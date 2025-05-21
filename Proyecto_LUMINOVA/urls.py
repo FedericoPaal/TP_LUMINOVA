@@ -21,5 +21,5 @@ from App_LUMINOVA.views import *
 urlpatterns = [
     path('', include('App_LUMINOVA.urls')),
     path('admin/', admin.site.urls),
-    path("App_LUMINOVA/", include("App_LUMINOVA.urls"))
+#    path("App_LUMINOVA/", include("App_LUMINOVA.urls"))
 ]

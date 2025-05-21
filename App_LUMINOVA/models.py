@@ -3,16 +3,22 @@ from django.contrib.auth.models import User
 
 # Create your models here.
 class ProductoTerminado(models.Model):
-    descripcion = models.TextField(max_length=500)
+    descripcion = models.CharField(max_length=100)
     categoria = models.CharField(max_length=50)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.IntegerField()
+    modelo = models.CharField(max_length=50)
+    potencia = models.IntegerField()
+    acabado = models.CharField(max_length=50)
+    color_luz = models.CharField(max_length=50)
+    material = models.CharField(max_length=50)
+    imagen = models.ImageField(null=True, blank=True)
 
     def __str__(self):
         return self.descripcion
 
 class Insumo(models.Model):
-    descripcion = models.TextField(max_length=500)
+    descripcion = models.CharField(max_length=100)
     categoria = models.CharField(max_length=50)
     fabricante = models.CharField(max_length=60)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
