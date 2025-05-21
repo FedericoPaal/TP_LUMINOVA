@@ -1,0 +1,100 @@
+{% extends 'padre.html' %}
+
+{% block title %}Roles y Permisos | Luminova{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom flex-column">
+    <h1 class="h2">Roles y Permisos</h1>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Rol</th>
+                <th>Descripción</th>
+                <th>Permisos</th>
+                <th>Módulos Asignados</th>
+                <th>Nivel de Acceso</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rol in roles %}
+            <tr>
+                <td>{{ rol.name|capfirst }}</td>
+                <td>
+                    {{ rol.descripcion_extendida.descripcion|default:"Sin descripción" }}
+                </td>
+                <td>
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal{{ rol.id }}Permisos">Ver</a>
+                </td>
+                <td>
+                    {% if rol.name == "administrador" %}
+                        Todos los módulos
+                    {% elif rol.name == "ventas" %}
+                        Ventas, Producción, Stock
+                    {% elif rol.name == "compras" %}
+                        Compras, Proveedores, Stock
+                    {% elif rol.name == "produccion" %}
+                        Producción, Órdenes de Producción
+                    {% elif rol.name == "deposito" %}
+                        Depósito, Stock, Envíos
+                    {% elif rol.name == "control de calidad" %}
+                        Control de Calidad, Reportes
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if rol.name == "administrador" %}
+                        Alto
+                    {% elif rol.name == "ventas" or rol.name == "compras" %}
+                        Medio
+                    {% elif rol.name == "produccion" or rol.name == "deposito" or rol.name == "control de calidad" %}
+                        Bajo
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="#" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-plus"></i> Agregar</a>
+                    <a href="#" class="btn btn-sm btn-outline-info me-1"><i class="bi bi-pencil"></i> Editar</a>
+                    <a href="#" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Eliminar</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% for rol in roles %}
+<div class="modal fade" id="modal{{ rol.id }}Permisos" tabindex="-1" aria-labelledby="modal{{ rol.id }}PermisosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal{{ rol.id }}PermisosLabel">Permisos de {{ rol.name|capfirst }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Descripción</h6>
+                <p>{{ rol.descripcion_extendida.descripcion|default:"Sin descripción" }}</p>
+                <h6>Permisos asignados</h6>
+                {% if rol.permissions.all %}
+                    <ul>
+                    {% for perm in rol.permissions.all %}
+                        <li>{{ perm.name }}</li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>Sin permisos asignados</p>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

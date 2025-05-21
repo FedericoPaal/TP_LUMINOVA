@@ -1,0 +1,200 @@
+{% if '/dashboard/' or '/usuarios/' or '/roles-permisos/' or '/audioria/' in request.path %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <span>Administrador</span>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if '/dashboard/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" aria-current="page" href="{% url 'App_LUMINOVA:dashboard' %}" style="border-radius: 25px;">
+                        <i class="bi bi-speedometer2 me-2"></i> <span class="ms-2">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/usuarios/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:lista_usuarios' %}" style="border-radius: 25px; padding-top: 0.75rem; padding-bottom: 0.75rem;">
+                        <i class="bi bi-people-fill me-2"></i> <span class="ms-2">Usuarios</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/roles-permisos/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:roles-permisos' %}" style="border-radius: 25px;">
+                        <i class="bi bi-key-fill me-2"></i> <span class="ms-2">Roles y Permisos</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/auditoria/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:auditoria' %}" style="border-radius: 25px;">
+                        <i class="bi bi-clock-history me-2"></i> <span class="ms-2">Auditoría de Accesos</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+        
+
+    
+{% elif '/compras/' in request.path %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <span>Compras</span>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if '/dashboard/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" aria-current="page" href="{% url 'App_LUMINOVA:dashboard' %}" style="border-radius: 25px;">
+                        <i class="bi bi-speedometer2 me-2"></i> <span class="ms-2">Desglose</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/usuarios/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:usuarios' %}" style="border-radius: 25px; padding-top: 0.75rem; padding-bottom: 0.75rem;">
+                        <i class="bi bi-people-fill me-2"></i> <span class="ms-2">Usuarios</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/roles-permisos/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:roles-permisos' %}" style="border-radius: 25px;">
+                        <i class="bi bi-key-fill me-2"></i> <span class="ms-2">Roles y Permisos</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/auditoria/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:auditoria' %}" style="border-radius: 25px;">
+                        <i class="bi bi-clock-history me-2"></i> <span class="ms-2">Auditoría de Accesos</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    
+{% elif '/produccion/' in request.path %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <span>Producción</span>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if '/dashboard/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" aria-current="page" href="{% url 'App_LUMINOVA:dashboard' %}" style="border-radius: 25px;">
+                        <i class="bi bi-speedometer2 me-2"></i> <span class="ms-2">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/usuarios/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:usuarios' %}" style="border-radius: 25px; padding-top: 0.75rem; padding-bottom: 0.75rem;">
+                        <i class="bi bi-people-fill me-2"></i> <span class="ms-2">Usuarios</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/roles-permisos/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:roles-permisos' %}" style="border-radius: 25px;">
+                        <i class="bi bi-key-fill me-2"></i> <span class="ms-2">Roles y Permisos</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/auditoria/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:auditoria' %}" style="border-radius: 25px;">
+                        <i class="bi bi-clock-history me-2"></i> <span class="ms-2">Auditoría de Accesos</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    
+{% elif '/ventas/' in request.path %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <span>Ventas</span>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if '/dashboard/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" aria-current="page" href="{% url 'App_LUMINOVA:dashboard' %}" style="border-radius: 25px;">
+                        <i class="bi bi-speedometer2 me-2"></i> <span class="ms-2">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/usuarios/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:usuarios' %}" style="border-radius: 25px; padding-top: 0.75rem; padding-bottom: 0.75rem;">
+                        <i class="bi bi-people-fill me-2"></i> <span class="ms-2">Usuarios</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/roles-permisos/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:roles-permisos' %}" style="border-radius: 25px;">
+                        <i class="bi bi-key-fill me-2"></i> <span class="ms-2">Roles y Permisos</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/auditoria/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:auditoria' %}" style="border-radius: 25px;">
+                        <i class="bi bi-clock-history me-2"></i> <span class="ms-2">Auditoría de Accesos</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+
+{% elif '/deposito/' in request.path %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <span>Depósito</span>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if '/dashboard/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" aria-current="page" href="{% url 'App_LUMINOVA:dashboard' %}" style="border-radius: 25px;">
+                        <i class="bi bi-speedometer2 me-2"></i> <span class="ms-2">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/usuarios/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:usuarios' %}" style="border-radius: 25px; padding-top: 0.75rem; padding-bottom: 0.75rem;">
+                        <i class="bi bi-people-fill me-2"></i> <span class="ms-2">Usuarios</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/roles-permisos/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:roles-permisos' %}" style="border-radius: 25px;">
+                        <i class="bi bi-key-fill me-2"></i> <span class="ms-2">Roles y Permisos</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/auditoria/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:auditoria' %}" style="border-radius: 25px;">
+                        <i class="bi bi-clock-history me-2"></i> <span class="ms-2">Auditoría de Accesos</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+
+
+{% elif '/control_calidad/' in request.path %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <span>Control de Calidad</span>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link {% if '/dashboard/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" aria-current="page" href="{% url 'App_LUMINOVA:dashboard' %}" style="border-radius: 25px;">
+                        <i class="bi bi-speedometer2 me-2"></i> <span class="ms-2">Boton 1</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/usuarios/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:usuarios' %}" style="border-radius: 25px; padding-top: 0.75rem; padding-bottom: 0.75rem;">
+                        <i class="bi bi-people-fill me-2"></i> <span class="ms-2">Boton 2</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/roles-permisos/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:roles-permisos' %}" style="border-radius: 25px;">
+                        <i class="bi bi-key-fill me-2"></i> <span class="ms-2">Boton 3</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link {% if '/auditoria/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:auditoria' %}" style="border-radius: 25px;">
+                        <i class="bi bi-clock-history me-2"></i> <span class="ms-2">Boton 4</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+{% endif %}

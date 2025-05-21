@@ -1,0 +1,83 @@
+{% extends 'padre.html' %}
+
+{% block title %}Dashboard | Luminova{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom flex-column">
+    <h1 class="h1">Dashboard Administrador</h1>
+</div>
+
+<div class="alert alert-info text-center" role="alert">
+    Bienvenido/a <strong>{{ request.user.username }}</strong> al panel de administración.
+</div>
+
+<div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-4 g-4 mb-4">
+    <div class="col">
+        <div class="card h-100 border-primary">
+            <div class="card-body">
+                <h5 class="card-title">Órdenes Activas</h5>
+                <p class="card-text">
+                    OV: <span class="fw-bold">2</span> <br>
+                    OP: <span class="fw-bold">2</span> <br>
+                    OC: <span class="fw-bold">2</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 border-warning">
+            <div class="card-body">
+                <h5 class="card-title">Stock Crítico</h5>
+                <p class="card-text">
+                    Componentes con Stock Bajo: <span class="fw-bold">3</span> <br>
+                    <small>
+                        [Nombre del Componente 1]: <span class="fw-bold"> [Stock Actual] / [Stock Mínimo]</span> <br>
+                        [Nombre del Componente 2]: <span class="fw-bold"> [Stock Actual] / [Stock Mínimo]</span> <br>
+                        [Nombre del Componente 3]: <span class="fw-bold"> [Stock Actual] / [Stock Mínimo]</span>
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 border-success">
+            <div class="card-body">
+                <h5 class="card-title">Proveedores Clave (Mes Actual)</h5>
+                <p class="card-text">
+                    Total Proveedores Activos: <span class="fw-bold">3</span> <br>
+                    Proveedor Mayor Gasto: <span class="fw-bold">[Nombre del Proveedor]</span> - <span class="text-muted">[Monto Gastado]</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100 border-info">
+            <div class="card-body">
+                <h5 class="card-title">Rendimiento Producción (Mes)</h5>
+                <h6 class="card-subtitle mb-2 text-muted">Producción Mensual</h6>
+                <p class="card-text">
+                    Total Luminarias Ensambladas: <span class="fw-bold">[Número]</span> <br>
+                    OP Completadas a Tiempo: <span class="fw-bold">[Número]</span>
+                </p>
+                <p class="card-text">
+                    Total Luminarias Ensambladas: <span class="fw-bold">[Número]</span> <br>
+                    OP Con Retraso: <span class="fw-bold">[Número]</span>
+                </p>
+                <p class="card-text">
+                    Tasa de Cumplimiento OP: <span class="fw-bold">[Porcentaje]%</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <p class="text-muted text-center" style="border:1px solid #ccc; padding: 10px; border-radius: 5px;">
+        OV: Órdenes de Ventas | OP: Órdenes de Producción | OC: Órdenes de Compras
+    </p>
+</div>
+
+{% endblock %}

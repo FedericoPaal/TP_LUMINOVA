@@ -1,0 +1,615 @@
+{% extends 'padre.html' %}
+
+{% load static %}  {# Carga el conjunto de tags staticfiles #}
+
+{% block title %}Depósito - Luminova{% endblock %}
+
+{% block sidebar_content %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end full-height" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <span>Depósito</span>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Agregar">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Artículo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Buscar">
+                        <i class="bi bi-search me-2"></i> <span class="ms-2">Buscar Artículo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Modificar">
+                        <i class="bi bi-pencil-square me-2"></i> <span class="ms-2">Modificar Artículo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Eliminar">
+                        <i class="bi bi-trash-fill me-2"></i> <span class="ms-2">Eliminar Artículo</span>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <div class="row mx-auto border-start">
+        <ul class="nav justify-content-start flex-wrap" style="background-color: white;">
+            <li class="nav-item">
+                <button id="insumos-tab" onclick="mostrarInsumos()" class="nav-link active bg-primary text-white" style="width: 170px; border-top-left-radius: 20px; border-top-right-radius: 20px; font-weight: bold;" aria-current="page">Insumos</button>
+            </li>
+            <li class="nav-item">
+                <button id="productos-tab" onclick="mostrarProductos()" class="nav-link bg-primary text-white" style="width: 170px; border-top-left-radius: 20px; border-top-right-radius: 20px; font-weight: bold;">Prod. Terminados</button>
+            </li>
+        </ul>
+
+        <div class="col-md-8 bg-primary" style="padding-top: 20px; padding-bottom: 20px;">
+            <div id="insumos-content" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <a href="" class="text-decoration-none text-dark" data-bs-toggle="modal" data-bs-target="#exampleModal1">
+                            <img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" class="card-img-top object-fit-contain" alt="Modulo LED" style="height: 150px;">
+                            <div class="card-body">
+                                <h5 class="card-title">Modulo LED</h5>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRCvFSyuHD_M3NaiP-jTb8VxxqjcQVh5G0IToauM86eCRKJJqltJsdECZW0AEEWNT3yMf0&usqp=CAU" class="card-img-top object-fit-contain" alt="Porta LED Cab" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Porta LED Cab</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://res.cloudinary.com/rsc/image/upload/bo_1.5px_solid_white,b_auto,c_pad,dpr_2,f_auto,h_399,q_auto,w_710/c_pad,h_399,w_710/R8805418-01?pgw=1" class="card-img-top object-fit-contain" alt="CLS Driver LED" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">CLS Driver LED</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://mm.digikey.com/Volume0/opasdata/d220001/derivates/6/003/229/104/MFG_SK%2520570%252010%2520SA_web%28640x640%29.jpg" class="card-img-top object-fit-contain" alt="Disipadores de Calor" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Disipadores de Calor</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://uy.mouser.com/images/ledengin/images/LZ4_Lens_SPL.jpg" class="card-img-top object-fit-contain" alt="Lentes para Iluminación LED" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Lentes para Iluminación LED</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://www.omo-ic.com/2019/big/9b/2a/f7bf6b5a9c3f.jpg" class="card-img-top object-fit-contain" alt="Reflectores LED" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Reflectores LED</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://ae-pic-a1.aliexpress-media.com/kf/S8990192b5c144a12b42729f4f31180e29.jpg_480x480q75.jpg_.webp" class="card-img-top object-fit-contain" alt="Cables para Conexión" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Cables para Conexión</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://media.distributordatasolutions.com/wago/2022q2/images/large/d728e3383170956b5128feb551fc30bea9677e96-large.png" class="card-img-top object-fit-contain" alt="Conectores para Iluminación" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Conectores para Iluminación</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://cdn2.bigcommerce.com/server1800/9a7cf/products/412/images/1207/l_264057__18218.1360904196.350.350.jpg?c=2" class="card-img-top object-fit-contain" alt="Conectores y Módulos Alumbrado Público" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Conectores y Módulos Alumbrado Público</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://www.newark.com/productimages/promo/en_US/5100733.jpg" class="card-img-top object-fit-contain" alt="Fuentes de Alimentación" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Fuentes de Alimentación</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://www.newark.com/productimages/promo/en_US/19P2475-40.jpg" class="card-img-top object-fit-contain" alt="Iluminación LED en Tiras y Cintas" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Iluminación LED en Tiras y Cintas</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://www.newark.com/productimages/promo/en_US/44Y3071-40.jpg" class="card-img-top object-fit-contain" alt="Led Cob" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Led Cob</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://www.newark.com/productimages/promo/en_US/4607113.jpg" class="card-img-top object-fit-contain" alt="Lentes de Alto Brillo" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Lentes de Alto Brillo</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://www.newark.com/productimages/promo/en_GB/4229262-40.jpg" class="card-img-top object-fit-contain" alt="Sistema de Control de Iluminación LED" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Sistema de Control de Iluminación LED</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="card shadow-sm">
+                        <img src="https://www.newark.com/productimages/promo/en_US/43Y4627-40.jpg" class="card-img-top object-fit-contain" alt="Soporte para Matriz LED" style="height: 150px;">
+                        <div class="card-body">
+                            <h5 class="card-title">Soporte para Matriz LED</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="productos-content" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4" style="display: none;">
+            <div class="col">
+                <div class="card shadow-sm">
+                    <img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" class="card-img-top object-fit-contain" alt="Modulo LED" style="height: 150px;">
+                    <div class="card-body">
+                        <h5 class="card-title">Producto Terminado 1</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card shadow-sm">
+                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRCvFSyuHD_M3NaiP-jTb8VxxqjcQVh5G0IToauM86eCRKJJqltJsdECZW0AEEWNT3yMf0&usqp=CAU" class="card-img-top object-fit-contain" alt="Porta LED Cab" style="height: 150px;">
+                    <div class="card-body">
+                        <h5 class="card-title">Producto Terminado 2</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+        <div class="col-md-4 bg-primary border-start border-5 border-white" style="margin-left: 0px; padding: 20px; border-radius: 25px;">
+            <table class="table table-borderless text-white">
+                <thead>
+                    <tr>
+                        <th colspan="3" class="bg-primary text-white text-center" style="padding-left: 90px;"> <h4>Órdenes de Producción</h4></th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white text-dark">
+                    <tr>
+                        <th colspan="2" class="text-white" style="background-color: #014BAC;">ID</th>
+                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Descripción</th>
+                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Cantidad</th>
+                    </tr>
+                    <tr>
+                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;">1</td>
+                        <td colspan="2" class="text-white" style="background-color: #61B5FA;">Módulo LED D08 sin conductor para bombillas</td>
+                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;"><span>300</span></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" class="text-white text-center" style="background-color: #3E83E8;">2</td>
+                        <td colspan="2" class="text-white" style="background-color: #3E83E8;">Porta LED 50-2204CT</td>
+                        <td colspan="2" class="text-white text-center" style="background-color: #3E83E8;"><span>150</span></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;">3</td>
+                        <td colspan="2" class="text-white" style="background-color: #61B5FA;">Porta LED 50-200NCR</td>
+                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;"><span>200</span></td>
+                    </tr>
+                    <tr>
+                        <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 90px;">
+                            <a class="btn border-white text-primary text-white" style="background-color: #014BAC; width: 180px; height: 40px; border-radius: 15px;" href="{% url 'App_LUMINOVA:depo_seleccion' %}">Seleccionar</a>
+                        </td>
+
+                    </tr>
+                </tbody>
+                <thead>
+                    <tr style="border-bottom: 3px solid white;">
+                        <td colspan="3" class="bg-primary text-center pt-3"></td>
+                    </tr>
+                    <tr>
+                        <th colspan="3" class="bg-primary text-white text-center" style="padding-left: 90px;"> <h4>Productos Terminados</h4></th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white text-dark">
+                    <tr>
+                        <th colspan="2" class="text-white" style="background-color: #014BAC;" >ID</th>
+                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Descripción</th>
+                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Cantidad</th>
+                    </tr>
+                    <tr>
+                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;">1</td>
+                        <td colspan="2" class="text-white" style="background-color: #61B5FA;">Lámpara de Pie</td>
+                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;"><span>50</span></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" class="text-white text-center" style="background-color: #3E83E8;">2</td>
+                        <td colspan="2" class="text-white" style="background-color: #3E83E8;">Lámpara Colgante</td>
+                        <td colspan="2" class="text-white text-center" style="background-color: #3E83E8;"><span>70</span></td>
+                    </tr>
+                </tbody>
+                <thead>
+                    <tr style="border-bottom: 3px solid white;">
+                        <td colspan="3" class="bg-primary text-center pt-3"></td>
+                    </tr>
+                    <tr>
+                        <th colspan="3" class="bg-primary text-white text-center" style="padding-left: 90px;"><h4>Stock en Falta</h4></th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white text-dark">
+                    <tr>
+                        <th colspan="2" class="text-white" style="background-color: #014BAC;">ID</th>
+                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Descripción</th>
+                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Cantidad</th>
+                    </tr>
+                    <tr>
+                        <td colspan="8" class="text-white text-center" style="background-color: #A19898;">No hay productos en falta actualmente.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function mostrarInsumos() {
+            document.getElementById("insumos-content").style.display = "flex";
+            document.getElementById("productos-content").style.display = "none";
+            document.getElementById("insumos-tab").classList.add("active");
+            document.getElementById("productos-tab").classList.remove("active");
+
+        }
+
+        function mostrarProductos() {
+            document.getElementById("insumos-content").style.display = "none";
+            document.getElementById("productos-content").style.display = "flex";
+            document.getElementById("insumos-tab").classList.remove("active");
+            document.getElementById("productos-tab").classList.add("active");
+        }
+
+        // Mostrar insumos por defecto
+        mostrarInsumos();
+    </script>
+    <script src="{% static 'js/cards_deposito.js' %}"></script>
+
+    <!-- Modal Modulos LED -->
+    <div class="modal fade" id="exampleModal1" tabindex="-1" aria-labelledby="exampleModalLabel1" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <nav class="navbar navbar-light bg-light">
+                        <form class="d-flex" role="search">
+                            <input class="form-control me-2" type="search" placeholder="Buscar" aria-label="Search">
+                            <button class="btn btn-white" type="submit"><i class="bi bi-search"></i></button>
+                        </form>
+                    </nav>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style=" padding-left: 50px; padding-right: 50px;">
+                    <table class="table bg-primary" style="border: black;">
+                    <thead>
+                        <th class="text-white text-center" style="background-color: #014BAC;" colspan="6">
+                            Modulos LED
+                        </th>
+                    </thead>
+                    <thead>
+                        <tr>
+                            <th scope="col" class="text-center" style="background-color: #808080;"></th>
+                            <th scope="col" class="text-center" style="background-color: #808080;">Imagen</th>
+                            <th scope="col" class="text-center" style="background-color: #808080;">ID</th>
+                            <th scope="col" style="background-color: #808080;">Nombre</th>
+                            <th scope="col" class="text-center" style="background-color: #808080;">Proveedor</th>
+                            <th scope="col" class="text-center" style="background-color: #808080;">Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th scope="row" style="padding-top: 25px; padding-left: 20px;">
+                                <div style="width: 18px; height: 18px; background-color: red; border-radius: 4px; display: inline-block;"></div>
+                            </th>
+                            <td class="text-center"><img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" alt="Modulo LED" style="height: 50px;"></td>
+                            <td class="text-center" style="padding-top: 20px;">1</td>
+                            <td style="padding-top: 20px;">Módulo LED, OSCONIQ S 5050 Series, Board + LED, Horti Blanco, 253 lm</td>
+                            <td class="text-center" style="padding-top: 20px;">Newark</td>
+                            <td class="text-center" style="padding-top: 20px;">600</td>
+                        </tr>
+                        <tr>
+                            <th scope="row" style="background-color: #C0B9B9; padding-top: 25px; padding-left: 20px;">
+                                <div style="width: 18px; height: 18px; background-color: yellow; border-radius: 4px; display: inline-block;"></div>
+                            </th>
+                            <td class="text-center" style="background-color: #C0B9B9;"><img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" alt="Modulo LED" style="height: 50px;"></td>
+                            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">2</td>
+                            <td style="background-color: #C0B9B9; padding-top: 20px;">Módulo LED DOB sin conductor para bombillas</td>
+                            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">Alibaba</td>
+                            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">500</td>
+                        </tr>
+                        <tr>
+                            <th scope="row" style="padding-top: 25px; padding-left: 20px; border-color: black;">
+                                <div style="width: 18px; height: 18px; background-color: yellow; border-radius: 4px; display: inline-block;"></div>
+                            </th>
+                            <td class="text-center"><img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" alt="Modulo LED" style="height: 50px;"></td>
+                            <td class="text-center" style="padding-top: 20px;">3</td>
+                            <td style="padding-top: 20px;">Módulo LED BXRC-30E10K0-B-73-SE</td>
+                            <td class="text-center" style="padding-top: 20px;">BridgeLux</td>
+                            <td class="text-center" style="padding-top: 20px;">380</td>
+                        </tr>
+                        <tr>
+                            <th scope="row" style="background-color: #C0B9B9; padding-top: 25px; padding-left: 20px;">
+                                <div style="width: 18px; height: 18px; background-color: green; border-radius: 4px; display: inline-block;"></div>
+                            </th>
+                            <td class="text-center" style="background-color: #C0B9B9;"><img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" alt="Modulo LED" style="height: 50px;"></td>
+                            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">2</td>
+                            <td style="background-color: #C0B9B9; padding-top: 20px;">Módulo LED DOB sin conductor para bombillas</td>
+                            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">Alibaba</td>
+                            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">500</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="mt-3">
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 30px;">
+                        <strong class="d-block text-center mb-2">Estados de Stock:</strong>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <div style="width: 18px; height: 18px; background-color: green; border-radius: 4px;"></div>
+                            <span style="color: #222;">De 30.000 en adelante </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <div style="width: 18px; height: 18px; background-color: yellow; border-radius: 4px;"></div>
+                            <span style="color: #222;">Entre 15.000 hasta 30.000 </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <div style="width: 18px; height: 18px; background-color: red; border-radius: 4px; border: 1px solid #ccc;"></div>
+                            <span style="color: #222;">De 15.000 para abajo </span>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 1: Formulario para Agregar -->
+    <div class="modal fade" id="exampleModal_Agregar" aria-hidden="true" aria-labelledby="exampleModalToggleLabel_Agregar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h1 class="modal-title fs-5" id="exampleModalToggleLabel_Agregar">Agregar Artículo</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+            <form id="formArticulo">
+                <label for="grupoEliminar" class="form-label">Seleccionar tipo de Articulo</label>
+                <select class="form-select" id="grupoEliminar" name="grupo">
+                    <option selected disabled>Sin asignar</option>
+                    <option value="Componente">Componente</option>
+                    <option value="Producto Terminado">Producto Terminado</option>
+                </select>
+            <div class="mb-3 d-flex align-items-center" style="padding-top: 20px;">
+                <label for="nombre" class="form-label" style="padding-right: 10px;">Nombre</label>
+                <input type="text" class="form-control" placeholder="Ingrese un Nombre" id="nombre" name="nombre" required>
+            </div>
+            <div class="mb-3 d-flex align-items-center">
+                <label for="id" class="form-label"  style="padding-right: 10px;">ID</label>
+                <input type="text" class="form-control" placeholder="Ingrese una ID" id="id" name="id" required>
+            </div>
+            <div class="mb-3 d-flex align-items-center">
+                <label for="imagen" class="form-label"  style="padding-right: 10px;">Imagen (URL)</label>
+                <input type="url" class="form-control" placeholder="Ingrese una URL" id="imagen" name="imagen">
+            </div>
+            <div class="mb-3 d-flex align-items-center">
+                <label for="proveedor" class="form-label"  style="padding-right: 10px;">Proveedor</label>
+                <input type="text" class="form-control" placeholder="Ingrese un Proveedor" id="proveedor" name="proveedor">
+            </div>
+            <div class="mb-3 d-flex align-items-center">
+                <label for="cantidad" class="form-label"  style="padding-right: 10px;">Cantidad</label>
+                <input type="number" class="form-control" placeholder="Ingrese una Cantidad" id="cantidad" name="cantidad" min="0">
+            </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" data-bs-target="#exampleModal_Agregar2" data-bs-toggle="modal">Siguiente</button>
+        </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Modal 1: Confirmación -->
+    <div class="modal fade" id="exampleModal_Agregar2" aria-hidden="true" aria-labelledby="exampleModal_Agregar2" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h1 class="modal-title fs-5" id="exampleModal_Agregar2">Confirmación</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+            Los datos han sido registrados correctamente.
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-bs-target="#exampleModal_Agregar" data-bs-toggle="modal">Volver</button>
+            <button type="button" class="btn btn-success" data-bs-dismiss="modal">Aceptar</button>
+        </div>
+        </div>
+    </div>
+    </div>
+
+
+    <!-- Modal 2: Formulario para Buscar -->
+    <div class="modal fade" id="exampleModal_Buscar" aria-hidden="true" aria-labelledby="exampleModalToggleLabel_Buscar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h1 class="modal-title fs-5" id="exampleModalToggleLabel_Buscar">Buscar Artículo</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+            <form id="formArticulo">
+                <label for="grupoEliminar" class="form-label">Seleccionar tipo de Articulo</label>
+                <select class="form-select" id="grupoEliminar" name="grupo">
+                    <option selected disabled>Sin asignar</option>
+                    <option value="Componente">Componente</option>
+                    <option value="Producto Terminado">Producto Terminado</option>
+                </select>
+            <div class="mb-3 d-flex align-items-center" style="padding-top: 20px;">
+                <label for="nombre" class="form-label" style="padding-right: 10px;">Nombre</label>
+                <input type="text" class="form-control" placeholder="Ingrese un Nombre" id="nombre" name="nombre" required>
+            </div>
+            <div class="mb-3 d-flex align-items-center">
+                <label for="id" class="form-label"  style="padding-right: 10px;">ID</label>
+                <input type="text" class="form-control" placeholder="Ingrese una ID" id="id" name="id" required>
+            </div>
+            <div class="mb-3 d-flex align-items-center">
+                <label for="proveedor" class="form-label"  style="padding-right: 10px;">Proveedor</label>
+                <input type="text" class="form-control" placeholder="Ingrese un Proveedor" id="proveedor" name="proveedor">
+            </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" data-bs-target="#exampleModal_Buscar2" data-bs-toggle="modal">Siguiente</button>
+        </div>
+        </div>
+    </div>
+    </div>
+
+
+    <!-- Modal 3: Formulario para Modificar -->
+    <div class="modal fade" id="exampleModal_Modificar" aria-hidden="true" aria-labelledby="exampleModalToggleLabel_Modificar" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h1 class="modal-title fs-5" id="exampleModalToggleLabel_Modificar">Modificar Artículo</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+            <form id="formArticulo">
+                <label for="grupoEliminar" class="form-label">Seleccionar tipo de Articulo</label>
+                <select class="form-select" id="grupoEliminar" name="grupo">
+                    <option selected disabled>Sin asignar</option>
+                    <option value="Componente">Componente</option>
+                    <option value="Producto Terminado">Producto Terminado</option>
+                </select>
+            <div class="mb-3 d-flex align-items-center" style="padding-top: 20px;">
+                <label for="nombre" class="form-label" style="padding-right: 10px;">Nombre</label>
+                <input type="text" class="form-control" placeholder="Modifique el Nombre" id="nombre" name="nombre" required>
+            </div>
+            <div class="mb-3 d-flex align-items-center">
+                <label for="id" class="form-label"  style="padding-right: 10px;">ID</label>
+                <input type="text" class="form-control" placeholder="Modifique la ID" id="id" name="id" required>
+            </div>
+            <div class="mb-3 d-flex align-items-center">
+                <label for="imagen" class="form-label"  style="padding-right: 10px;">Imagen (URL)</label>
+                <input type="url" class="form-control" placeholder="Modifique la URL" id="imagen" name="imagen">
+            </div>
+            <div class="mb-3 d-flex align-items-center">
+                <label for="proveedor" class="form-label"  style="padding-right: 10px;">Proveedor</label>
+                <input type="text" class="form-control" placeholder="Modifique el Proveedor" id="proveedor" name="proveedor">
+            </div>
+            <div class="mb-3 d-flex align-items-center">
+                <label for="cantidad" class="form-label"  style="padding-right: 10px;">Cantidad</label>
+                <input type="number" class="form-control" placeholder="Modifique la Cantidad" id="cantidad" name="cantidad" min="0">
+            </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" data-bs-target="#exampleModal_Modificar2" data-bs-toggle="modal">Siguiente</button>
+        </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Modal 3: Confirmación -->
+    <div class="modal fade" id="exampleModal_Modificar2" aria-hidden="true" aria-labelledby="exampleModal_Modificar2" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+        <div class="modal-header">
+            <h1 class="modal-title fs-5" id="exampleModal_Modificar2">Confirmación</h1>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+            Los datos han sido registrados correctamente.
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" data-bs-target="#exampleModal_Modificar" data-bs-toggle="modal">Volver</button>
+            <button type="button" class="btn btn-success" data-bs-dismiss="modal">Aceptar</button>
+        </div>
+        </div>
+    </div>
+    </div>
+
+
+<!-- Modal 2: Formulario para Eliminar -->
+<div class="modal fade" id="exampleModal_Eliminar" aria-hidden="true" aria-labelledby="exampleModalLabel_Eliminar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel_Eliminar">Eliminar Artículo</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formEliminar">
+            <label for="grupoEliminar" class="form-label">Seleccionar tipo de Articulo</label>
+            <select class="form-select" id="grupoEliminar" name="grupo">
+                <option selected disabled>Sin asignar</option>
+                <option value="Componente">Componente</option>
+                <option value="Producto Terminado">Producto Terminado</option>
+            </select>
+            <label for="grupoEliminar" class="form-label">Seleccionar Articulo</label>
+            <select class="form-select" id="grupoEliminar" name="grupo">
+                <option selected disabled>Sin asignar</option>
+                <option value="Articulo 1">Articulo 1</option>
+                <option value="Articulo 2">Articulo 2</option>
+                <option value="Articulo 3">Articulo 3</option>
+            </select>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <!-- Abre el segundo modal de confirmación -->
+        <button class="btn btn-danger" data-bs-target="#exampleModal_Eliminar2" data-bs-toggle="modal" data-bs-dismiss="modal">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 4: Confirmación -->
+<div class="modal fade" id="exampleModal_Eliminar2" aria-hidden="true" aria-labelledby="exampleModalLabel_Eliminar2" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="exampleModalLabel_Eliminar2">Confirmación</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        El artículo ha sido eliminado correctamente.
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-target="#exampleModal_Eliminar" data-bs-toggle="modal">Volver</button>
+        <button type="button" class="btn btn-success" data-bs-dismiss="modal">Aceptar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}

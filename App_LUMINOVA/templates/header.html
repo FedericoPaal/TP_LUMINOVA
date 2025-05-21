@@ -1,0 +1,42 @@
+{% load static %}
+<header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm p-0">
+        <div class="container-fluid d-flex align-items-center">
+            <div class="col-md-3 col-lg-2">
+                <a class="navbar-brand d-flex align-items-center ms-3" href="{% url 'App_LUMINOVA:dashboard' %}">
+                    <img src="{% static 'img/logo.png' %}" alt="Luminova Logo" height="100" class="d-inline-block align-text-top me-2">
+                </a>
+            </div>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent"
+                    aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav mb-2 mb-lg-0 d-flex justify-content-around w-100">
+                    <li class="nav-item"><a class="nav-link text-primary fw-bold" href="{% url 'App_LUMINOVA:compras' %} ">Compras</a></li>
+                    <li class="nav-item"><a class="nav-link text-primary fw-bold" href="{% url 'App_LUMINOVA:produccion' %}">Producción</a></li>
+                    <li class="nav-item"><a class="nav-link text-primary fw-bold" href="{% url 'App_LUMINOVA:ventas' %}">Ventas</a></li>
+                    <li class="nav-item"><a class="nav-link text-primary fw-bold" href="{% url 'App_LUMINOVA:deposito' %}">Depósito</a></li>
+                    <li class="nav-item"><a class="nav-link text-primary fw-bold" href="{% url 'App_LUMINOVA:control_calidad' %}">Control de Calidad</a></li>
+                </ul>
+
+                <div class="navbar-nav ms-auto align-items-center me-3 mb-2 mb-lg-0 d-flex flex-row">
+                    <div class="d-flex flex-row align-items-center flex-nowrap">
+                        <span class="nav-link text-primary d-flex align-items-center me-2" style="white-space: nowrap;">
+                            <i class="bi bi-bell-fill me-2 align-self-center"></i>
+                            <i class="bi bi-envelope-fill me-2 align-self-center"></i>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-circle me-2 align-self-center" viewBox="0 0 16 16">
+                                <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+                                <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
+                            </svg>
+                            <span class="d-none d-lg-inline align-self-center me-2  fw-bold">Usuario Administrador</span>
+                        </span>
+                        <a class="btn btn-outline-primary btn-sm align-self-center" style="white-space: nowrap;" href="{% url 'App_LUMINOVA:login' %}">Cerrar sesión</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+</header>

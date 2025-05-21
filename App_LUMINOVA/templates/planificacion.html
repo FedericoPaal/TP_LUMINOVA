@@ -1,0 +1,128 @@
+{% extends 'padre.html' %}
+
+{% block sidebar_content %}
+
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <span>Produccion</span>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link  {% if '/ordenes/' in request.path %}active{% endif %}  text-white fw-bold custom-active-button d-flex align-items-center" aria-current="page" href="{% url 'App_LUMINOVA:ordenes' %}" style="border-radius: 25px;">
+                        <i class="bi bi-clipboard"></i> <span class="ms-2">Ordenes</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link  {% if '/planificacion/' in request.path %}active{% endif %}  text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:planificacion' %}" style="border-radius: 25px; padding-top: 0.75rem; padding-bottom: 0.75rem;">
+                        <i class="bi bi-card-checklist"></i> <span class="ms-2">Planificacion</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link  {% if '/reportes/' in request.path %}active{% endif %}  text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:reportes' %}" style="border-radius: 25px;">
+                        <i class="bi bi-flag"></i> <span class="ms-2">Reportes</span>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+    </nav>
+
+
+{% endblock %}
+
+{% block content %}
+
+
+
+
+<section>
+    <div class="table-responsive">
+        <table class="table">
+            <tr>
+                <th>N° OP</th>
+                <th>Cliente</th>
+                <th>Fecha de inicio</th>
+                <th>Fecha limite</th>
+                <th>Asignado a</th>
+
+            </tr>
+            <tr>
+                <td>00045237</td>
+                <td>Nombre</td>
+                <td>fecha de inicio</td>
+                <td>Fecha limite</td>
+                <td><select class="form-select" id="asignar1">
+                                <option selected disabled>Sin asignar</option>
+                                <option value="Grupo A">Grupo A</option>
+                                <option value="Grupo B">Grupo B</option>
+                                <option value="Grupo C">Grupo C</option>
+                        </select>
+                    </td>
+
+            </tr>
+            <tr>
+                <td>00045238</td>
+                <td>Nombre</td>
+                <td>fecha de inicio</td>
+                <td>Fecha limite</td>
+                <td><select class="form-select" id="asignar2">
+                                <option selected disabled>Sin asignar</option>
+                                <option value="Grupo A">Grupo A</option>
+                                <option value="Grupo B">Grupo B</option>
+                                <option value="Grupo C">Grupo C</option>
+                        </select>
+                    </td>
+            </tr>
+            <tr>
+                <td>00045240</td>
+                <td>Nombre</td>
+                <td>fecha de inicio</td>
+                <td>Fecha limite</td>
+                <td><select class="form-select" id="asignar3">
+                                <option selected disabled>Sin asignar</option>
+                                <option value="Grupo A">Grupo A</option>
+                                <option value="Grupo B">Grupo B</option>
+                                <option value="Grupo C">Grupo C</option>
+                        </select>
+                    </td>
+            </tr>
+            <tr>
+                <td>N</td>
+                <td>Nombre</td>
+                <td>fecha de inicio</td>
+                <td>Fecha limite</td>
+                <td>
+
+                    <select class="form-select" id="asignar4">
+                                <option selected disabled>Sin asignar</option>
+                                <option value="Grupo A">Grupo A</option>
+                                <option value="Grupo B">Grupo B</option>
+                                <option value="Grupo C">Grupo C</option>
+                        </select>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>N</td>
+                <td>Nombre</td>
+                <td>fecha de inicio</td>
+                <td>Fecha limite</td>
+                <td>
+                    <select class="form-select" id="asignar5">
+                                <option selected disabled>Sin asignar</option>
+                                <option value="Grupo A">Grupo A</option>
+                                <option value="Grupo B">Grupo B</option>
+                                <option value="Grupo C">Grupo C</option>
+                        </select>
+                </td>
+            </tr>
+
+        </table>
+
+    </div>
+
+</section>
+
+{% endblock %}
