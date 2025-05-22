@@ -1,7 +1,5 @@
 {% extends 'padre.html' %}
-
-{% load static %}  {# Carga el conjunto de tags staticfiles #}
-
+{% load static %}
 {% block title %}Depósito - Luminova{% endblock %}
 
 {% block sidebar_content %}
@@ -22,7 +20,16 @@
                         <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Producto Terminado</span>
                     </a>
                 </li>
-
+                 <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:categoria_i_create' %}">
+                        <i class="bi bi-bookmark-plus-fill me-2"></i> <span class="ms-2">Agregar Categoría Insumo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:categoria_pt_create' %}">
+                        <i class="bi bi-bookmark-plus-fill me-2"></i> <span class="ms-2">Agregar Categoría Prod. Term.</span>
+                    </a>
+                </li>
             </ul>
         </div>
     </nav>
@@ -32,57 +39,63 @@
     <div class="row mx-auto border-start">
         <ul class="nav justify-content-start flex-wrap" style="background-color: white;">
             <li class="nav-item">
-                <button id="insumos-tab" onclick="mostrarInsumos()" class="nav-link active bg-primary text-white" style="width: 170px; border-top-left-radius: 20px; border-top-right-radius: 20px; font-weight: bold;" aria-current="page">Insumos</button>
+                <button id="insumos-tab" onclick="mostrarInsumos()" class="nav-link active bg-primary text-white text-center" style="width: 170px; border-top-left-radius: 20px; border-top-right-radius: 20px; font-weight: bold;" aria-current="page">Insumos</button>
             </li>
             <li class="nav-item">
-                <button id="productos-tab" onclick="mostrarProductos()" class="nav-link bg-primary text-white" style="width: 170px; border-top-left-radius: 20px; border-top-right-radius: 20px; font-weight: bold;">Prod. Terminados</button>
+                <button id="productos-tab" onclick="mostrarProductos()" class="nav-link bg-primary text-white text-center" style="width: 170px; border-top-left-radius: 20px; border-top-right-radius: 20px; font-weight: bold;">Prod. Terminados</button>
             </li>
         </ul>
 
         <div class="col-md-8 bg-primary" style="padding-top: 20px; padding-bottom: 20px;">
             <div id="insumos-content" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
                 {% for categoria in categorias_I %}
-
                     {% if categoria %}
                         <div class="col">
-                            <div class="card shadow-sm">
-                                <a href="{% url 'App_LUMINOVA:categoria_i_detail' categoria.id %}" class="text-decoration-none text-dark">
-                                    <img src="{{categoria.imagen.url}}" class="card-img-top object-fit-contain" alt="Modulo LED" style="height: 150px;">
-                                    <div class="card-body">
+                            <div class="card shadow-sm h-100">
+                                <a href="{% url 'App_LUMINOVA:categoria_i_detail' categoria.id %}" class="text-decoration-none text-dark d-flex flex-column h-100">
+                                    {% if categoria.imagen %}
+                                    <img src="{{categoria.imagen.url}}" class="card-img-top object-fit-contain" alt="{{categoria.nombre}}" style="height: 150px;">
+                                    {% else %}
+                                    <img src="{% static 'img/placeholder.png' %}" class="card-img-top object-fit-contain" alt="Imagen no disponible" style="height: 150px;">
+                                    {% endif %}
+                                    <div class="card-body d-flex flex-column">
                                         <h5 class="card-title">{{categoria.nombre}}</h5>
                                     </div>
                                 </a>
                             </div>
                         </div>
-
                     {% endif %}
-
+                {% empty %}
+                    <p class="text-white">No hay categorías de insumos disponibles.</p>
                 {% endfor %}
             </div>
 
-
             <div id="productos-content" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4" style="display: none;">
-                {% for categoria in categorias_PT %}
-
-                    {% if categoria %}
+                {% for categoria_pt in categorias_PT %}
+                    {% if categoria_pt %}
                         <div class="col">
-                            <div class="card shadow-sm">
-                                <a href="{% url 'App_LUMINOVA:categoria_pt_detail' categoria.id %}" class="text-decoration-none text-dark">
-                                    <img src="{{categoria.imagen.url}}" class="card-img-top object-fit-contain" alt="Producto Terminado" style="height: 150px;">
-                                    <div class="card-body">
-                                        <h5 class="card-title">{{categoria.nombre}}</h5>
+                            <div class="card shadow-sm h-100">
+                                <a href="{% url 'App_LUMINOVA:categoria_pt_detail' categoria_pt.id %}" class="text-decoration-none text-dark d-flex flex-column h-100">
+                                     {% if categoria_pt.imagen %}
+                                    <img src="{{categoria_pt.imagen.url}}" class="card-img-top object-fit-contain" alt="{{categoria_pt.nombre}}" style="height: 150px;">
+                                     {% else %}
+                                    <img src="{% static 'img/placeholder.png' %}" class="card-img-top object-fit-contain" alt="Imagen no disponible" style="height: 150px;">
+                                    {% endif %}
+                                    <div class="card-body d-flex flex-column">
+                                        <h5 class="card-title">{{categoria_pt.nombre}}</h5>
                                     </div>
                                 </a>
                             </div>
                         </div>
-
                     {% endif %}
-
+                {% empty %}
+                     <p class="text-white">No hay categorías de productos terminados disponibles.</p>
                 {% endfor %}
             </div>
         </div>
 
         <div class="col-md-4 bg-primary border-start border-5 border-white" style="margin-left: 0px; padding: 20px; border-radius: 25px;">
+            <!-- Contenido de la columna derecha (Órdenes de Producción, etc.) -->
             <table class="table table-borderless text-white">
                 <thead>
                     <tr>
@@ -91,73 +104,68 @@
                 </thead>
                 <tbody class="bg-white text-dark">
                     <tr>
-                        <th colspan="2" class="text-white" style="background-color: #014BAC;">ID</th>
-                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Descripción</th>
-                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Cantidad</th>
+                        <th class="text-white" style="background-color: #014BAC;">ID</th>
+                        <th class="text-white" style="background-color: #014BAC;">Descripción</th>
+                        <th class="text-white" style="background-color: #014BAC;">Cantidad</th>
                     </tr>
                     <tr>
-                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;">1</td>
-                        <td colspan="2" class="text-white" style="background-color: #61B5FA;">Módulo LED D08 sin conductor para bombillas</td>
-                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;"><span>300</span></td>
+                        <td class="text-white text-center" style="background-color: #61B5FA;">1</td>
+                        <td class="text-white" style="background-color: #61B5FA;">Módulo LED D08</td>
+                        <td class="text-white text-center" style="background-color: #61B5FA;"><span>300</span></td>
                     </tr>
                     <tr>
-                        <td colspan="2" class="text-white text-center" style="background-color: #3E83E8;">2</td>
-                        <td colspan="2" class="text-white" style="background-color: #3E83E8;">Porta LED 50-2204CT</td>
-                        <td colspan="2" class="text-white text-center" style="background-color: #3E83E8;"><span>150</span></td>
+                        <td class="text-white text-center" style="background-color: #3E83E8;">2</td>
+                        <td class="text-white" style="background-color: #3E83E8;">Porta LED 50-2204CT</td>
+                        <td class="text-white text-center" style="background-color: #3E83E8;"><span>150</span></td>
+                    </tr>
+                     <tr>
+                        <td class="text-white text-center" style="background-color: #61B5FA;">3</td>
+                        <td class="text-white" style="background-color: #61B5FA;">Porta LED 50-200NCR</td>
+                        <td class="text-white text-center" style="background-color: #61B5FA;"><span>200</span></td>
                     </tr>
                     <tr>
-                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;">3</td>
-                        <td colspan="2" class="text-white" style="background-color: #61B5FA;">Porta LED 50-200NCR</td>
-                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;"><span>200</span></td>
-                    </tr>
-                    <tr>
-                        <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 90px;">
+                        <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 0px;"> <!-- Ajustado padding-left para centrar el botón -->
                             <a class="btn border-white text-primary text-white" style="background-color: #014BAC; width: 180px; height: 40px; border-radius: 15px;" href="{% url 'App_LUMINOVA:depo_seleccion' %}">Seleccionar</a>
                         </td>
-
                     </tr>
                 </tbody>
+                 <!-- Productos Terminados -->
                 <thead>
-                    <tr style="border-bottom: 3px solid white;">
-                        <td colspan="3" class="bg-primary text-center pt-3"></td>
-                    </tr>
-                    <tr>
-                        <th colspan="3" class="bg-primary text-white text-center" style="padding-left: 90px;"> <h4>Productos Terminados</h4></th>
+                    <tr style="border-top: 3px solid white;"> <!-- Separador visual -->
+                        <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;"><h4>Productos Terminados</h4></th>
                     </tr>
                 </thead>
                 <tbody class="bg-white text-dark">
                     <tr>
-                        <th colspan="2" class="text-white" style="background-color: #014BAC;" >ID</th>
-                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Descripción</th>
-                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Cantidad</th>
+                        <th class="text-white" style="background-color: #014BAC;">ID</th>
+                        <th class="text-white" style="background-color: #014BAC;">Descripción</th>
+                        <th class="text-white" style="background-color: #014BAC;">Cantidad</th>
                     </tr>
                     <tr>
-                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;">1</td>
-                        <td colspan="2" class="text-white" style="background-color: #61B5FA;">Lámpara de Pie</td>
-                        <td colspan="2" class="text-white text-center" style="background-color: #61B5FA;"><span>50</span></td>
+                        <td class="text-white text-center" style="background-color: #61B5FA;">1</td>
+                        <td class="text-white" style="background-color: #61B5FA;">Lámpara de Pie</td>
+                        <td class="text-white text-center" style="background-color: #61B5FA;"><span>50</span></td>
                     </tr>
-                    <tr>
-                        <td colspan="2" class="text-white text-center" style="background-color: #3E83E8;">2</td>
-                        <td colspan="2" class="text-white" style="background-color: #3E83E8;">Lámpara Colgante</td>
-                        <td colspan="2" class="text-white text-center" style="background-color: #3E83E8;"><span>70</span></td>
+                     <tr>
+                        <td class="text-white text-center" style="background-color: #3E83E8;">2</td>
+                        <td class="text-white" style="background-color: #3E83E8;">Lámpara Colgante</td>
+                        <td class="text-white text-center" style="background-color: #3E83E8;"><span>70</span></td>
                     </tr>
                 </tbody>
+                <!-- Stock en Falta -->
                 <thead>
-                    <tr style="border-bottom: 3px solid white;">
-                        <td colspan="3" class="bg-primary text-center pt-3"></td>
-                    </tr>
-                    <tr>
-                        <th colspan="3" class="bg-primary text-white text-center" style="padding-left: 90px;"><h4>Stock en Falta</h4></th>
+                    <tr style="border-top: 3px solid white;"> <!-- Separador visual -->
+                        <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;"><h4>Stock en Falta</h4></th>
                     </tr>
                 </thead>
                 <tbody class="bg-white text-dark">
                     <tr>
-                        <th colspan="2" class="text-white" style="background-color: #014BAC;">ID</th>
-                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Descripción</th>
-                        <th colspan="2" class="text-white" style="background-color: #014BAC;">Cantidad</th>
+                        <th class="text-white" style="background-color: #014BAC;">ID</th>
+                        <th class="text-white" style="background-color: #014BAC;">Descripción</th>
+                        <th class="text-white" style="background-color: #014BAC;">Cantidad</th>
                     </tr>
                     <tr>
-                        <td colspan="8" class="text-white text-center" style="background-color: #A19898;">No hay productos en falta actualmente.</td>
+                        <td colspan="3" class="text-white text-center" style="background-color: #A19898;">No hay productos en falta actualmente.</td>
                     </tr>
                 </tbody>
             </table>
@@ -169,20 +177,28 @@
             document.getElementById("insumos-content").style.display = "flex";
             document.getElementById("productos-content").style.display = "none";
             document.getElementById("insumos-tab").classList.add("active");
+            document.getElementById("insumos-tab").style.backgroundColor = "#014BAC"; 
             document.getElementById("productos-tab").classList.remove("active");
-
+            document.getElementById("productos-tab").style.backgroundColor = "#0d6efd"; 
         }
 
         function mostrarProductos() {
             document.getElementById("insumos-content").style.display = "none";
             document.getElementById("productos-content").style.display = "flex";
             document.getElementById("insumos-tab").classList.remove("active");
+            document.getElementById("insumos-tab").style.backgroundColor = "#0d6efd";
             document.getElementById("productos-tab").classList.add("active");
+            document.getElementById("productos-tab").style.backgroundColor = "#014BAC";
         }
 
-        // Mostrar insumos por defecto
-        mostrarInsumos();
+        document.addEventListener('DOMContentLoaded', function() {
+            mostrarInsumos();
+        });
     </script>
+    
+    <!-- Los modales se pueden mover a un archivo separado e incluirlos si son muy largos -->
+
+    
     <script src="{% static 'js/cards_deposito.js' %}"></script>
 
     <!-- Modal Modulos LED -->

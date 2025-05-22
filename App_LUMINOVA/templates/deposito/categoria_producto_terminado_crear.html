@@ -1,0 +1,57 @@
+{% extends 'padre.html' %}
+
+{% block title %}Crear Nueva Categoría de Producto Terminado{% endblock %}
+
+{% block sidebar_content %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end full-height" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <a href="{% url 'App_LUMINOVA:deposito' %}"><span style="color: white;">Depósito</span></a>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:insumo_create' %}">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Insumo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:producto_terminado_create' %}">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Producto Terminado</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:categoria_i_create' %}">
+                        <i class="bi bi-bookmark-plus-fill me-2"></i> <span class="ms-2">Agregar Categoría Insumo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center active"> {# Marcar como activo #}
+                        <i class="bi bi-bookmark-plus-fill me-2"></i> <span class="ms-2">Agregar Categoría Prod. Term.</span>
+                    </a>
+                </li>
+                 <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:deposito' %}">
+                        <i class="bi bi-arrow-left-circle-fill me-2"></i> <span class="ms-2">Volver a Depósito</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Crear Nueva Categoría de Producto Terminado</h2>
+    <hr>
+    <form method="post" enctype="multipart/form-data"> {# La action se infiere de la URL actual para CreateView #}
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Guardar Categoría</button>
+            <a href="{% url 'App_LUMINOVA:deposito' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

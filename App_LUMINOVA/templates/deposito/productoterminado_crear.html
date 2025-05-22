@@ -1,0 +1,141 @@
+{% extends 'padre.html' %}
+
+{% block title %}Agregar Nuevo Producto Terminado{% endblock %}
+
+{% block sidebar_content %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end full-height" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <a href="{% url 'App_LUMINOVA:deposito' %}"><span style="color: white;">Depósito</span></a>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:insumo_create' %}">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Insumo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center active"> {# Marcar como activo #}
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Producto Terminado</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:categoria_i_create' %}">
+                        <i class="bi bi-bookmark-plus-fill me-2"></i> <span class="ms-2">Agregar Categoría Insumo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:categoria_pt_create' %}">
+                        <i class="bi bi-bookmark-plus-fill me-2"></i> <span class="ms-2">Agregar Categoría Prod. Term.</span>
+                    </a>
+                </li>
+                 <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:deposito' %}">
+                        <i class="bi bi-arrow-left-circle-fill me-2"></i> <span class="ms-2">Volver a Depósito</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Agregar Nuevo Producto Terminado</h2>
+    <hr>
+    <form method="post" enctype="multipart/form-data"> {# La action se infiere de la URL actual para CreateView #}
+        {% csrf_token %}
+        
+        {# Renderizar campos individualmente para mejor control o usar {{ form.as_p }} #}
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.descripcion.id_for_label }}" class="form-label">{{ form.descripcion.label }}</label>
+                {{ form.descripcion }}
+                {% if form.descripcion.errors %}<div class="invalid-feedback d-block">{{ form.descripcion.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.categoria.id_for_label }}" class="form-label">{{ form.categoria.label }}</label>
+                {{ form.categoria }}
+                {% if form.categoria.errors %}<div class="invalid-feedback d-block">{{ form.categoria.errors }}</div>{% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="{{ form.precio_unitario.id_for_label }}" class="form-label">{{ form.precio_unitario.label }}</label>
+                {{ form.precio_unitario }}
+                {% if form.precio_unitario.errors %}<div class="invalid-feedback d-block">{{ form.precio_unitario.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="{{ form.stock.id_for_label }}" class="form-label">{{ form.stock.label }}</label>
+                {{ form.stock }}
+                {% if form.stock.errors %}<div class="invalid-feedback d-block">{{ form.stock.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="{{ form.modelo.id_for_label }}" class="form-label">{{ form.modelo.label }}</label>
+                {{ form.modelo }}
+                {% if form.modelo.errors %}<div class="invalid-feedback d-block">{{ form.modelo.errors }}</div>{% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label for="{{ form.potencia.id_for_label }}" class="form-label">{{ form.potencia.label }}</label>
+                {{ form.potencia }}
+                {% if form.potencia.errors %}<div class="invalid-feedback d-block">{{ form.potencia.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="{{ form.acabado.id_for_label }}" class="form-label">{{ form.acabado.label }}</label>
+                {{ form.acabado }}
+                {% if form.acabado.errors %}<div class="invalid-feedback d-block">{{ form.acabado.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="{{ form.color_luz.id_for_label }}" class="form-label">{{ form.color_luz.label }}</label>
+                {{ form.color_luz }}
+                {% if form.color_luz.errors %}<div class="invalid-feedback d-block">{{ form.color_luz.errors }}</div>{% endif %}
+            </div>
+        </div>
+         <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.material.id_for_label }}" class="form-label">{{ form.material.label }}</label>
+                {{ form.material }}
+                {% if form.material.errors %}<div class="invalid-feedback d-block">{{ form.material.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.imagen.id_for_label }}" class="form-label">{{ form.imagen.label }}</label>
+                {{ form.imagen }}
+                {% if form.imagen.errors %}<div class="invalid-feedback d-block">{{ form.imagen.errors }}</div>{% endif %}
+            </div>
+        </div>
+
+        {# Si prefieres la forma simple: {{ form.as_p }} #}
+
+        <div class="mt-3">
+            <button type="submit" class="btn btn-primary">Guardar Producto</button>
+            <a href="{% url 'App_LUMINOVA:deposito' %}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var form = document.querySelector('form'); // Selecciona el primer formulario de la página
+        if (form) {
+            var elements = form.elements;
+            for (var i = 0; i < elements.length; i++) {
+                var element = elements[i];
+                if (element.tagName === 'INPUT' && element.type !== 'checkbox' && element.type !== 'radio' && element.type !== 'file' && element.type !== 'hidden' && element.type !== 'submit' && element.type !== 'reset' && element.type !== 'button') {
+                    element.classList.add('form-control');
+                } else if (element.tagName === 'SELECT') {
+                    element.classList.add('form-select');
+                } else if (element.tagName === 'TEXTAREA') {
+                    element.classList.add('form-control');
+                } else if (element.tagName === 'INPUT' && element.type === 'file') {
+                    // Bootstrap 5 usa form-control para file inputs también.
+                    element.classList.add('form-control');
+                }
+            }
+        }
+    });
+</script>
+
+{% endblock %}

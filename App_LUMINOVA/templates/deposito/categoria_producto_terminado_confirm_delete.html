@@ -1,0 +1,61 @@
+{% extends 'padre.html' %}
+
+{% block title %}Confirmar Eliminación - {{ categoria.nombre }}{% endblock %} {# Asumiendo context_object_name = 'categoria' #}
+
+{% block sidebar_content %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end full-height" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <a href="{% url 'App_LUMINOVA:deposito' %}"><span style="color: white;">Depósito</span></a>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:categoria_pt_detail' categoria.pk %}">
+                        <i class="bi bi-eye-fill me-2"></i> <span class="ms-2">Ver Categoría</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:deposito' %}">
+                        <i class="bi bi-arrow-left-circle-fill me-2"></i> <span class="ms-2">Volver a Depósito</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Confirmar Eliminación</h4>
+                </div>
+                <div class="card-body">
+                    <p class="fs-5">¿Estás seguro de que deseas eliminar la categoría de producto terminado "<strong>{{ categoria.nombre }}</strong>"?</p>
+                    
+                    {# Verificar si la categoría tiene productos terminados asociados #}
+                    {# Asumiendo related_name='productos_terminados' en el modelo ProductoTerminado #}
+                    {% if categoria.productos_terminados.all %} 
+                        <div class="alert alert-warning" role="alert">
+                            <strong>¡Atención!</strong> Esta categoría contiene <strong>{{ categoria.productos_terminados.count }}</strong> producto(s) terminado(s).
+                            Eliminar la categoría podría afectar a estos productos (dependiendo de tu configuración `on_delete` en el modelo ProductoTerminado).
+                            Si `on_delete=models.CASCADE`, los productos terminados también serán eliminados.
+                        </div>
+                    {% endif %}
+
+                    <form action="{% url 'App_LUMINOVA:categoria_pt_delete' pk=categoria.pk %}" method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+                            <a href="{% url 'App_LUMINOVA:categoria_pt_detail' categoria.pk %}" class="btn btn-secondary me-md-2">Cancelar</a>
+                            <button type="submit" class="btn btn-danger">Sí, Eliminar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

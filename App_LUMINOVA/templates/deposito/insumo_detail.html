@@ -1,0 +1,98 @@
+{% extends 'padre.html' %}
+{% load static %}
+
+{% block title %}{{ categoria_I.nombre }} - Depósito Luminova{% endblock %}
+
+{% block sidebar_content %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end full-height" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <a href="{% url 'App_LUMINOVA:deposito' %}"><span style="color: white;">Depósito</span></a>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:insumo_create' %}">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Insumo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                     <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:categoria_i_edit' categoria_I.pk %}">
+                        <i class="bi bi-pencil-fill me-2"></i> <span class="ms-2">Editar Categoría</span>
+                    </a>
+                </li>
+                 <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:categoria_i_delete' categoria_I.pk %}">
+                        <i class="bi bi-trash-fill me-2"></i> <span class="ms-2">Eliminar Categoría</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+        <h1 class="h2">Categoría Insumo: {{ categoria_I.nombre }}</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{% url 'App_LUMINOVA:insumo_create' %}?categoria={{ categoria_I.id }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-plus-circle"></i> Agregar Insumo a esta Categoría
+            </a>
+        </div>
+    </div>
+
+    {% if categoria_I.imagen %}
+    <div class="mb-3 text-center">
+        <img src="{{ categoria_I.imagen.url }}" alt="{{ categoria_I.nombre }}" class="img-fluid rounded" style="max-height: 200px;">
+    </div>
+    {% endif %}
+
+    <h3 class="mt-4">Insumos en esta categoría:</h3>
+    {% if insumos_de_categoria %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Imagen</th>
+                        <th>Descripción</th>
+                        <th>Fabricante</th>
+                        <th>Precio Unitario</th>
+                        <th>Stock</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for insumo in insumos_de_categoria %}
+                    <tr>
+                        <td>{{ insumo.id }}</td>
+                        <td>
+                            {% if insumo.imagen %}
+                                <img src="{{ insumo.imagen.url }}" alt="{{ insumo.descripcion }}" style="width: 50px; height: 50px; object-fit: cover;">
+                            {% else %}
+                                <img src="{% static 'img/placeholder.png' %}" alt="No image" style="width: 50px; height: 50px; object-fit: cover;">
+                            {% endif %}
+                        </td>
+                        <td><a href="{% url 'App_LUMINOVA:insumo_detail' insumo.pk %}">{{ insumo.descripcion }}</a></td>
+                        <td>{{ insumo.fabricante }}</td>
+                        <td>${{ insumo.precio_unitario }}</td>
+                        <td>{{ insumo.stock }}</td>
+                        <td>
+                            <a href="{% url 'App_LUMINOVA:insumo_edit' insumo.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'App_LUMINOVA:insumo_delete' insumo.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>No hay insumos registrados en esta categoría.</p>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{% url 'App_LUMINOVA:deposito' %}" class="btn btn-secondary">Volver a Depósito</a>
+    </div>
+</div>
+{% endblock %}
