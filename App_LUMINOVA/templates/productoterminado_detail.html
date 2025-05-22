@@ -1,0 +1,44 @@
+{% extends 'padre.html' %}
+
+
+{% block sidebar_content %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end full-height" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <span>Depósito</span>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Agregar">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Artículo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Buscar">
+                        <i class="bi bi-search me-2"></i> <span class="ms-2">Buscar Artículo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Modificar">
+                        <i class="bi bi-pencil-square me-2"></i> <span class="ms-2">Modificar Artículo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Eliminar">
+                        <i class="bi bi-trash-fill me-2"></i> <span class="ms-2">Eliminar Artículo</span>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+    <h1>Vista en detalle del insumo</h1>
+
+    Descripción: {{producto_terminado.descripcion}}<br>
+    Stock: {{insumo.stock}}<br>
+{% endblock %}

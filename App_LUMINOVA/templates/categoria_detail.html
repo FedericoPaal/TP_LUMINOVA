@@ -1,0 +1,140 @@
+{% extends 'padre.html' %}
+
+
+{% block sidebar_content %}
+    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end full-height" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+        <div class="position-sticky pt-4">
+            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+                <span>Depósito</span>
+            </h6>
+            <hr class="text-white">
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:insumo_create' %}">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Insumo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:producto_terminado_create' %}">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Producto Terminado</span>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+    <h1>Vista de productos de la Categoria</h1>
+
+
+    <!-- {% for categoria in categorias %}
+        <table class="table bg-primary" style="border: black;">
+            <thead>
+                <th class="text-white text-center" style="background-color: #014BAC;" colspan="6">
+                    {{categoria.nombre}}
+                </th>
+            </thead>
+            <thead>
+        </table>
+    {% endfor %} -->
+
+    <table class="table bg-primary" style="border: black;">
+    <thead>
+        <th class="text-white text-center" style="background-color: #014BAC;" colspan="7">
+            Modulos LED
+        </th>
+    </thead>
+    <thead>
+        <tr>
+            <th scope="col" class="text-center" style="background-color: #808080;"></th>
+            <th scope="col" class="text-center" style="background-color: #808080;">Imagen</th>
+            <th scope="col" class="text-center" style="background-color: #808080;">ID</th>
+            <th scope="col" style="background-color: #808080;">Nombre</th>
+            <th scope="col" class="text-center" style="background-color: #808080;">Proveedor</th>
+            <th scope="col" class="text-center" style="background-color: #808080;">Cantidad</th>
+            <th scope="col" class="text-center" style="background-color: #808080;">Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <th scope="row" style="padding-top: 25px; padding-left: 20px;">
+                <div style="width: 18px; height: 18px; background-color: red; border-radius: 4px; display: inline-block;"></div>
+            </th>
+            <td class="text-center"><img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" alt="Modulo LED" style="height: 50px;"></td>
+            <td class="text-center" style="padding-top: 20px;">1</td>
+            <td style="padding-top: 20px;">Módulo LED, OSCONIQ S 5050 Series, Board + LED, Horti Blanco, 253 lm</td>
+            <td class="text-center" style="padding-top: 20px;">Newark</td>
+            <td class="text-center" style="padding-top: 20px;">600</td>
+            <td class="text-center" style="padding-top: 20px;">
+                <a href=""><i class="bi bi-pencil-fill" style="padding-right: 15px;"></i></a>
+                <a href=""><i class="bi bi-trash3-fill"></i></a>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row" style="background-color: #C0B9B9; padding-top: 25px; padding-left: 20px;">
+                <div style="width: 18px; height: 18px; background-color: yellow; border-radius: 4px; display: inline-block;"></div>
+            </th>
+            <td class="text-center" style="background-color: #C0B9B9;"><img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" alt="Modulo LED" style="height: 50px;"></td>
+            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">2</td>
+            <td style="background-color: #C0B9B9; padding-top: 20px;">Módulo LED DOB sin conductor para bombillas</td>
+            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">Alibaba</td>
+            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">500</td>
+            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">
+                <a href=""><i class="bi bi-pencil-fill" style="padding-right: 15px;"></i></a>
+                <a href=""><i class="bi bi-trash3-fill"></i></a>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row" style="padding-top: 25px; padding-left: 20px; border-color: black;">
+                <div style="width: 18px; height: 18px; background-color: yellow; border-radius: 4px; display: inline-block;"></div>
+            </th>
+            <td class="text-center"><img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" alt="Modulo LED" style="height: 50px;"></td>
+            <td class="text-center" style="padding-top: 20px;">3</td>
+            <td style="padding-top: 20px;">Módulo LED BXRC-30E10K0-B-73-SE</td>
+            <td class="text-center" style="padding-top: 20px;">BridgeLux</td>
+            <td class="text-center" style="padding-top: 20px;">380</td>
+            <td class="text-center" style="padding-top: 20px;">
+                <a href=""><i class="bi bi-pencil-fill" style="padding-right: 15px;"></i></a>
+                <a href=""><i class="bi bi-trash3-fill"></i></a>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row" style="background-color: #C0B9B9; padding-top: 25px; padding-left: 20px;">
+                <div style="width: 18px; height: 18px; background-color: green; border-radius: 4px; display: inline-block;"></div>
+            </th>
+            <td class="text-center" style="background-color: #C0B9B9;"><img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" alt="Modulo LED" style="height: 50px;"></td>
+            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">2</td>
+            <td style="background-color: #C0B9B9; padding-top: 20px;">Módulo LED DOB sin conductor para bombillas</td>
+            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">Alibaba</td>
+            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">500</td>
+            <td class="text-center" style="background-color: #C0B9B9; padding-top: 20px;">
+                <a href=""><i class="bi bi-pencil-fill" style="padding-right: 15px;"></i></a>
+                <a href=""><i class="bi bi-trash3-fill"></i></a>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<div class="mt-3">
+    <div style="display: flex; justify-content: center; align-items: center; gap: 30px;">
+        <strong class="d-block text-center mb-2">Estados de Stock:</strong>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <div style="width: 18px; height: 18px; background-color: green; border-radius: 4px;"></div>
+            <span style="color: #222;">De 30.000 en adelante </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <div style="width: 18px; height: 18px; background-color: yellow; border-radius: 4px;"></div>
+            <span style="color: #222;">Entre 15.000 hasta 30.000 </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <div style="width: 18px; height: 18px; background-color: red; border-radius: 4px; border: 1px solid #ccc;"></div>
+            <span style="color: #222;">De 15.000 para abajo </span>
+        </div>
+    </div>
+</div>
+
+
+
+{% endblock %}

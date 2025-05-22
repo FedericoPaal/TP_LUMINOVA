@@ -58,4 +58,25 @@ urlpatterns = [
 #  Paths para el boton Seleccionar de la tabla de OP// los botones del sidebar de Deposito
     path('depo-seleccion/', depo_seleccion, name='depo_seleccion'),
     path('depo-enviar/', depo_enviar, name='depo_enviar'),
+
+    path('categorias/', CategoriaListView.as_view(), name='categoria_list'),
+    path('categorias/<pk>', CategoriaDetailView.as_view(), name='categoria_detail'),
+    path('categorias/nuevo/', CategoriaCreateView.as_view(), name='categoria_create'),
+    path('categorias/editar/<pk>', CategoriaUpdateView.as_view(), name='categoria_edit'),
+    path('categorias/eliminar/<pk>', CategoriaDeleteView.as_view(), name='categoria_delete'),
+
+    path('insumos/', InsumosListView.as_view(), name='insumos_list'),
+    path('insumos/<pk>', InsumoDetailView.as_view(), name='insumo_detail'),
+    path('insumos/nuevo/', InsumoCreateView.as_view(), name='insumo_create'),
+    path('insumos/editar/<pk>', InsumoUpdateView.as_view(), name='insumo_edit'),
+    path('insumos/eliminar/<pk>', InsumoDeleteView.as_view(), name='insumo_delete'),
+
+    path('productosterminados/',ProductoTerminadosListView.as_view(), name='productos_terminados_list'),
+    path('productosterminados/<pk>', ProductoTerminadoDetailView.as_view(), name='producto_terminado_detail'),
+    path('productosterminados/nuevo/', ProductoTerminadoCreateView.as_view(), name='producto_terminado_create'),
+    path('productosterminados/editar/<pk>', ProductoTerminadoUpdateView.as_view(), name='producto_terminado_edit'),
+    path('productosterminados/eliminar/<pk>', ProductoTerminadoDeleteView.as_view(), name='producto_terminado_delete'),
+
+    path('categoria-detalle/', categoria_detail, name='categoria_detalle')
+
 ]

@@ -13,23 +13,13 @@
             <hr class="text-white">
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Agregar">
-                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Artículo</span>
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:insumo_create' %}">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Insumo</span>
                     </a>
                 </li>
                 <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Buscar">
-                        <i class="bi bi-search me-2"></i> <span class="ms-2">Buscar Artículo</span>
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Modificar">
-                        <i class="bi bi-pencil-square me-2"></i> <span class="ms-2">Modificar Artículo</span>
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Eliminar">
-                        <i class="bi bi-trash-fill me-2"></i> <span class="ms-2">Eliminar Artículo</span>
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:producto_terminado_create' %}">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Producto Terminado</span>
                     </a>
                 </li>
 
@@ -51,148 +41,47 @@
 
         <div class="col-md-8 bg-primary" style="padding-top: 20px; padding-bottom: 20px;">
             <div id="insumos-content" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <a href="" class="text-decoration-none text-dark" data-bs-toggle="modal" data-bs-target="#exampleModal1">
-                            <img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" class="card-img-top object-fit-contain" alt="Modulo LED" style="height: 150px;">
-                            <div class="card-body">
-                                <h5 class="card-title">Modulo LED</h5>
+                {% for categoria in categorias %}
+
+                    {% if categoria.tipo == "Insumo" %}
+                        <div class="col">
+                            <div class="card shadow-sm">
+                                <a href="{% url 'App_LUMINOVA:categoria_detalle' %}" class="text-decoration-none text-dark">
+                                    <img src="{{categoria.imagen.url}}" class="card-img-top object-fit-contain" alt="Modulo LED" style="height: 150px;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{categoria.nombre}}</h5>
+                                    </div>
+                                </a>
                             </div>
-                        </a>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRCvFSyuHD_M3NaiP-jTb8VxxqjcQVh5G0IToauM86eCRKJJqltJsdECZW0AEEWNT3yMf0&usqp=CAU" class="card-img-top object-fit-contain" alt="Porta LED Cab" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Porta LED Cab</h5>
                         </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://res.cloudinary.com/rsc/image/upload/bo_1.5px_solid_white,b_auto,c_pad,dpr_2,f_auto,h_399,q_auto,w_710/c_pad,h_399,w_710/R8805418-01?pgw=1" class="card-img-top object-fit-contain" alt="CLS Driver LED" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">CLS Driver LED</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://mm.digikey.com/Volume0/opasdata/d220001/derivates/6/003/229/104/MFG_SK%2520570%252010%2520SA_web%28640x640%29.jpg" class="card-img-top object-fit-contain" alt="Disipadores de Calor" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Disipadores de Calor</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://uy.mouser.com/images/ledengin/images/LZ4_Lens_SPL.jpg" class="card-img-top object-fit-contain" alt="Lentes para Iluminación LED" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Lentes para Iluminación LED</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://www.omo-ic.com/2019/big/9b/2a/f7bf6b5a9c3f.jpg" class="card-img-top object-fit-contain" alt="Reflectores LED" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Reflectores LED</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://ae-pic-a1.aliexpress-media.com/kf/S8990192b5c144a12b42729f4f31180e29.jpg_480x480q75.jpg_.webp" class="card-img-top object-fit-contain" alt="Cables para Conexión" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Cables para Conexión</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://media.distributordatasolutions.com/wago/2022q2/images/large/d728e3383170956b5128feb551fc30bea9677e96-large.png" class="card-img-top object-fit-contain" alt="Conectores para Iluminación" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Conectores para Iluminación</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://cdn2.bigcommerce.com/server1800/9a7cf/products/412/images/1207/l_264057__18218.1360904196.350.350.jpg?c=2" class="card-img-top object-fit-contain" alt="Conectores y Módulos Alumbrado Público" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Conectores y Módulos Alumbrado Público</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://www.newark.com/productimages/promo/en_US/5100733.jpg" class="card-img-top object-fit-contain" alt="Fuentes de Alimentación" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Fuentes de Alimentación</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://www.newark.com/productimages/promo/en_US/19P2475-40.jpg" class="card-img-top object-fit-contain" alt="Iluminación LED en Tiras y Cintas" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Iluminación LED en Tiras y Cintas</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://www.newark.com/productimages/promo/en_US/44Y3071-40.jpg" class="card-img-top object-fit-contain" alt="Led Cob" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Led Cob</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://www.newark.com/productimages/promo/en_US/4607113.jpg" class="card-img-top object-fit-contain" alt="Lentes de Alto Brillo" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Lentes de Alto Brillo</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://www.newark.com/productimages/promo/en_GB/4229262-40.jpg" class="card-img-top object-fit-contain" alt="Sistema de Control de Iluminación LED" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Sistema de Control de Iluminación LED</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="col">
-                    <div class="card shadow-sm">
-                        <img src="https://www.newark.com/productimages/promo/en_US/43Y4627-40.jpg" class="card-img-top object-fit-contain" alt="Soporte para Matriz LED" style="height: 150px;">
-                        <div class="card-body">
-                            <h5 class="card-title">Soporte para Matriz LED</h5>
-                        </div>
-                    </div>
-                </div>
+
+                    {% endif %}
+
+                {% endfor %}
             </div>
+
+
             <div id="productos-content" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4" style="display: none;">
-            <div class="col">
-                <div class="card shadow-sm">
-                    <img src="https://www.newark.com/productimages/promo/en_US/56AJ9853-40.jpg" class="card-img-top object-fit-contain" alt="Modulo LED" style="height: 150px;">
-                    <div class="card-body">
-                        <h5 class="card-title">Producto Terminado 1</h5>
-                    </div>
-                </div>
-            </div>
-            <div class="col">
-                <div class="card shadow-sm">
-                    <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRCvFSyuHD_M3NaiP-jTb8VxxqjcQVh5G0IToauM86eCRKJJqltJsdECZW0AEEWNT3yMf0&usqp=CAU" class="card-img-top object-fit-contain" alt="Porta LED Cab" style="height: 150px;">
-                    <div class="card-body">
-                        <h5 class="card-title">Producto Terminado 2</h5>
-                    </div>
-                </div>
+                {% for categoria in categorias %}
+
+                    {% if categoria.tipo == "Producto Terminado" %}
+                        <div class="col">
+                            <div class="card shadow-sm">
+                                <a href="#" class="text-decoration-none text-dark">
+                                    <img src="{{categoria.imagen.url}}" class="card-img-top object-fit-contain" alt="Producto Terminado" style="height: 150px;">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{categoria.nombre}}</h5>
+                                    </div>
+                                </a>
+                            </div>
+                        </div>
+
+                    {% endif %}
+
+                {% endfor %}
             </div>
         </div>
-        </div>
+
         <div class="col-md-4 bg-primary border-start border-5 border-white" style="margin-left: 0px; padding: 20px; border-radius: 25px;">
             <table class="table table-borderless text-white">
                 <thead>

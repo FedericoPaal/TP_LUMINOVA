@@ -7,6 +7,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from .models import *
 from django.contrib import messages
+from django.views.generic import ListView
+from django.views.generic.detail import DetailView
+from django.views.generic.edit import CreateView, UpdateView, DeleteView
 
 # Create your views here.
 
@@ -21,7 +24,14 @@ def ventas(req):
     return render(req, "ventas.html")
 
 def deposito(req):
-    return render(req, "deposito.html")
+    categorias = Categoria.objects.all()
+    insumos = Insumo.objects.all()
+    productos_terminados = ProductoTerminado.objects.all()
+    return render(req, 'deposito.html', {
+    'categorias': categorias,
+    'insumos': insumos,
+    'productos_terminados': productos_terminados
+})
 
 def control_calidad(req):
     return render(req, "control_calidad.html")
@@ -186,4 +196,100 @@ def depo_seleccion(request):
 def depo_enviar(request):
     return render(request, 'depo_enviar.html')
 
+def categoria_detail(req):
+    categorias = Categoria.objects.all()
+    insumos = Insumo.objects.all()
+    productos_terminados = ProductoTerminado.objects.all()
+    return render(req, 'categoria_detail.html', {
+    'categorias': categorias,
+    'insumos': insumos,
+    'productos_terminados': productos_terminados
+})
 
+#TODAS LAS LISTVIEW NO TIENEN FUNCION PARA NADA, CREO
+
+# Funciones para el CRUD de Categorias
+class CategoriaListView(ListView):
+    model = Categoria
+    template_name = 'deposito.html'
+    context_object_name = 'categorias'
+
+class CategoriaDetailView(DetailView):
+    model = Categoria
+    template_name = 'categoria_detail.html'
+    context_object_name = 'categoria'
+
+class CategoriaCreateView(CreateView):
+    model = Categoria
+    template_name = 'categoria_crear.html'
+    fields = ('__all__')
+    success_url = '/categorias/' #/deposito/ ????
+
+class CategoriaUpdateView(UpdateView):
+    model = Categoria
+    template_name = 'categoria_editar.html'
+    fields = ('__all__')
+    success_url = '/categorias/' #/deposito/ ????
+
+class CategoriaDeleteView(DeleteView):
+    model = Categoria
+    template_name = 'categoria_confirm_delete.html'
+    success_url = '/categorias/' #/deposito/ ????
+
+
+# Funciones para el CRUD de Insumos
+class InsumosListView(ListView):
+    model = Insumo
+    template_name = 'deposito.html'
+    context_object_name = 'insumos'
+
+class InsumoDetailView(DetailView):
+    model = Insumo
+    template_name = 'insumo_detail.html'
+    context_object_name = 'insumo'
+
+class InsumoCreateView(CreateView):
+    model = Insumo
+    template_name = 'insumo_crear.html'
+    fields = ('__all__')
+    success_url = '/insumos/' #/deposito/ ????
+
+class InsumoUpdateView(UpdateView):
+    model = Insumo
+    template_name = 'insumo_editar.html'
+    fields = ('__all__')
+    success_url = '/insumos/' #/deposito/ ????
+
+class InsumoDeleteView(DeleteView):
+    model = Insumo
+    template_name = 'insumo_confirm_delete.html'
+    success_url = '/insumos/' #/deposito/ ????
+
+
+# Funciones para el CRUD de Productos Terminados
+class ProductoTerminadosListView(ListView):
+    model = ProductoTerminado
+    template_name = 'deposito.html'
+    context_object_name = 'productos_terminados'
+
+class ProductoTerminadoDetailView(DetailView):
+    model = ProductoTerminado
+    template_name = 'productoterminado_detail.html'
+    context_object_name = 'producto_terminado'
+
+class ProductoTerminadoCreateView(CreateView):
+    model = ProductoTerminado
+    template_name = 'productoterminado_crear.html'
+    fields = ('__all__')
+    success_url = '/productosterminados/' #/deposito/ ????
+
+class ProductoTerminadoUpdateView(UpdateView):
+    model = ProductoTerminado
+    template_name = 'productoterminado_editar.html'
+    fields = ('__all__')
+    success_url = '/productosterminados/' #/deposito/ ????
+
+class ProductoTerminadoDeleteView(DeleteView):
+    model = ProductoTerminado
+    template_name = 'productoterminado_confirm_delete.html'
+    success_url = '/productosterminados/' #/deposito/ ????

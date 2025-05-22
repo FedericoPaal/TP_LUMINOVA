@@ -2,9 +2,17 @@ from django.db import models
 from django.contrib.auth.models import User
 
 # Create your models here.
+class Categoria(models.Model):
+    nombre = models.CharField(max_length=50)
+    tipo = models.CharField(max_length=50, default='Insumo')
+    imagen = models.ImageField(null=True, blank=True, upload_to='categorias')
+
+    def __str__(self):
+        return self.nombre
+
 class ProductoTerminado(models.Model):
     descripcion = models.CharField(max_length=100)
-    categoria = models.CharField(max_length=50)
+    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE, related_name='productos_terminados')
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.IntegerField()
     modelo = models.CharField(max_length=50)
@@ -12,18 +20,18 @@ class ProductoTerminado(models.Model):
     acabado = models.CharField(max_length=50)
     color_luz = models.CharField(max_length=50)
     material = models.CharField(max_length=50)
-    imagen = models.ImageField(null=True, blank=True)
+    imagen = models.ImageField(null=True, blank=True, upload_to='productos_terminados')
 
     def __str__(self):
         return self.descripcion
 
 class Insumo(models.Model):
     descripcion = models.CharField(max_length=100)
-    categoria = models.CharField(max_length=50)
+    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE, related_name='insumos')
     fabricante = models.CharField(max_length=60)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     tiempo_entrega = models.IntegerField() # Tiempo de entrega en días
-    imagen = models.ImageField(null=True, blank=True)
+    imagen = models.ImageField(null=True, blank=True, upload_to='insumos')
     proveedor = models.CharField(max_length=60)
     stock = models.IntegerField()
 
@@ -45,14 +53,6 @@ class Orden(models.Model):
 
     def __str__(self):
         return f"{self.numero_orden} - {self.get_tipo_display()}"
-
-class Usuario(models.Model):
-    nombre = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
-    rol = models.CharField(max_length=50)
-
-    def __str__(self):
-        return self.nombre
 
 class Proveedor(models.Model):
     nombre = models.CharField(max_length=100)
