@@ -59,11 +59,17 @@ urlpatterns = [
     path('depo-seleccion/', depo_seleccion, name='depo_seleccion'),
     path('depo-enviar/', depo_enviar, name='depo_enviar'),
 
-    path('categorias/', CategoriaListView.as_view(), name='categoria_list'),
-    path('categorias/<pk>', CategoriaDetailView.as_view(), name='categoria_detail'),
-    path('categorias/nuevo/', CategoriaCreateView.as_view(), name='categoria_create'),
-    path('categorias/editar/<pk>', CategoriaUpdateView.as_view(), name='categoria_edit'),
-    path('categorias/eliminar/<pk>', CategoriaDeleteView.as_view(), name='categoria_delete'),
+    path('categorias_i/', Categoria_IListView.as_view(), name='categoria_i_list'),
+    path('categorias_i/<pk>', Categoria_IDetailView.as_view(), name='categoria_i_detail'),
+    path('categorias_i/nuevo/', Categoria_ICreateView.as_view(), name='categoria_i_create'),
+    path('categorias_i/editar/<pk>', Categoria_IUpdateView.as_view(), name='categoria_i_edit'),
+    path('categorias_i/eliminar/<pk>', Categoria_IDeleteView.as_view(), name='categoria_i_delete'),
+
+    path('categorias_pt/', Categoria_PTListView.as_view(), name='categoria_pt_list'),
+    path('categorias_pt/<pk>', Categoria_PTDetailView.as_view(), name='categoria_pt_detail'),
+    path('categorias_pt/nuevo/', Categoria_PTCreateView.as_view(), name='categoria_pt_create'),
+    path('categorias_pt/editar/<pk>', Categoria_PTUpdateView.as_view(), name='categoria_pt_edit'),
+    path('categorias_pt/eliminar/<pk>', Categoria_PTDeleteView.as_view(), name='categoria_pt_delete'),
 
     path('insumos/', InsumosListView.as_view(), name='insumos_list'),
     path('insumos/<pk>', InsumoDetailView.as_view(), name='insumo_detail'),

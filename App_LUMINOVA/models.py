@@ -2,17 +2,20 @@ from django.db import models
 from django.contrib.auth.models import User
 
 # Create your models here.
-class Categoria(models.Model):
-    nombre = models.CharField(max_length=50)
-    tipo = models.CharField(max_length=50, default='Insumo')
-    imagen = models.ImageField(null=True, blank=True, upload_to='categorias')
+class CategoriaProductoTerminado(models.Model):
+    nombre = models.CharField(max_length=50, unique=True)
+    imagen = models.ImageField(upload_to='categorias_productos/', null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Categoría de Producto Terminado"
+        verbose_name_plural = "Categorías de Productos Terminados"
 
     def __str__(self):
         return self.nombre
 
 class ProductoTerminado(models.Model):
     descripcion = models.CharField(max_length=100)
-    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE, related_name='productos_terminados')
+    categoria = models.ForeignKey(CategoriaProductoTerminado, on_delete=models.CASCADE, related_name='productos_terminados')
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     stock = models.IntegerField()
     modelo = models.CharField(max_length=50)
@@ -25,9 +28,20 @@ class ProductoTerminado(models.Model):
     def __str__(self):
         return self.descripcion
 
+class CategoriaInsumo(models.Model):
+    nombre = models.CharField(max_length=50, unique=True)
+    imagen = models.ImageField(upload_to='categorias_insumos/', null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Categoría de Insumo"
+        verbose_name_plural = "Categorías de Insumos"
+
+    def __str__(self):
+        return self.nombre
+
 class Insumo(models.Model):
     descripcion = models.CharField(max_length=100)
-    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE, related_name='insumos')
+    categoria = models.ForeignKey(CategoriaInsumo, on_delete=models.CASCADE, related_name='insumos')
     fabricante = models.CharField(max_length=60)
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     tiempo_entrega = models.IntegerField() # Tiempo de entrega en días

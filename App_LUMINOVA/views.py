@@ -24,11 +24,13 @@ def ventas(req):
     return render(req, "ventas.html")
 
 def deposito(req):
-    categorias = Categoria.objects.all()
+    categorias_I = CategoriaInsumo.objects.all()
+    categorias_PT = CategoriaProductoTerminado.objects.all()
     insumos = Insumo.objects.all()
     productos_terminados = ProductoTerminado.objects.all()
     return render(req, 'deposito.html', {
-    'categorias': categorias,
+    'categorias_I': categorias_I,
+    'categorias_PT': categorias_PT,
     'insumos': insumos,
     'productos_terminados': productos_terminados
 })
@@ -197,11 +199,13 @@ def depo_enviar(request):
     return render(request, 'depo_enviar.html')
 
 def categoria_detail(req):
-    categorias = Categoria.objects.all()
+    categorias_I = CategoriaInsumo.objects.all()
+    categorias_PT = CategoriaProductoTerminado.objects.all()
     insumos = Insumo.objects.all()
     productos_terminados = ProductoTerminado.objects.all()
     return render(req, 'categoria_detail.html', {
-    'categorias': categorias,
+    'categorias_I': categorias_I,
+    'categorias_PT': categorias_PT,
     'insumos': insumos,
     'productos_terminados': productos_terminados
 })
@@ -209,30 +213,59 @@ def categoria_detail(req):
 #TODAS LAS LISTVIEW NO TIENEN FUNCION PARA NADA, CREO
 
 # Funciones para el CRUD de Categorias
-class CategoriaListView(ListView):
-    model = Categoria
+class Categoria_PTListView(ListView):
+    model = CategoriaProductoTerminado
     template_name = 'deposito.html'
     context_object_name = 'categorias'
 
-class CategoriaDetailView(DetailView):
-    model = Categoria
+class Categoria_PTDetailView(DetailView):
+    model = CategoriaProductoTerminado
     template_name = 'categoria_detail.html'
     context_object_name = 'categoria'
 
-class CategoriaCreateView(CreateView):
-    model = Categoria
+class Categoria_PTCreateView(CreateView):
+    model = CategoriaProductoTerminado
     template_name = 'categoria_crear.html'
     fields = ('__all__')
     success_url = '/categorias/' #/deposito/ ????
 
-class CategoriaUpdateView(UpdateView):
-    model = Categoria
+class Categoria_PTUpdateView(UpdateView):
+    model = CategoriaProductoTerminado
     template_name = 'categoria_editar.html'
     fields = ('__all__')
     success_url = '/categorias/' #/deposito/ ????
 
-class CategoriaDeleteView(DeleteView):
-    model = Categoria
+class Categoria_PTDeleteView(DeleteView):
+    model = CategoriaProductoTerminado
+    template_name = 'categoria_confirm_delete.html'
+    success_url = '/categorias/' #/deposito/ ????
+
+
+
+class Categoria_IListView(ListView):
+    model = CategoriaInsumo
+    template_name = 'deposito.html'
+    context_object_name = 'categorias'
+
+class Categoria_IDetailView(DetailView):
+    model = CategoriaInsumo
+    template_name = 'categoria_detail.html'
+    context_object_name = 'categoria'
+
+class Categoria_ICreateView(CreateView):
+    model = CategoriaInsumo
+    template_name = 'categoria_crear.html'
+    fields = ('__all__')
+    success_url = '/categorias/' #/deposito/ ????
+
+class Categoria_IUpdateView(UpdateView):
+    model = CategoriaInsumo
+    template_name = 'categoria_editar.html'
+    fields = ('__all__')
+    success_url = '/categorias/' #/deposito/ ????
+
+class Categoria_IDeleteView(DeleteView):
+    model = CategoriaInsumo
     template_name = 'categoria_confirm_delete.html'
     success_url = '/categorias/' #/deposito/ ????
 
