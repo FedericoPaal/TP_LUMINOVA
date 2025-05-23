@@ -22,7 +22,7 @@
             {% block sidebar_content %}
                 {% include 'shared/sidebar.html' %}
             {% endblock %}
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4"> 
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
                 {% bootstrap_messages %} <!-- Para mostrar mensajes de Django (success, error, etc.) -->
                 {% block content %}{% endblock %}
             </main>

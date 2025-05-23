@@ -42,16 +42,23 @@
     {# Columna Izquierda - Detalle de Insumos de la Categoría (como en la respuesta anterior) #}
     <div class="col-lg-12 col-md-7 col-12">
         {% if insumos_de_categoria %}
-            <div class="table-responsive rounded" style="background-color: #0d6efd;">
+            <div class="table-responsive rounded">
                 <table class="table mb-0">
                     <thead style="background-color: #014BAC;">
-                        
+                        <tr>
+                            <th colspan="8" class="text-white text-center py-3" style="background-color: #014BAC;">
+                                <div class="d-flex justify-content-center align-items-center">
+
+                                    <h3 class="mb-0">{{ categoria_I.nombre }}</h3>
+                                </div>
+                            </th>
                         </tr>
                         <tr>
                             <th scope="col" class="text-center text-white" style="background-color: #808080; width: 5%; vertical-align: middle;"></th>
                             <th scope="col" class="text-center text-white" style="background-color: #808080; width: 10%; vertical-align: middle;">Imagen</th>
                             <th scope="col" class="text-center text-white" style="background-color: #808080; width: 5%; vertical-align: middle;">ID</th>
                             <th scope="col" class="text-white" style="background-color: #808080; width: 35%; vertical-align: middle;">Descripción</th>
+                            <th scope="col" class="text-center text-white" style="background-color: #808080; width: 15%; vertical-align: middle;">Fabricante</th>
                             <th scope="col" class="text-center text-white" style="background-color: #808080; width: 15%; vertical-align: middle;">Proveedor</th>
                             <th scope="col" class="text-center text-white" style="background-color: #808080; width: 10%; vertical-align: middle;">Cantidad</th>
                             <th scope="col" class="text-center text-white" style="background-color: #808080; width: 20%; vertical-align: middle;">Acciones</th>
@@ -79,11 +86,12 @@
                             <td class="text-center align-middle">{{ insumo.id }}</td>
                             <td class="align-middle">
                                 {% if insumo.descripcion %}
-                                    <span class="text-truncate" style="max-width: 200px;">{{ insumo.descripcion }}</span>
+                                    <span class="text-truncate">{{ insumo.descripcion }}</span>
                                 {% else %}
-                                    <span class="text-truncate" style="max-width: 200px;">N/A</span>
+                                    <span class="text-truncate">N/A</span>
                                 {% endif %}
                             </td>
+                            <td class="text-center align-middle">{{ insumo.fabricante|default:"N/A" }}</td>
                             <td class="text-center align-middle">{{ insumo.proveedor|default:"N/A" }}</td>
                             <td class="text-center align-middle">{{ insumo.stock }}</td>
                             <td class="text-center align-middle">
@@ -115,6 +123,6 @@
                 No hay insumos registrados en la categoría "{{categoria_I.nombre}}". Puedes <a href="{% url 'App_LUMINOVA:insumo_create' %}?categoria={{ categoria_I.id }}" class="alert-link">agregar uno nuevo</a>.
         {% endif %}
     </div>
-    
+
 </div>
 {% endblock %}

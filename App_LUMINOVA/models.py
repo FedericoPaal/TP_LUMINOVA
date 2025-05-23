@@ -52,21 +52,41 @@ class Insumo(models.Model):
     def __str__(self):
         return f"{self.descripcion}"
 
-class Orden(models.Model):
-    TIPO_ORDEN_CHOICES = [
-        ('produccion', 'Orden de Producción'),
-        ('compra', 'Orden de Compra'),
-        ('venta', 'Orden de Venta'),
-    ]
-
-    numero_orden = models.CharField(max_length=20)
-    fecha = models.DateField()
-    cliente = models.CharField(max_length=100)
-    total = models.DecimalField(max_digits=10, decimal_places=2)
-    tipo = models.CharField(max_length=20, choices=TIPO_ORDEN_CHOICES)
+class EstadoOrden(models.Model):
+    estado_orden = models.CharField()
 
     def __str__(self):
-        return f"{self.numero_orden} - {self.get_tipo_display()}"
+        return f"{self.estado_orden}"
+
+class SectorAsignado(models.Model):
+    sector = models.CharField()
+
+    def __str__(self):
+        return f"{self.sector}"
+
+class OrdenProduccion(models.Model):
+    numero_orden = models.CharField(max_length=20)
+    nombre_categoria = models.ForeignKey(CategoriaProductoTerminado, on_delete=models.CASCADE, related_name='categoria_productos_terminados')
+    nombre_prod = models.ForeignKey(ProductoTerminado, on_delete=models.CASCADE, related_name='productos_terminados')
+    insumos_req = models.ForeignKey(Insumo, on_delete=models.CASCADE, related_name='insumos')
+    cantidad_prod = models.IntegerField()
+    cliente = models.CharField(max_length=100)
+    estado = models.ForeignKey(EstadoOrden, on_delete=models.CASCADE, related_name='estado')
+
+    fecha_inicio = models.DateField()
+    sector_asignado = models.ForeignKey(SectorAsignado, on_delete=models.CASCADE, related_name='sector_asignado')
+
+    def __str__(self):
+        return f"{self.numero_orden}"
+
+class Reportes(models.Model):
+    n_reporte = models.IntegerField()
+    fecha = models.DateField()
+    tipo_problema = models.CharField()
+    informe_reporte = models.CharField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.n_reporte}"
 
 class Proveedor(models.Model):
     nombre = models.CharField(max_length=100)

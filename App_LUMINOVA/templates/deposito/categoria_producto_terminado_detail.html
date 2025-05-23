@@ -44,28 +44,28 @@
             <h1 class="h2">Categoría: {{ categoria_PT.nombre }}</h1>
         </div>
 
-        
 
-        <h4 class="mt-4">Productos Terminados:</h4>
         {% if productos_de_categoria %}
-            <div class="table-responsive rounded" style="background-color: #0d6efd;">
+            <div class="table-responsive rounded">
                 <table class="table mb-0">
-                    <thead style="background-color: #014BAC;">
+                    <thead>
                         <tr>
-                            <th colspan="8" class="text-white text-center py-3">
+                            <th colspan="10" class="text-white text-center py-3" style="background-color: #014BAC;">
                                 <div class="d-flex justify-content-center align-items-center">
-                                    
+
                                     <h3 class="mb-0">{{ categoria_PT.nombre }}</h3>
                                 </div>
                             </th>
                         </tr>
                         <tr>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Stock</th>
+                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;"></th>
                             <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Imagen</th>
                             <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">ID</th>
                             <th scope="col" class="text-white" style="background-color: #808080; vertical-align: middle;">Descripción</th>
                             <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Modelo</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Precio</th>
+                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Potencia</th>
+                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Color de Luz</th>
+                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Material</th>
                             <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Cantidad</th>
                             <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Acciones</th>
                         </tr>
@@ -98,7 +98,9 @@
                                 {% endif %}
                             </td>
                             <td class="text-center align-middle">{{ producto.modelo|default:"N/A" }}</td>
-                            <td class="text-center align-middle">${{ producto.precio_unitario|floatformat:2 }}</td>
+                            <td class="text-center align-middle">{{ producto.potencia }}W</td>
+                            <td class="text-center align-middle">{{ producto.color_luz }}</td>
+                            <td class="text-center align-middle">{{ producto.material }}</td>
                             <td class="text-center align-middle">{{ producto.stock }}</td>
                             <td class="text-center align-middle">
                                 <a href="{% url 'App_LUMINOVA:producto_terminado_edit' producto.pk %}" class="btn btn-sm btn-light me-1" title="Editar Producto"><i class="bi bi-pencil" style="color: #0d6efd;"></i></a>
