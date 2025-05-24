@@ -63,6 +63,14 @@ urlpatterns = [
     path('deposito/productos-terminados/editar/<int:pk>/', ProductoTerminadoUpdateView.as_view(), name='producto_terminado_edit'),
     path('deposito/productos-terminados/eliminar/<int:pk>/', ProductoTerminadoDeleteView.as_view(), name='producto_terminado_delete'),
 
+    # URLs AJAX para Roles y Permisos
+    path('ajax/crear-rol/', crear_rol_ajax, name='crear_rol_ajax'),
+    path('ajax/get-rol-data/', get_rol_data_ajax, name='get_rol_data_ajax'),
+    path('ajax/editar-rol/', editar_rol_ajax, name='editar_rol_ajax'),
+    path('ajax/eliminar-rol/', eliminar_rol_ajax, name='eliminar_rol_ajax'),
+    path('ajax/get-permisos-rol/', get_permisos_rol_ajax, name='get_permisos_rol_ajax'),
+    path('ajax/actualizar-permisos-rol/', actualizar_permisos_rol_ajax, name='actualizar_permisos_rol_ajax'),
+    
     # La URL 'categoria_detalle' probablemente ya no es necesaria con las DetailView específicas
     # path('categoria-detalle/', categoria_detail, name='categoria_detalle') 
 ]

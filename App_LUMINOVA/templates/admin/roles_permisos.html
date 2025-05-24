@@ -1,100 +1,507 @@
 {% extends 'padre.html' %}
+{% load static %}
 
 {% block title %}Roles y Permisos | Luminova{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom flex-column">
-    <h1 class="h2">Roles y Permisos</h1>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">Gestión de Roles y Permisos</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCrearRol">
+            <i class="bi bi-plus-circle-fill"></i> Agregar Nuevo Rol
+        </button>
+    </div>
 </div>
 
 <div class="table-responsive">
-    <table class="table table-striped table-bordered">
+    <table class="table table-striped table-bordered" id="tablaRoles">
         <thead class="table-light">
             <tr>
-                <th>Rol</th>
+                <th>ID</th>
+                <th>Rol (Grupo)</th>
                 <th>Descripción</th>
                 <th>Permisos</th>
-                <th>Módulos Asignados</th>
-                <th>Nivel de Acceso</th>
-                <th>Acciones</th>
+                {# Estas columnas eran más descriptivas que funcionales, puedes mantenerlas o quitarlas #}
+                {# <th>Módulos Asignados</th> #}
+                {# <th>Nivel de Acceso</th> #}
+                <th style="width: 150px;">Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for rol in roles %}
+            <tr id="rol-row-{{ rol.id }}">
+                <td>{{ rol.id }}</td>
+                <td class="rol-name">{{ rol.name|capfirst }}</td>
+                <td class="rol-description">
+                    {% if rol.descripcion_extendida %}
+                        {{ rol.descripcion_extendida.descripcion|default:"-" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary btn-ver-permisos" data-rol-id="{{ rol.id }}" data-rol-name="{{ rol.name|capfirst }}">
+                        <i class="bi bi-shield-check"></i> Ver/Editar
+                    </button>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-info btn-editar-rol" data-rol-id="{{ rol.id }}">
+                        <i class="bi bi-pencil-fill"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btn-eliminar-rol" data-rol-id="{{ rol.id }}" data-rol-name="{{ rol.name|capfirst }}">
+                        <i class="bi bi-trash-fill"></i>
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
             <tr>
-                <td>{{ rol.name|capfirst }}</td>
-                <td>
-                    {{ rol.descripcion_extendida.descripcion|default:"Sin descripción" }}
-                </td>
-                <td>
-                    <a href="#" data-bs-toggle="modal" data-bs-target="#modal{{ rol.id }}Permisos">Ver</a>
-                </td>
-                <td>
-                    {% if rol.name == "administrador" %}
-                        Todos los módulos
-                    {% elif rol.name == "ventas" %}
-                        Ventas, Producción, Stock
-                    {% elif rol.name == "compras" %}
-                        Compras, Proveedores, Stock
-                    {% elif rol.name == "produccion" %}
-                        Producción, Órdenes de Producción
-                    {% elif rol.name == "deposito" %}
-                        Depósito, Stock, Envíos
-                    {% elif rol.name == "control de calidad" %}
-                        Control de Calidad, Reportes
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if rol.name == "administrador" %}
-                        Alto
-                    {% elif rol.name == "ventas" or rol.name == "compras" %}
-                        Medio
-                    {% elif rol.name == "produccion" or rol.name == "deposito" or rol.name == "control de calidad" %}
-                        Bajo
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="#" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-plus"></i> Agregar</a>
-                    <a href="#" class="btn btn-sm btn-outline-info me-1"><i class="bi bi-pencil"></i> Editar</a>
-                    <a href="#" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Eliminar</a>
-                </td>
+                <td colspan="5" class="text-center">No hay roles definidos.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-{% for rol in roles %}
-<div class="modal fade" id="modal{{ rol.id }}Permisos" tabindex="-1" aria-labelledby="modal{{ rol.id }}PermisosLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+<!-- Modal Crear Rol -->
+<div class="modal fade" id="modalCrearRol" tabindex="-1" aria-labelledby="modalCrearRolLabel" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modal{{ rol.id }}PermisosLabel">Permisos de {{ rol.name|capfirst }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body">
-                <h6>Descripción</h6>
-                <p>{{ rol.descripcion_extendida.descripcion|default:"Sin descripción" }}</p>
-                <h6>Permisos asignados</h6>
-                {% if rol.permissions.all %}
-                    <ul>
-                    {% for perm in rol.permissions.all %}
-                        <li>{{ perm.name }}</li>
-                    {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>Sin permisos asignados</p>
-                {% endif %}
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            </div>
+            <form id="formCrearRol">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCrearRolLabel">Crear Nuevo Rol</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="crear_rol_nombre" class="form-label">Nombre del Rol <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="crear_rol_nombre" name="nombre" required>
+                        <div class="invalid-feedback" id="error-crear_rol_nombre"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="crear_rol_descripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="crear_rol_descripcion" name="descripcion" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Rol</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
-{% endfor %}
+
+<!-- Modal Editar Rol -->
+<div class="modal fade" id="modalEditarRol" tabindex="-1" aria-labelledby="modalEditarRolLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formEditarRol">
+                {% csrf_token %}
+                <input type="hidden" id="edit_rol_id" name="rol_id">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEditarRolLabel">Editar Rol</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_rol_nombre" class="form-label">Nombre del Rol <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit_rol_nombre" name="nombre" required>
+                         <div class="invalid-feedback" id="error-edit_rol_nombre"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_rol_descripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="edit_rol_descripcion" name="descripcion" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ver/Editar Permisos -->
+<div class="modal fade" id="modalPermisos" tabindex="-1" aria-labelledby="modalPermisosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <form id="formPermisosRol">
+                {% csrf_token %}
+                <input type="hidden" id="permisos_rol_id" name="rol_id">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalPermisosLabel">Permisos para el Rol: <span id="permisosRolNombre"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Selecciona los permisos que este rol tendrá:</p>
+                    <div id="listaPermisosCheckboxes" class="row">
+                        <!-- Checkboxes de permisos se cargarán aquí por JS -->
+                    </div>
+                    <div id="loadingPermisos" class="text-center" style="display:none;">
+                        <div class="spinner-border" role="status"><span class="visually-hidden">Cargando...</span></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Permisos</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const crearRolModal = new bootstrap.Modal(document.getElementById('modalCrearRol'));
+    const editarRolModal = new bootstrap.Modal(document.getElementById('modalEditarRol'));
+    const permisosModal = new bootstrap.Modal(document.getElementById('modalPermisos'));
+    const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+    // --- Crear Rol ---
+    document.getElementById('formCrearRol').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch("{% url 'App_LUMINOVA:crear_rol_ajax' %}", { // Debes crear esta URL y vista
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': csrfToken }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Rol creado exitosamente!');
+                crearRolModal.hide();
+                // Agregar dinámicamente la fila a la tabla o recargar
+                addRolToTable(data.rol);
+                this.reset();
+            } else {
+                // Mostrar errores (ej. debajo de los campos)
+                if(data.errors) {
+                    for (const field in data.errors) {
+                        const errorElement = document.getElementById(`error-crear_rol_${field}`);
+                        const inputElement = document.getElementById(`crear_rol_${field}`);
+                        if (errorElement && inputElement) {
+                            inputElement.classList.add('is-invalid');
+                            errorElement.textContent = data.errors[field].join(', ');
+                        } else if (field === '__all__') {
+                             alert(data.errors[field].join(', '));
+                        }
+                    }
+                } else {
+                    alert('Error al crear el rol.');
+                }
+            }
+        }).catch(error => console.error('Error:', error));
+    });
+
+    // --- Editar Rol (Poblar y Enviar) ---
+    document.querySelectorAll('.btn-editar-rol').forEach(button => {
+        button.addEventListener('click', function () {
+            const rolId = this.dataset.rolId;
+            fetch(`{% url 'App_LUMINOVA:get_rol_data_ajax' %}?rol_id=${rolId}`) // Debes crear esta URL y vista
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('edit_rol_id').value = data.rol.id;
+                    document.getElementById('edit_rol_nombre').value = data.rol.nombre;
+                    document.getElementById('edit_rol_descripcion').value = data.rol.descripcion;
+                    editarRolModal.show();
+                } else {
+                    alert('Error al cargar datos del rol.');
+                }
+            }).catch(error => console.error('Error:', error));
+        });
+    });
+
+    document.getElementById('formEditarRol').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch("{% url 'App_LUMINOVA:editar_rol_ajax' %}", { // Debes crear esta URL y vista
+            method: 'POST',
+            body: formData,
+            headers: { 'X-CSRFToken': csrfToken }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Rol actualizado exitosamente!');
+                editarRolModal.hide();
+                updateRolInTable(data.rol);
+            } else {
+                 if(data.errors) {
+                    for (const field in data.errors) {
+                        const errorElement = document.getElementById(`error-edit_rol_${field}`);
+                        const inputElement = document.getElementById(`edit_rol_${field}`);
+                        if (errorElement && inputElement) {
+                            inputElement.classList.add('is-invalid');
+                            errorElement.textContent = data.errors[field].join(', ');
+                        } else if (field === '__all__') {
+                             alert(data.errors[field].join(', '));
+                        }
+                    }
+                } else {
+                    alert('Error al actualizar el rol.');
+                }
+            }
+        }).catch(error => console.error('Error:', error));
+    });
+
+    // --- Eliminar Rol ---
+    document.querySelectorAll('.btn-eliminar-rol').forEach(button => {
+        button.addEventListener('click', function () {
+            const rolId = this.dataset.rolId;
+            const rolName = this.dataset.rolName;
+            if (confirm(`¿Estás seguro de que deseas eliminar el rol "${rolName}"?`)) {
+                fetch("{% url 'App_LUMINOVA:eliminar_rol_ajax' %}", { // Debes crear esta URL y vista
+                    method: 'POST',
+                    body: JSON.stringify({ rol_id: rolId }),
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Rol eliminado exitosamente!');
+                        document.getElementById(`rol-row-${rolId}`).remove();
+                    } else {
+                        alert('Error al eliminar el rol: ' + (data.error || 'Error desconocido'));
+                    }
+                }).catch(error => console.error('Error:', error));
+            }
+        });
+    });
+
+    // --- Ver/Editar Permisos ---
+    document.querySelectorAll('.btn-ver-permisos').forEach(button => {
+        button.addEventListener('click', function () {
+            const rolId = this.dataset.rolId;
+            const rolName = this.dataset.rolName;
+            document.getElementById('permisos_rol_id').value = rolId;
+            document.getElementById('permisosRolNombre').textContent = rolName;
+            const listaPermisosDiv = document.getElementById('listaPermisosCheckboxes');
+            const loadingDiv = document.getElementById('loadingPermisos');
+            listaPermisosDiv.innerHTML = ''; // Limpiar
+            loadingDiv.style.display = 'block';
+            permisosModal.show();
+
+            fetch(`{% url 'App_LUMINOVA:get_permisos_rol_ajax' %}?rol_id=${rolId}`) // Debes crear esta URL y vista
+            .then(response => response.json())
+            .then(data => {
+                loadingDiv.style.display = 'none';
+                if (data.success) {
+                    // data.todos_los_permisos = [{'id': 1, 'name': 'Can add user', 'codename': 'add_user', 'content_type_app_label': 'auth'}, ...]
+                    // data.permisos_del_rol = [1, 5, ...] (lista de IDs de los permisos que tiene el rol)
+                    const permisosPorApp = {};
+                    data.todos_los_permisos.forEach(perm => {
+                        if (!permisosPorApp[perm.content_type_app_label]) {
+                            permisosPorApp[perm.content_type_app_label] = [];
+                        }
+                        permisosPorApp[perm.content_type_app_label].push(perm);
+                    });
+
+                    for (const appLabel in permisosPorApp) {
+                        let appHtml = `<div class="col-md-6 mb-3"><h5>${appLabel.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h5>`;
+                        permisosPorApp[appLabel].forEach(perm => {
+                            const isChecked = data.permisos_del_rol.includes(perm.id) ? 'checked' : '';
+                            appHtml += `
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="${perm.id}" name="permisos" id="perm_${perm.id}" ${isChecked}>
+                                    <label class="form-check-label" for="perm_${perm.id}">
+                                        ${perm.name} <small class="text-muted">(${perm.codename})</small>
+                                    </label>
+                                </div>`;
+                        });
+                        appHtml += `</div>`;
+                        listaPermisosDiv.insertAdjacentHTML('beforeend', appHtml);
+                    }
+                } else {
+                    listaPermisosDiv.innerHTML = '<p class="text-danger">Error al cargar los permisos.</p>';
+                }
+            }).catch(error => {
+                loadingDiv.style.display = 'none';
+                listaPermisosDiv.innerHTML = '<p class="text-danger">Error de conexión al cargar permisos.</p>';
+                console.error('Error:', error)
+            });
+        });
+    });
+
+    document.getElementById('formPermisosRol').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        // FormData no serializa bien los checkboxes no marcados, así que creamos un array de los marcados
+        const permisosSeleccionados = [];
+        this.querySelectorAll('input[name="permisos"]:checked').forEach(checkbox => {
+            permisosSeleccionados.push(checkbox.value);
+        });
+        
+        const payload = {
+            rol_id: formData.get('rol_id'),
+            permisos_ids: permisosSeleccionados, // Enviar array de IDs
+            csrfmiddlewaretoken: csrfToken
+        };
+
+        fetch("{% url 'App_LUMINOVA:actualizar_permisos_rol_ajax' %}", { // Debes crear esta URL y vista
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Permisos actualizados exitosamente!');
+                permisosModal.hide();
+            } else {
+                alert('Error al actualizar permisos: ' + (data.error || 'Error desconocido'));
+            }
+        }).catch(error => console.error('Error:', error));
+    });
+
+    // Funciones auxiliares para actualizar la tabla
+    function addRolToTable(rol) {
+        const tbody = document.querySelector('#tablaRoles tbody');
+        // Si había un mensaje de "No hay roles", eliminarlo
+        const noRolesRow = tbody.querySelector('td[colspan="5"]');
+        if (noRolesRow) noRolesRow.parentElement.remove();
+
+        const newRow = `
+            <tr id="rol-row-${rol.id}">
+                <td>${rol.id}</td>
+                <td class="rol-name">${rol.nombre}</td>
+                <td class="rol-description">${rol.descripcion || '-'}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary btn-ver-permisos" data-rol-id="${rol.id}" data-rol-name="${rol.nombre}">
+                        <i class="bi bi-shield-check"></i> Ver/Editar
+                    </button>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-info btn-editar-rol" data-rol-id="${rol.id}"><i class="bi bi-pencil-fill"></i></button>
+                    <button class="btn btn-sm btn-danger btn-eliminar-rol" data-rol-id="${rol.id}" data-rol-name="${rol.nombre}"><i class="bi bi-trash-fill"></i></button>
+                </td>
+            </tr>`;
+        tbody.insertAdjacentHTML('beforeend', newRow);
+        // Re-bind events para los nuevos botones
+        rebindTableButtons();
+    }
+
+    function updateRolInTable(rol) {
+        const row = document.getElementById(`rol-row-${rol.id}`);
+        if (row) {
+            row.querySelector('.rol-name').textContent = rol.nombre;
+            row.querySelector('.rol-description').textContent = rol.descripcion || '-';
+            row.querySelector('.btn-ver-permisos').dataset.rolName = rol.nombre;
+            row.querySelector('.btn-eliminar-rol').dataset.rolName = rol.nombre;
+        }
+    }
+    
+    function rebindTableButtons() {
+        document.querySelectorAll('.btn-editar-rol').forEach(button => {
+            button.removeEventListener('click', handleEditRolClick); // Evitar duplicados
+            button.addEventListener('click', handleEditRolClick);
+        });
+        document.querySelectorAll('.btn-eliminar-rol').forEach(button => {
+            button.removeEventListener('click', handleDeleteRolClick);
+            button.addEventListener('click', handleDeleteRolClick);
+        });
+        document.querySelectorAll('.btn-ver-permisos').forEach(button => {
+            button.removeEventListener('click', handleVerPermisosClick);
+            button.addEventListener('click', handleVerPermisosClick);
+        });
+    }
+
+    // Funciones handler separadas para re-binding
+    function handleEditRolClick() {
+        const rolId = this.dataset.rolId;
+        fetch(`{% url 'App_LUMINOVA:get_rol_data_ajax' %}?rol_id=${rolId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('edit_rol_id').value = data.rol.id;
+                document.getElementById('edit_rol_nombre').value = data.rol.nombre;
+                document.getElementById('edit_rol_descripcion').value = data.rol.descripcion;
+                editarRolModal.show();
+            } else { alert('Error al cargar datos del rol.'); }
+        }).catch(error => console.error('Error:', error));
+    }
+
+    function handleDeleteRolClick() {
+        const rolId = this.dataset.rolId;
+        const rolName = this.dataset.rolName;
+        if (confirm(`¿Estás seguro de que deseas eliminar el rol "${rolName}"?`)) {
+            fetch("{% url 'App_LUMINOVA:eliminar_rol_ajax' %}", {
+                method: 'POST',
+                body: JSON.stringify({ rol_id: rolId }),
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Rol eliminado exitosamente!');
+                    document.getElementById(`rol-row-${rolId}`).remove();
+                } else { alert('Error al eliminar el rol: ' + (data.error || 'Error desconocido'));}
+            }).catch(error => console.error('Error:', error));
+        }
+    }
+    
+    function handleVerPermisosClick() {
+        const rolId = this.dataset.rolId;
+        const rolName = this.dataset.rolName;
+        document.getElementById('permisos_rol_id').value = rolId;
+        document.getElementById('permisosRolNombre').textContent = rolName;
+        const listaPermisosDiv = document.getElementById('listaPermisosCheckboxes');
+        const loadingDiv = document.getElementById('loadingPermisos');
+        listaPermisosDiv.innerHTML = '';
+        loadingDiv.style.display = 'block';
+        permisosModal.show();
+
+        fetch(`{% url 'App_LUMINOVA:get_permisos_rol_ajax' %}?rol_id=${rolId}`)
+        .then(response => response.json())
+        .then(data => {
+            loadingDiv.style.display = 'none';
+            if (data.success) {
+                const permisosPorApp = {};
+                data.todos_los_permisos.forEach(perm => {
+                    const appLabel = perm.content_type_app_label;
+                    if (!permisosPorApp[appLabel]) {
+                        permisosPorApp[appLabel] = [];
+                    }
+                    permisosPorApp[appLabel].push(perm);
+                });
+
+                for (const appLabel in permisosPorApp) {
+                    let appHtml = `<div class="col-md-6 mb-3"><h5>${appLabel.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</h5>`;
+                    permisosPorApp[appLabel].forEach(perm => {
+                        const isChecked = data.permisos_del_rol.includes(perm.id) ? 'checked' : '';
+                        appHtml += `
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="${perm.id}" name="permisos" id="perm_${perm.id}" ${isChecked}>
+                                <label class="form-check-label" for="perm_${perm.id}">
+                                    ${perm.name} <small class="text-muted">(${perm.codename})</small>
+                                </label>
+                            </div>`;
+                    });
+                    appHtml += `</div>`;
+                    listaPermisosDiv.insertAdjacentHTML('beforeend', appHtml);
+                }
+            } else {
+                listaPermisosDiv.innerHTML = '<p class="text-danger">Error al cargar los permisos.</p>';
+            }
+        }).catch(error => {
+            loadingDiv.style.display = 'none';
+            listaPermisosDiv.innerHTML = '<p class="text-danger">Error de conexión al cargar permisos.</p>';
+            console.error('Error:', error);
+        });
+    }
+    
+    // Llamada inicial para bindeo de botones existentes
+    rebindTableButtons();
+
+});
+</script>
 {% endblock %}
