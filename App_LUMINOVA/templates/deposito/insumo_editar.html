@@ -36,8 +36,101 @@
 
 {% block content %}
 
-    <form action="{% url 'App_LUMINOVA:insumo_edit' insumo.id %}" method="post"> {% csrf_token %}
-        {{form.as_p}}
-        <button type="submit" class="btn btn-primary">Actualizar</button>
-    </form>
+    <div class="container mt-4">
+        <h2>Editar Insumo</h2>
+        <hr>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.descripcion.id_for_label }}" class="form-label">{{ form.descripcion.label }}</label>
+                    {{ form.descripcion }}
+                    {% if form.descripcion.errors %}<div class="invalid-feedback d-block">{{ form.descripcion.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.categoria.id_for_label }}" class="form-label">{{ form.categoria.label }}</label>
+                    {{ form.categoria }}
+                    {% if form.categoria.errors %}<div class="invalid-feedback d-block">{{ form.categoria.errors }}</div>{% endif %}
+                    {% if request.GET.categoria %}
+                        <small class="form-text text-muted">Categoría preseleccionada.</small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.fabricante.id_for_label }}" class="form-label">{{ form.fabricante.label }}</label>
+                    {{ form.fabricante }}
+                    {% if form.fabricante.errors %}<div class="invalid-feedback d-block">{{ form.fabricante.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.proveedor.id_for_label }}" class="form-label">{{ form.proveedor.label }}</label>
+                    {{ form.proveedor }}
+                    {% if form.proveedor.errors %}<div class="invalid-feedback d-block">{{ form.proveedor.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.precio_unitario.id_for_label }}" class="form-label">{{ form.precio_unitario.label }}</label>
+                    {{ form.precio_unitario }}
+                    {% if form.precio_unitario.errors %}<div class="invalid-feedback d-block">{{ form.precio_unitario.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.tiempo_entrega.id_for_label }}" class="form-label">{{ form.tiempo_entrega.label }} (días)</label>
+                    {{ form.tiempo_entrega }}
+                    {% if form.tiempo_entrega.errors %}<div class="invalid-feedback d-block">{{ form.tiempo_entrega.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.stock.id_for_label }}" class="form-label">{{ form.stock.label }}</label>
+                    {{ form.stock }}
+                    {% if form.stock.errors %}<div class="invalid-feedback d-block">{{ form.stock.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="{{ form.imagen.id_for_label }}" class="form-label">{{ form.imagen.label }}</label>
+                {{ form.imagen }}
+                {% if form.imagen.errors %}<div class="invalid-feedback d-block">{{ form.imagen.errors }}</div>{% endif %}
+            </div>
+
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary">Guardar Insumo</button>
+                <a href="{% url 'App_LUMINOVA:deposito' %}" class="btn btn-secondary">Cancelar</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var form = document.querySelector('form');
+            if (form) {
+                var elements = form.elements;
+                for (var i = 0; i < elements.length; i++) {
+                    var element = elements[i];
+                    var tagName = element.tagName.toLowerCase();
+                    var type = element.type ? element.type.toLowerCase() : '';
+
+                    if (tagName === 'input' && (type === 'text' || type === 'email' || type === 'number' || type === 'password' || type === 'url' || type === 'search' || type === 'tel' || type === 'date' || type === 'datetime-local' || type === 'month' || type === 'week' || type === 'time')) {
+                        element.classList.add('form-control');
+                    } else if (tagName === 'select') {
+                        element.classList.add('form-select');
+                    } else if (tagName === 'textarea') {
+                        element.classList.add('form-control');
+                    } else if (tagName === 'input' && type === 'file') {
+                        element.classList.add('form-control');
+                    }
+                }
+                const urlParams = new URLSearchParams(window.location.search);
+                const categoriaId = urlParams.get('categoria');
+                if (categoriaId) {
+                    const categoriaSelect = form.querySelector('#id_categoria');
+                    if (categoriaSelect) {
+                        categoriaSelect.value = categoriaId;
+                    }
+                }
+            }
+        });
+    </script>
 {% endblock %}
