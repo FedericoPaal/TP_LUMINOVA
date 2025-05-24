@@ -1,0 +1,34 @@
+{% load static %}
+
+{% url 'App_LUMINOVA:dashboard' as dashboard_url %}
+{% url 'App_LUMINOVA:lista_usuarios' as usuarios_url %}
+{% url 'App_LUMINOVA:roles-permisos' as roles_url %}
+{% url 'App_LUMINOVA:auditoria' as auditoria_url %}
+
+{% url 'App_LUMINOVA:ventas_lista_ov' as ventas_url %}
+{% url 'App_LUMINOVA:lista_clientes' as clientes_url %} {# Asumiendo que tienes esta URL #}
+
+{% url 'App_LUMINOVA:produccion_lista_op' as produccion_url %}
+
+{% url 'App_LUMINOVA:deposito' as deposito_url %}
+{# ... y así para las otras secciones principales ... #}
+
+
+{% if request.resolver_match.app_name == 'App_LUMINOVA' %}
+    {% if request.path == dashboard_url or request.path == usuarios_url or request.path == roles_url or request.path == auditoria_url %}
+         {% include 'admin/admin_sidebar.html' %} {# Crea este archivo #}
+    {% elif request.path == ventas_url or request.path == clientes_url or '/ventas/orden/crear/' in request.path %}
+         {% include 'ventas/ventas_sidebar.html' %}
+    {% elif '/produccion/' in request.path %} {# Más genérico para todas las sub-rutas de producción #}
+         {% include 'produccion/produccion_sidebar.html' %} {# Crea este archivo #}
+    {% elif '/deposito/' in request.path %}
+         {% include 'deposito/deposito_sidebar.html' %} {# Crea este archivo #}
+    {% elif '/compras/' in request.path %}
+         {% include 'compras/compras_sidebar.html' %} {# Crea este archivo #}
+    {% elif '/control_calidad/' in request.path %}
+         {% include 'control_calidad/control_calidad_sidebar.html' %} {# Crea este archivo #}
+    {% else %}
+        {# Podrías tener un sidebar por defecto o ninguno si no coincide ninguna sección #}
+        {# <p class="text-muted ms-3">Sidebar no disponible para esta sección.</p> #}
+    {% endif %}
+{% endif %}

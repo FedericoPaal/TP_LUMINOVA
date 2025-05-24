@@ -7,7 +7,7 @@
     <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end full-height" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
         <div class="position-sticky pt-4">
             <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
-                <a href="{% url 'App_LUMINOVA:deposito' %}"><span style="color: white;">Depósito</span></a>
+                <a href="{% url 'App_LUMINOVA:deposito_view' %}"><span style="color: white;">Depósito</span></a>
             </h6>
             <hr class="text-white">
             <ul class="nav flex-column">
@@ -92,7 +92,7 @@
     {% endif %}
 
     <div class="mt-4">
-        <a href="{% url 'App_LUMINOVA:deposito' %}" class="btn btn-secondary">Volver a Depósito</a>
+        <a href="{% url 'App_LUMINOVA:deposito_view' %}" class="btn btn-secondary">Volver a Depósito</a>
     </div>
 </div>
 {% endblock %}

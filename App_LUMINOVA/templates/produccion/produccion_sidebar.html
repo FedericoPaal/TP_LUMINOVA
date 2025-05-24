@@ -1,0 +1,40 @@
+{% load static %}
+
+{# Definir URLs para claridad y mantenimiento #}
+{% url 'App_LUMINOVA:produccion_lista_op' as url_produccion_lista_op %}
+{% url 'App_LUMINOVA:planificacion_produccion' as url_planificacion %} {# Asumiendo que este es el nombre correcto #}
+{% url 'App_LUMINOVA:reportes_produccion' as url_reportes %}       {# Asumiendo que este es el nombre correcto #}
+
+<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+    <div class="position-sticky pt-4">
+        <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+            <span>Producción</span>
+        </h6>
+        <hr class="text-white">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center 
+                   {% if request.resolver_match.url_name == 'produccion_lista_op' or request.resolver_match.url_name == 'produccion_detalle_op' %}active{% endif %}" 
+                   aria-current="page" href="{{ url_produccion_lista_op }}">
+                    <i class="bi bi-card-list"></i> <span class="ms-2">Listado OPs</span>
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center 
+                   {% if request.resolver_match.url_name == 'planificacion_produccion' %}active{% endif %}" 
+                   href="{{ url_planificacion }}">
+                    <i class="bi bi-calendar-week"></i> <span class="ms-2">Planificación</span>
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center 
+                   {% if request.resolver_match.url_name == 'reportes_produccion' %}active{% endif %}" 
+                   href="{{ url_reportes }}">
+                    <i class="bi bi-flag-fill"></i> <span class="ms-2">Reportes</span>
+                </a>
+            </li>
+            {# El botón que añadiste anteriormente "Lista OP" con el icono de engranaje es redundante si el primer enlace ya es "Listado OPs" #}
+            {# Si lo quieres mantener con otro propósito, asegúrate que su {% url %} sea válido #}
+        </ul>
+    </div>
+</nav>

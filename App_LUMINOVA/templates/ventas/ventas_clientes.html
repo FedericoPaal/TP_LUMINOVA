@@ -1,0 +1,132 @@
+{% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titulo_seccion|default:"Gestión de Clientes" }} | Ventas{% endblock %}
+
+{% block sidebar_content %}
+    {% include 'ventas/ventas_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ titulo_seccion|default:"Gestión de Clientes" }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#crearClienteModal">
+            <i class="bi bi-person-plus-fill"></i> Nuevo Cliente
+        </button>
+    </div>
+</div>
+
+{% bootstrap_messages %}
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Teléfono</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cliente_obj in clientes_list %}
+            <tr>
+                <td>{{ cliente_obj.id }}</td>
+                <td>{{ cliente_obj.nombre }}</td>
+                <td>{{ cliente_obj.email|default_if_none:"N/A" }}</td>
+                <td>{{ cliente_obj.telefono|default_if_none:"N/A" }}</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#editarClienteModal{{ cliente_obj.id }}" title="Editar {{cliente_obj.nombre}}">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#eliminarClienteModal{{ cliente_obj.id }}" title="Eliminar {{cliente_obj.nombre}}">
+                        <i class="bi bi-trash3-fill"></i>
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center fst-italic text-muted">No hay clientes registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Crear Cliente -->
+<div class="modal fade" id="crearClienteModal" tabindex="-1" aria-labelledby="crearClienteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'App_LUMINOVA:crear_cliente' %}" novalidate>
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="crearClienteModalLabel">Nuevo Cliente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {% comment %} El 'cliente_form' aquí es la instancia vacía pasada desde la vista lista_clientes_view {% endcomment %}
+                    {% bootstrap_form cliente_form_crear layout='vertical' %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modales Editar Cliente -->
+{% for cliente_obj in clientes_list %}
+<div class="modal fade" id="editarClienteModal{{ cliente_obj.id }}" ...>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            {% with form_edit=ClienteFormClass instance=cliente_obj %} {# <--- USA LA CLASE DEL CONTEXTO #}
+            <form method="post" action="{% url 'App_LUMINOVA:editar_cliente' cliente_obj.id %}" novalidate>
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editarClienteModalLabel{{ cliente_obj.id }}">Editar Cliente: {{ cliente_obj.nombre }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    {% bootstrap_form form_edit layout='vertical' %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+            {% endwith %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Modal Eliminar Cliente (sin cambios) -->
+{% for cliente_obj in clientes_list %}
+<div class="modal fade" id="eliminarClienteModal{{ cliente_obj.id }}" tabindex="-1" aria-labelledby="eliminarClienteModalLabel{{ cliente_obj.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+             <form method="post" action="{% url 'App_LUMINOVA:eliminar_cliente' cliente_obj.id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="eliminarClienteModalLabel{{ cliente_obj.id }}"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de que deseas eliminar al cliente "<strong>{{ cliente_obj.nombre }}</strong>"?</p>
+                    <p class="text-danger small">Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer d-flex justify-content-center">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar Cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

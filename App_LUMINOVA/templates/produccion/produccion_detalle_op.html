@@ -1,0 +1,127 @@
+{% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titulo_seccion|default:"Detalle Orden de Producción" }}{% endblock %}
+
+{% block sidebar_content %}
+    {% include 'produccion/produccion_sidebar.html' %} 
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">{{ titulo_seccion }}</h1>
+        <a href="{% url 'App_LUMINOVA:produccion_lista_op' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left-circle"></i> Volver al Listado de OPs
+        </a>
+    </div>
+
+    {% bootstrap_messages %}
+
+    <div class="row">
+        
+        <div class="col-lg-7">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-dark"> 
+                    Información de la Orden de Producción
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <p><strong>N° OP:</strong> {{ op.numero_op }}</p>
+                    
+                    {% if op.producto_a_producir %}
+                        <p class="text-success">DEBUG: Producto a producir SÍ está definido.</p>
+                        <p><strong>Producto a Producir (ID):</strong> {{ op.producto_a_producir.id }}</p>
+                        <p><strong>Producto a Producir (Desc):</strong> {{ op.producto_a_producir.descripcion }}</p>
+                    {% else %}
+                        <p class="text-danger">DEBUG: Producto a producir NO está definido (es None o Falso).</p>
+                    {% endif %}
+                        <dt class="col-sm-4">N° OP:</dt>
+                        <dd class="col-sm-8">{{ op.numero_op }}</dd>
+
+                        <dt class="col-sm-4">Producto a Producir:</dt>
+                        <dd class="col-sm-8">{{ op.producto_a_producir.descripcion }}</dd>
+
+                        <dt class="col-sm-4">Cantidad a Producir:</dt>
+                        <dd class="col-sm-8">{{ op.cantidad_a_producir }}</dd>
+
+                        <dt class="col-sm-4">OV Origen:</dt>
+                        <dd class="col-sm-8">
+                            {% if op.orden_venta_origen %}
+                                {{ op.orden_venta_origen.numero_ov }} (Cliente: {{ op.orden_venta_origen.cliente.nombre }})
+                            {% else %}
+                                N/A (Creada manualmente)
+                            {% endif %}
+                        </dd>
+                        <dt class="col-sm-4">Fecha Solicitud:</dt>
+                        <dd class="col-sm-8">{{ op.fecha_solicitud|date:"d/m/Y H:i" }}</dd>
+                        
+                        <dt class="col-sm-4">Notas OP:</dt>
+                        <dd class="col-sm-8">{{ op.notas|default_if_none:"-"|linebreaksbr }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    Insumos Requeridos para esta OP
+                </div>
+                <div class="card-body p-0"> 
+                    {% if insumos_necesarios_list %}
+                        <ul class="list-group list-group-flush">
+                            {% for item_insumo in insumos_necesarios_list %}
+                            <li class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ item_insumo.insumo_descripcion }}</h6>
+                                    <span class="badge {% if item_insumo.suficiente_stock %}bg-success-subtle text-success-emphasis{% else %}bg-danger-subtle text-danger-emphasis{% endif %} rounded-pill">
+                                        Stock: {{ item_insumo.stock_actual_insumo }}
+                                    </span>
+                                </div>
+                                <small class="text-muted">
+                                    Cant. por PT: {{ item_insumo.cantidad_por_unidad_pt }} | 
+                                    Total Requerido OP: <strong>{{ item_insumo.cantidad_total_requerida_op }}</strong>
+                                </small>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <div class="p-3">
+                            <p class="text-muted mb-0">No se han definido componentes (BOM) para el producto: "{{ op.producto_a_producir.descripcion }}".</p>
+                            <p class="mb-0"><small>Por favor, <a href="{% url 'admin:App_LUMINOVA_productoterminado_change' op.producto_a_producir.id %}" target="_blank">configure los componentes en el admin</a>.</small></p>
+                        </div>
+                    {% endif %}
+                </div>
+                 {% if insumos_necesarios_list %}
+                <div class="card-footer text-end">
+                    {# Botón para solicitar/descontar insumos a Depósito #}
+                    <a href="{% url 'App_LUMINOVA:deposito_enviar_insumos_op' op.id %}" class="btn btn-info btn-sm {% if not todos_los_insumos_disponibles_variable_de_contexto %}disabled{% endif %}">
+                        <i class="bi bi-box-arrow-down"></i> Solicitar/Descontar Insumos
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Columna Derecha: Gestionar OP (Estado, Sector) #}
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Gestionar Orden de Producción
+                </div>
+                <div class="card-body">
+                    <form method="post"> {# El action es la URL actual por defecto #}
+                        {% csrf_token %}
+                        {% bootstrap_form form_update_op layout='vertical' %}
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save-fill"></i> Actualizar Estado/Sector OP
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+    <div class="position-sticky pt-4">
+        <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+            <span>Compras</span>
+        </h6>
+        <hr class="text-white">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:compras_lista_oc' %}">
+                    <i class="bi bi-list-ul me-2"></i> <span class="ms-2">Listado de OC</span>
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:compras_desglose' %}">
+                    <i class="bi bi-box-seam-fill"></i> <span class="ms-2">Desglose de Componentes</span>
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:compras_seguimiento' %}">
+                    <i class="bi bi-truck me-2"></i> <span class="ms-2">Seguimiento de Compras</span>
+                </a>
+            </li>
+            </ul>
+    </div>
+</nav>

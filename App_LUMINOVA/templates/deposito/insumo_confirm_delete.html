@@ -34,11 +34,9 @@
     </nav>
 {% endblock %}
 
-{% block content %}
-
-    <form action="{% url 'App_LUMINOVA:insumo_delete' insumo.id %}" method="post"> {% csrf_token %}
+{% block content %}        
         <p>Esta seguro que desea eliminar el insumo?</p>
         <button type="submit" class="btn btn-primary">Confirmar</button>
-        <button class="btn btn-primary"><a href="{% url 'App_LUMINOVA:deposito' %}">Cancelar</a></button>
-    </form>
+        <a href="{% url 'App_LUMINOVA:deposito_view' %}" class="btn btn-secondary">Cancelar</a>
+    </>
 {% endblock %}

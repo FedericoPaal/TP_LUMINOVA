@@ -1,76 +1,131 @@
+# TP_LUMINOVA-main/App_LUMINOVA/urls.py
+
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from .views import *
+from .views import (
+    # Vistas Principales y Autenticación
+    inicio, login_view, dashboard_view, # Asumiendo que login_view es tu vista personalizada
+
+    # Admin
+    roles_permisos_view, auditoria_view,
+    lista_usuarios, crear_usuario, editar_usuario, eliminar_usuario,
+
+    # Ventas
+    ventas_lista_ov_view, ventas_crear_ov_view,
+    lista_clientes_view, crear_cliente_view, editar_cliente_view, eliminar_cliente_view,
+
+    # Compras (Renombrar vistas si es necesario en views.py)
+    compras_lista_oc_view, # Vista para el listado principal de Órdenes de Compra
+    compras_desglose_detalle_oc_view, compras_desglose_view,
+    compras_seguimiento_view, compras_tracking_pedido_view,
+    
+    # Producción
+    
+    produccion_lista_op_view,
+    produccion_detalle_op_view,
+    planificacion_produccion_view,
+    reportes_produccion_view,
+
+    # Depósito
+    deposito_view, # Vista principal de depósito (categorías)
+    deposito_solicitudes_insumos_view, 
+    deposito_detalle_solicitud_op_view, 
+    deposito_enviar_insumos_op_view, 
+    # depo_seleccion, depo_enviar (Eliminar si ya no se usan directamente por el nuevo flujo)
+
+    # CRUDs para Categorías, Insumos, Productos Terminados (Class-Based Views)
+    Categoria_IDetailView, Categoria_ICreateView, Categoria_IUpdateView, Categoria_IDeleteView,
+    Categoria_PTDetailView, Categoria_PTCreateView, Categoria_PTUpdateView, Categoria_PTDeleteView,
+    InsumosListView, InsumoDetailView, InsumoCreateView, InsumoUpdateView, InsumoDeleteView,
+    ProductoTerminadosListView, ProductoTerminadoDetailView, ProductoTerminadoCreateView, ProductoTerminadoUpdateView, ProductoTerminadoDeleteView,
+
+    # Control de Calidad (Placeholder)
+    
+    
+    # Vistas AJAX para Roles
+    crear_rol_ajax, get_rol_data_ajax, editar_rol_ajax, eliminar_rol_ajax,
+    get_permisos_rol_ajax, actualizar_permisos_rol_ajax,
+)
 
 app_name = 'App_LUMINOVA'
 
 urlpatterns = [
-    path("", inicio, name="inicio"), # Esta URL raíz ahora mostrará la página de login
-    
-    path("compras/", compras, name="compras"),
-    path("produccion/", produccion, name="produccion"),
-    path("ventas/", ventas, name="ventas"),
-    path("deposito/", deposito, name="deposito"),
-    path("control_calidad/", control_calidad, name="control_calidad"),
-
+    # --- Rutas Principales y Autenticación ---
+    path("", inicio, name="inicio"),
     path('login/', auth_views.LoginView.as_view(template_name='login.html', next_page='App_LUMINOVA:dashboard'), name='login'),
+    # path('login/', login_view, name='login'), # Descomenta si usas tu vista login_view personalizada
     path('logout/', auth_views.LogoutView.as_view(next_page='App_LUMINOVA:login'), name='logout'),
-
     path('dashboard/', dashboard_view, name='dashboard'),
-    path('roles-permisos/', roles_permisos_view, name='roles-permisos'),
-    path('auditoria/', auditoria_view, name='auditoria'),
 
-    path('usuarios/', lista_usuarios, name='lista_usuarios'),
-    path('usuarios/crear/', crear_usuario, name='crear_usuario'),
-    path('usuarios/editar/<int:id>/', editar_usuario, name='editar_usuario'),
-    path('usuarios/eliminar/<int:id>/', eliminar_usuario, name='eliminar_usuario'),
+    # --- Rutas de Administración ---
+    path('admin/usuarios/', lista_usuarios, name='lista_usuarios'),
+    path('admin/usuarios/crear/', crear_usuario, name='crear_usuario'),
+    path('admin/usuarios/editar/<int:id>/', editar_usuario, name='editar_usuario'),
+    path('admin/usuarios/eliminar/<int:id>/', eliminar_usuario, name='eliminar_usuario'),
+    path('admin/roles-permisos/', roles_permisos_view, name='roles-permisos'),
+    path('admin/auditoria/', auditoria_view, name='auditoria'),
 
-    path("compras/desglose/", desglose, name="desglose"),
-    path("compras/seguimiento/", seguimiento, name="seguimiento"),
-    path("compras/tracking/", tracking, name="tracking"),
-    path("compras/desglose2/", desglose2, name="desglose2"),
+    # --- Rutas de Ventas ---
+    path('ventas/', ventas_lista_ov_view, name='ventas_lista_ov'),
+    path('ventas/orden/crear/', ventas_crear_ov_view, name='ventas_crear_ov'),
+    path('ventas/clientes/', lista_clientes_view, name='lista_clientes'),
+    path('ventas/clientes/crear/', crear_cliente_view, name='crear_cliente'),
+    path('ventas/clientes/editar/<int:cliente_id>/', editar_cliente_view, name='editar_cliente'),
+    path('ventas/clientes/eliminar/<int:cliente_id>/', eliminar_cliente_view, name='eliminar_cliente'),
 
-    path('produccion/ordenes/', ordenes, name='ordenes'),
-    path('produccion/planificacion/', planificacion, name='planificacion'),
-    path('produccion/reportes/', reportes, name='reportes'),
+    # --- Rutas de Compras ---
+    path('compras/', compras_lista_oc_view, name='compras_lista_oc'), # Vista principal de compras
+    path('compras/desglose/', compras_desglose_view, name='compras_desglose'),
+    path('compras/seguimiento/', compras_seguimiento_view, name='compras_seguimiento'),
+    path('compras/tracking/<str:numero_orden_track>/', compras_tracking_pedido_view, name='compras_tracking_pedido'),
+    path('compras/desglose-oc/<str:numero_orden_desglose>/', compras_desglose_detalle_oc_view, name='compras_desglose_detalle_oc'),
 
-    path('deposito/seleccion/', depo_seleccion, name='depo_seleccion'),
-    path('deposito/enviar/', depo_enviar, name='depo_enviar'),
+    # --- Rutas de Producción ---
+    path('produccion/', produccion_lista_op_view, name='produccion_principal'), # La lista de OPs es la vista principal
+    #path('produccion/vista-general/', produccion_view, name='produccion_vista_general'), # Si necesitas una página "marco" separada
+    path('produccion/ordenes/', produccion_lista_op_view, name='produccion_lista_op'), # Puede ser redundante si la de arriba ya es la lista
+    path('produccion/orden/<int:op_id>/', produccion_detalle_op_view, name='produccion_detalle_op'),
+    path('produccion/planificacion/', planificacion_produccion_view, name='planificacion_produccion'),
+    path('produccion/reportes/', reportes_produccion_view, name='reportes_produccion'),
+    
+    # --- Rutas de Depósito ---
+    path('deposito/', deposito_view, name='deposito_view'), 
+    path('deposito/solicitudes-insumos/', deposito_solicitudes_insumos_view, name='deposito_solicitudes_insumos'),
+    path('deposito/solicitud-op/<int:op_id>/', deposito_detalle_solicitud_op_view, name='deposito_detalle_solicitud_op'),
+    path('deposito/enviar-insumos-op/<int:op_id>/', deposito_enviar_insumos_op_view, name='deposito_enviar_insumos_op'),
+    #path('deposito/seleccion/', depo_seleccion, name='depo_seleccion'), # Eliminar si ya no se usa
+    # path('deposito/enviar/', depo_enviar, name='depo_enviar'),       # Eliminar si ya no se usa
 
-    # URLs para Categorias de Insumo
+    # CRUDs para Categorías, Insumos, Productos Terminados (Class-Based Views)
     path('deposito/categorias-insumo/<int:pk>/', Categoria_IDetailView.as_view(), name='categoria_i_detail'),
     path('deposito/categorias-insumo/crear/', Categoria_ICreateView.as_view(), name='categoria_i_create'),
     path('deposito/categorias-insumo/editar/<int:pk>/', Categoria_IUpdateView.as_view(), name='categoria_i_edit'),
     path('deposito/categorias-insumo/eliminar/<int:pk>/', Categoria_IDeleteView.as_view(), name='categoria_i_delete'),
-
-    # URLs para Categorias de Producto Terminado
+    
     path('deposito/categorias-producto-terminado/<int:pk>/', Categoria_PTDetailView.as_view(), name='categoria_pt_detail'),
     path('deposito/categorias-producto-terminado/crear/', Categoria_PTCreateView.as_view(), name='categoria_pt_create'),
     path('deposito/categorias-producto-terminado/editar/<int:pk>/', Categoria_PTUpdateView.as_view(), name='categoria_pt_edit'),
     path('deposito/categorias-producto-terminado/eliminar/<int:pk>/', Categoria_PTDeleteView.as_view(), name='categoria_pt_delete'),
 
-    # URLs para Insumos
-    path('deposito/insumos/', InsumosListView.as_view(), name='insumos_list'), # Si quieres una lista general
-    path('deposito/insumos/<int:pk>/', InsumoDetailView.as_view(), name='insumo_detail'),
     path('deposito/insumos/crear/', InsumoCreateView.as_view(), name='insumo_create'),
     path('deposito/insumos/editar/<int:pk>/', InsumoUpdateView.as_view(), name='insumo_edit'),
     path('deposito/insumos/eliminar/<int:pk>/', InsumoDeleteView.as_view(), name='insumo_delete'),
+    # path('deposito/insumos/', InsumosListView.as_view(), name='insumos_list'), # Descomentar si necesitas una lista general de todos los insumos
 
-    # URLs para Productos Terminados
-    path('deposito/productos-terminados/',ProductoTerminadosListView.as_view(), name='productos_terminados_list'), # Si quieres una lista general
-    path('deposito/productos-terminados/<int:pk>/', ProductoTerminadoDetailView.as_view(), name='producto_terminado_detail'),
     path('deposito/productos-terminados/crear/', ProductoTerminadoCreateView.as_view(), name='producto_terminado_create'),
     path('deposito/productos-terminados/editar/<int:pk>/', ProductoTerminadoUpdateView.as_view(), name='producto_terminado_edit'),
     path('deposito/productos-terminados/eliminar/<int:pk>/', ProductoTerminadoDeleteView.as_view(), name='producto_terminado_delete'),
+    # path('deposito/productos-terminados/',ProductoTerminadosListView.as_view(), name='productos_terminados_list'),
 
-    # URLs AJAX para Roles y Permisos
+
+    # --- Ruta de Control de Calidad (Placeholder) ---
+    #path('control_calidad/', control_calidad_view, name='control_calidad_view'),
+
+    # --- URLs AJAX para Roles y Permisos ---
     path('ajax/crear-rol/', crear_rol_ajax, name='crear_rol_ajax'),
     path('ajax/get-rol-data/', get_rol_data_ajax, name='get_rol_data_ajax'),
     path('ajax/editar-rol/', editar_rol_ajax, name='editar_rol_ajax'),
     path('ajax/eliminar-rol/', eliminar_rol_ajax, name='eliminar_rol_ajax'),
     path('ajax/get-permisos-rol/', get_permisos_rol_ajax, name='get_permisos_rol_ajax'),
     path('ajax/actualizar-permisos-rol/', actualizar_permisos_rol_ajax, name='actualizar_permisos_rol_ajax'),
-    
-    # La URL 'categoria_detalle' probablemente ya no es necesaria con las DetailView específicas
-    # path('categoria-detalle/', categoria_detail, name='categoria_detalle') 
 ]

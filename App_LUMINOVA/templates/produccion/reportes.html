@@ -1,262 +1,59 @@
 {% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titulo_seccion|default:"Reportes de Producción" }}{% endblock %}
 
 {% block sidebar_content %}
-
-    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
-        <div class="position-sticky pt-4">
-            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
-                <span>Produccion</span>
-            </h6>
-            <hr class="text-white">
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link  {% if '/ordenes/' in request.path %}active{% endif %}  text-white fw-bold custom-active-button d-flex align-items-center" aria-current="page" href="{% url 'App_LUMINOVA:ordenes' %}" style="border-radius: 25px;">
-                        <i class="bi bi-clipboard"></i> <span class="ms-2">Ordenes</span>
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link  {% if '/planificacion/' in request.path %}active{% endif %}  text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:planificacion' %}" style="border-radius: 25px; padding-top: 0.75rem; padding-bottom: 0.75rem;">
-                        <i class="bi bi-card-checklist"></i> <span class="ms-2">Planificacion</span>
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link  {% if '/reportes/' in request.path %}active{% endif %}  text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:reportes' %}" style="border-radius: 25px;">
-                        <i class="bi bi-flag"></i> <span class="ms-2">Reportes</span>
-                    </a>
-                </li>
-
-            </ul>
-        </div>
-    </nav>
-
-
+    {% include 'produccion/produccion_sidebar.html' %}
 {% endblock %}
 
 {% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ titulo_seccion }}</h1>
+    {# Botón para crear reporte manual si es necesario #}
+</div>
 
- <section>
-        <div class="table-responsive">
-            <table class="table">
-                <tr>
-                    <th>N° Reporte</th>
-                    <th>N° de Orden</th>
-                    <th>Sector</th>
-                    <th>Fecha</th>
-                    <th>Tipo de problema</th>
-                    <th>Info</th>
-                </tr>
-                <tr>
-                    <td>0054</td>
-                    <td>00045237</td>
-                    <td>A</td>
-                    <td>21/06/2025</td>
-                    <td>Tipo</td>
+{% bootstrap_messages %}
 
-                        <td>
-                        <a href="#" class="text-primary text-decoration-none" data-bs-toggle="modal" data-bs-target="#exampleModal1">
-                            Ver
+{% if reportes_list %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>N° Reporte</th>
+                <th>Fecha</th>
+                <th>OP Asociada</th>
+                <th>Tipo de Problema</th>
+                <th>Descripción</th>
+                <th>Reportado Por</th>
+                <th>Sector</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for reporte in reportes_list %}
+            <tr>
+                <td>{{ reporte.n_reporte }}</td>
+                <td>{{ reporte.fecha|date:"d/m/Y H:i" }}</td>
+                <td>
+                    {% if reporte.orden_produccion_asociada %}
+                        <a href="{% url 'App_LUMINOVA:produccion_detalle_op' reporte.orden_produccion_asociada.id %}">
+                            {{ reporte.orden_produccion_asociada.numero_op }}
                         </a>
-                        <div class="modal" tabindex="-1" id="exampleModal1">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Informe del Reporte</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>Toda la descripcion del Reporte va aca</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-
-                </tr>
-                <tr>
-                    <td>0065</td>
-
-                    <td>00045238</td>
-                    <td>B</td>
-                    <td>27/06/2025</td>
-                    <td>Tipo</td>
-                    <td>
-                        <a href="#" class="text-primary text-decoration-none" data-bs-toggle="modal" data-bs-target="#exampleModal2">
-                            Ver
-                        </a>
-                        <div class="modal" tabindex="-1" id="exampleModal2">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Informe del Reporte</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>Toda la descripcion del Reporte va aca</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>0086</td>
-                    <td>00045240</td>
-                    <td>C</td>
-                    <td>Fecha</td>
-                    <td>Tipo</td>
-                    <td>
-                        <a href="#" class="text-primary text-decoration-none" data-bs-toggle="modal" data-bs-target="#exampleModal3">
-                            Ver
-                        </a>
-                        <div class="modal" tabindex="-1" id="exampleModal3">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Informe del Reporte</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>Toda la descripcion del Reporte va aca</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>N</td>
-                    <td>N</td>
-                    <td>Grupo</td>
-                    <td>Fecha</td>
-                    <td>Tipo</td>
-                    <td>
-                        <a href="#" class="text-primary text-decoration-none" data-bs-toggle="modal" data-bs-target="#exampleModal4">
-                            Ver
-                        </a>
-                        <div class="modal" tabindex="-1" id="exampleModal4">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Informe del Reporte</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>Toda la descripcion del Reporte va aca</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>N</td>
-                    <td>N</td>
-                    <td>Grupo</td>
-                    <td>Fecha</td>
-                    <td>Tipo</td>
-                    <td>
-                        <a href="#" class="text-primary text-decoration-none" data-bs-toggle="modal" data-bs-target="#exampleModal5">
-                            Ver
-                        </a>
-                        <div class="modal" tabindex="-1" id="exampleModal5">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Informe del Reporte</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>Toda la descripcion del Reporte va aca</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>N</td>
-                    <td>N</td>
-                    <td>Grupo</td>
-                    <td>Fecha</td>
-                    <td>Tipo</td>
-                    <td>
-                        <a href="#" class="text-primary text-decoration-none" data-bs-toggle="modal" data-bs-target="#exampleModal6">
-                            Ver
-                        </a>
-                        <div class="modal" tabindex="-1" id="exampleModal6">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Informe del Reporte</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>Toda la descripcion del Reporte va aca</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td>N</td>
-                    <td>N</td>
-                    <td>Grupo</td>
-                    <td>Fecha</td>
-                    <td>Tipo</td>
-                    <td>
-                        <a href="#" class="text-primary text-decoration-none" data-bs-toggle="modal" data-bs-target="#exampleModal7">
-                            Ver
-                        </a>
-                        <div class="modal" tabindex="-1" id="exampleModal7">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Informe del Reporte</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>Toda la descripcion del Reporte va aca</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-
-                                </div>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            </table>
-
-        </div>
-
-    </section>
-
-
-
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                <td>{{ reporte.tipo_problema }}</td>
+                <td>{{ reporte.descripcion_problema|truncatewords:15|default_if_none:"-" }}</td>
+                <td>{{ reporte.reportado_por.username|default_if_none:"Sistema" }}</td>
+                <td>{{ reporte.sector_reporta.nombre|default_if_none:"N/A" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info mt-3">No hay reportes de producción registrados.</div>
+{% endif %}
 {% endblock %}

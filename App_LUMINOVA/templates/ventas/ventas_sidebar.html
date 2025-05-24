@@ -1,0 +1,39 @@
+{% load static %}
+
+{# Definir URLs para que sea más fácil mantenerlas y usarlas en la clase 'active' #}
+{% url 'App_LUMINOVA:ventas_lista_ov' as url_ventas_lista_ov %}
+{% url 'App_LUMINOVA:ventas_crear_ov' as url_ventas_crear_ov %}
+{% url 'App_LUMINOVA:lista_clientes' as url_lista_clientes %}
+{% url 'App_LUMINOVA:produccion_lista_op' as url_produccion_lista_op %} {# Enlace para ver las OPs generadas #}
+
+<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+    <div class="position-sticky pt-4">
+        <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+            <span>Ventas</span>
+        </h6>
+        <hr class="text-white">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_ventas_lista_ov %}active{% endif %}" href="{{ url_ventas_lista_ov }}">
+                    <i class="bi bi-card-list me-2"></i> <span class="ms-2">Listado Órdenes Venta</span>
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_ventas_crear_ov %}active{% endif %}" href="{{ url_ventas_crear_ov }}">
+                    <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Nueva Orden Venta</span>
+                </a>
+            </li>
+             <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_lista_clientes %}active{% endif %}" href="{{ url_lista_clientes }}">
+                    <i class="bi bi-people-fill me-2"></i> <span class="ms-2">Gestión de Clientes</span>
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_produccion_lista_op %}active{% endif %}" href="{{ url_produccion_lista_op }}">
+                    <i class="bi bi-gear-fill me-2"></i> <span class="ms-2">Ver Órdenes Producción</span>
+                </a>
+            </li>
+            {# Futuro: Botón para "Generar Facturas" podría ir aquí o ser una acción en la lista de OVs #}
+        </ul>
+    </div>
+</nav>

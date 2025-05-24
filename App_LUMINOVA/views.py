@@ -1,28 +1,122 @@
-from django.http import JsonResponse
+# TP_LUMINOVA-main/App_LUMINOVA/views.py
+
+from django.http import JsonResponse # Necesario para vistas AJAX
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.models import User, Group, Permission
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+# from django.contrib.auth.forms import UserCreationForm, UserChangeForm # No se usan directamente aquí
 from django.contrib.auth.decorators import user_passes_test, login_required
-from .models import AuditoriaAcceso
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.decorators import login_required
-from .models import *
+# from .models import AuditoriaAcceso # Se importará más abajo con otros modelos
+from django.contrib.auth import authenticate, login, logout as auth_logout # Renombrado
+# from django.contrib.auth.decorators import login_required # Ya importado arriba
 from django.contrib import messages
-from django.views.generic import ListView
-from django.views.generic.detail import DetailView
-from django.views.generic.edit import CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST, require_GET
-from django.views.decorators.csrf import csrf_exempt
-from .forms import (
-    RolForm, PermisosRolForm
+from django.views.decorators.csrf import csrf_exempt # Usar con precaución
+from django.db import transaction, IntegrityError as DjangoIntegrityError # Para transacciones y error de Django
+from django.utils import timezone # Para fechas y horas
+
+# Importa los modelos que realmente existen y necesitas:
+from .models import (
+    AuditoriaAcceso,
+    CategoriaProductoTerminado, ProductoTerminado, CategoriaInsumo, Insumo,
+    ComponenteProducto, Proveedor, Cliente,
+    Orden, # <--- Agregado para Órdenes de Compra
+    OrdenVenta, ItemOrdenVenta, # <--- MODELO PARA ÓRDENES DE VENTA
+    EstadoOrden, SectorAsignado, OrdenProduccion, # Modelos para Órdenes de Producción
+    Reportes, Factura, RolDescripcion,
 )
-from django.db import transaction
+
+# Importa los formularios que realmente existen y necesitas:
+from .forms import (
+    RolForm, PermisosRolForm, ClienteForm, ProveedorForm, # Asegúrate que ProveedorForm exista si lo usas
+    OrdenVentaForm, ItemOrdenVentaFormSet, OrdenProduccionUpdateForm,
+)
 # Create your views here.
 
 #  Funciones para las vistas del navbar
-def compras(req):
-    return render(req, "compras/compras.html")
+@login_required
+def compras_lista_oc_view(request):
+    # if not es_admin_o_rol(request.user, ['compras', 'administrador']):
+    #     messages.error(request, "Acceso denegado.")
+    #     return redirect('App_LUMINOVA:dashboard')
+
+    # Filtrar órdenes de tipo 'compra'
+    # Asumiendo que tu modelo Orden tiene un campo 'tipo' y 'proveedor'
+    ordenes_compra = Orden.objects.filter(tipo='compra').select_related(
+        'proveedor', # Si el campo se llama 'proveedor' en el modelo Orden
+        'insumo_principal'     # Si el campo se llama 'insumo' en el modelo Orden
+    ).order_by('-fecha_creacion')
+    
+    # Para un futuro modal de creación de OC
+    # from .forms import OrdenCompraForm # Necesitarás crear este formulario
+    # form_oc = OrdenCompraForm()
+    # oc_count = Orden.objects.filter(tipo='compra').count()
+    # next_oc_number = f"OC-{str(oc_count + 1).zfill(4)}"
+    # form_oc.fields['numero_orden'].initial = next_oc_number
+    
+    context = {
+        'ordenes_list': ordenes_compra, # Nombre genérico para la plantilla
+        'titulo_seccion': 'Listado de Órdenes de Compra',
+        # 'form_orden': form_oc, # Para el modal de creación
+        # 'tipo_orden_actual': 'compra',
+    }
+    # Necesitarás una plantilla para esto, ej. 'compras/compras_lista_oc.html'
+    return render(request, 'compras/compras_lista_oc.html', context)
+
+@login_required
+def compras_desglose_view(request):
+    # Esta vista mostraría las OCs que están pendientes de generar pedidos a proveedores
+    # Basado en el estado 'PENDIENTE_COMPRAR' o similar que definimos para Orden.
+    # estado_pendiente = EstadoOrden.objects.filter(nombre__iexact='Pendiente a Comprar').first() # Necesitarías EstadoOrden para OC
+    # ordenes_pendientes_compra = []
+    # if estado_pendiente:
+    #     ordenes_pendientes_compra = Orden.objects.filter(tipo='compra', estado=estado_pendiente).order_by('-fecha_creacion')
+    
+    context = {
+        # 'ordenes_pendientes_list': ordenes_pendientes_compra,
+        'ordenes_pendientes_list': [], # Placeholder por ahora
+        'titulo_seccion': 'Desglose de Componentes para Compra',
+    }
+    return render(request, 'compras/compras_desglose.html', context)
+
+@login_required
+def compras_seguimiento_view(request):
+    # Esta vista mostraría las OCs que ya fueron enviadas a proveedores y están en seguimiento
+    # estado_solicitada = EstadoOrden.objects.filter(nombre__iexact='Solicitada').first() # Necesitarías EstadoOrden para OC
+    # ordenes_en_seguimiento = []
+    # if estado_solicitada:
+    #     ordenes_en_seguimiento = Orden.objects.filter(tipo='compra', estado=estado_solicitada).order_by('-fecha_creacion')
+        
+    context = {
+        # 'ordenes_solicitadas_list': ordenes_en_seguimiento,
+        'ordenes_solicitadas_list': [], # Placeholder por ahora
+        'titulo_seccion': 'Seguimiento de Órdenes de Compra',
+    }
+    return render(request, 'compras/compras_seguimiento.html', context)
+
+@login_required
+def compras_tracking_pedido_view(request, numero_orden_track):
+    # Aquí buscarías la OC por 'numero_orden_track' y mostrarías su info de tracking
+    # orden_compra = get_object_or_404(Orden, numero_orden=numero_orden_track, tipo='compra')
+    context = {
+        # 'orden': orden_compra,
+        'numero_orden_track': numero_orden_track, # Pasar para mostrar en la plantilla
+        'titulo_seccion': f'Tracking OC: {numero_orden_track}',
+    }
+    return render(request, 'compras/compras_tracking.html', context)
+
+@login_required
+def compras_desglose_detalle_oc_view(request, numero_orden_desglose):
+    # Aquí mostrarías el detalle de una OC específica de la vista de desglose
+    # orden_compra = get_object_or_404(Orden, numero_orden=numero_orden_desglose, tipo='compra')
+    # Aquí podrías listar los insumos si una OC puede tener múltiples.
+    context = {
+        # 'orden': orden_compra,
+        'numero_orden_desglose': numero_orden_desglose, # Pasar para mostrar en la plantilla
+        'titulo_seccion': f'Detalle Desglose OC: {numero_orden_desglose}',
+    }
+    return render(request, 'compras/compras_desglose_detalle.html', context) # Nombre de plantilla sugerido
 
 def produccion(req):
     return render(req, "produccion/produccion.html")
@@ -432,8 +526,7 @@ def ordenes(request):
 def planificacion(request):
     return render(request, 'produccion/planificacion.html')
 
-def reportes(request):
-    return render(request, 'produccion/reportes.html')
+
 
 #  Funciones para el boton Seleccionar de la tabla de OP// los botones del sidebar de Deposito
 def depo_seleccion(request):
@@ -578,3 +671,637 @@ class ProductoTerminadoDeleteView(DeleteView):
     template_name = 'deposito/productoterminado_confirm_delete.html'
     context_object_name = 'producto_terminado'
     success_url = reverse_lazy('App_LUMINOVA:deposito')
+
+
+
+# TP_LUMINOVA-main/App_LUMINOVA/views.py
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.models import User, Group
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.db import transaction
+from django.db.utils import IntegrityError as DjangoIntegrityError
+from django.urls import reverse_lazy
+from django.utils import timezone
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView # Si las usas para otros CRUDs
+
+from .models import (
+    Cliente, OrdenVenta, ItemOrdenVenta, ProductoTerminado, OrdenProduccion,
+    EstadoOrden, SectorAsignado, Proveedor, Insumo, CategoriaInsumo,
+    CategoriaProductoTerminado, RolDescripcion, AuditoriaAcceso, ComponenteProducto
+)
+from .forms import (
+    ClienteForm, OrdenVentaForm, ItemOrdenVentaFormSet, OrdenProduccionUpdateForm,
+    # Si tienes InsumoForm, ProductoTerminadoForm, etc., impórtalos aquí
+)
+
+# --- HELPER ---
+def es_admin_o_rol(user, roles_permitidos=None):
+    if user.is_superuser:
+        return True
+    if roles_permitidos is None:
+        roles_permitidos = []
+    return user.groups.filter(name__in=[rol.lower() for rol in roles_permitidos]).exists()
+
+# --- VISTAS DE CLIENTES ---
+@login_required
+def lista_clientes_view(request):
+    if not es_admin_o_rol(request.user, ['ventas', 'administrador']):
+        messages.error(request, "Acceso denegado.")
+        return redirect('App_LUMINOVA:dashboard')
+        
+    clientes = Cliente.objects.all().order_by('nombre')
+    form_para_crear = ClienteForm() # Instancia para el modal de creación
+    
+    context = {
+        'clientes_list': clientes,
+        'cliente_form_crear': form_para_crear, # Para el modal de creación
+        'ClienteFormClass': ClienteForm,      # Pasamos la clase del formulario
+        'titulo_seccion': 'Gestión de Clientes',
+    }
+    return render(request, 'ventas/ventas_clientes.html', context)
+
+@login_required
+@transaction.atomic
+def crear_cliente_view(request):
+    if not es_admin_o_rol(request.user, ['ventas', 'administrador']):
+        messages.error(request, "Acción no permitida.")
+        return redirect('App_LUMINOVA:lista_clientes')
+
+    if request.method == 'POST':
+        form = ClienteForm(request.POST)
+        if form.is_valid():
+            try:
+                form.save()
+                messages.success(request, 'Cliente creado exitosamente.')
+            except DjangoIntegrityError:
+                messages.error(request, 'Error: Un cliente con ese nombre o email ya existe.')
+            except Exception as e:
+                messages.error(request, f'Error inesperado al crear cliente: {e}')
+            return redirect('App_LUMINOVA:lista_clientes')
+        else:
+            # Re-render con errores (para modales puede ser complejo, simplificamos)
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
+            return redirect('App_LUMINOVA:lista_clientes') 
+    return redirect('App_LUMINOVA:lista_clientes')
+
+# ... (editar_cliente_view y eliminar_cliente_view pueden permanecer similares a como estaban) ...
+@login_required
+@transaction.atomic
+def editar_cliente_view(request, cliente_id):
+    if not es_admin_o_rol(request.user, ['ventas', 'administrador']):
+        messages.error(request, "Acción no permitida.")
+        return redirect('App_LUMINOVA:lista_clientes')
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    if request.method == 'POST':
+        form = ClienteForm(request.POST, instance=cliente)
+        if form.is_valid():
+            try:
+                form.save()
+                messages.success(request, 'Cliente actualizado exitosamente.')
+            except DjangoIntegrityError:
+                messages.error(request, 'Error: Otro cliente ya tiene ese nombre o email.')
+            except Exception as e:
+                messages.error(request, f'Error inesperado al actualizar cliente: {e}')
+            return redirect('App_LUMINOVA:lista_clientes')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
+            return redirect('App_LUMINOVA:lista_clientes')
+    return redirect('App_LUMINOVA:lista_clientes')
+
+@login_required
+@transaction.atomic
+def eliminar_cliente_view(request, cliente_id):
+    if not es_admin_o_rol(request.user, ['ventas', 'administrador']):
+        messages.error(request, "Acción no permitida.")
+        return redirect('App_LUMINOVA:lista_clientes')
+    cliente = get_object_or_404(Cliente, id=cliente_id)
+    if request.method == 'POST':
+        try:
+            nombre_cliente = cliente.nombre
+            cliente.delete()
+            messages.success(request, f'Cliente "{nombre_cliente}" eliminado exitosamente.')
+        except Exception as e:
+            messages.error(request, f'Error al eliminar cliente: {e}. Verifique que no tenga órdenes asociadas.')
+    return redirect('App_LUMINOVA:lista_clientes')
+
+# --- VISTAS PARA ÓRDENES DE VENTA ---
+@login_required
+def ventas_lista_ov_view(request):
+    if not es_admin_o_rol(request.user, ['ventas', 'produccion', 'administrador']): # Producción también podría ver OVs
+        messages.error(request, "Acceso denegado.")
+        return redirect('App_LUMINOVA:dashboard')
+
+    ordenes = OrdenVenta.objects.select_related('cliente').prefetch_related(
+        'items_ov__producto_terminado', 
+        'ops_generadas' # Usando el related_name de OrdenProduccion.orden_venta_origen
+    ).order_by('-fecha_creacion')
+    
+    context = {
+        'ordenes_list': ordenes,
+        'titulo_seccion': 'Órdenes de Venta',
+    }
+    return render(request, 'ventas/ventas_lista_ov.html', context)
+
+@login_required
+@transaction.atomic
+def ventas_crear_ov_view(request):
+    if not es_admin_o_rol(request.user, ['ventas', 'administrador']):
+        messages.error(request, "Acción no permitida.")
+        return redirect('App_LUMINOVA:ventas_lista_ov')
+
+    if request.method == 'POST':
+        form_ov = OrdenVentaForm(request.POST, prefix='ov')
+        formset_items = ItemOrdenVentaFormSet(request.POST, prefix='items')
+
+        if form_ov.is_valid() and formset_items.is_valid():
+            ov = form_ov.save(commit=False)
+            # El estado viene del form, si no, default del modelo.
+            # El total_ov se calcula después de guardar los items.
+            ov.total_ov = 0 
+            
+            try:
+                ov.save() # Guardar OV para obtener ID
+
+                total_orden_calculado = 0
+                items_guardados_para_op = []
+
+                for form_item in formset_items:
+                    if form_item.is_valid() and not form_item.cleaned_data.get('DELETE', False):
+                        if form_item.cleaned_data.get('producto_terminado') and form_item.cleaned_data.get('cantidad'):
+                            item = form_item.save(commit=False)
+                            item.orden_venta = ov
+                            # Asegurar que el precio_unitario_venta se toma del producto
+                            item.precio_unitario_venta = item.producto_terminado.precio_unitario
+                            item.subtotal = item.cantidad * item.precio_unitario_venta
+                            total_orden_calculado += item.subtotal
+                            item.save()
+                            items_guardados_para_op.append(item)
+                
+                # formset_items.save_m2m() # No es necesario si no hay M2M directos en ItemOrdenVenta
+
+                if not items_guardados_para_op:
+                    messages.error(request, "Debe añadir al menos un producto a la orden.")
+                    # No guardamos la OV si no tiene items, o podrías permitirlo
+                    ov.delete() # Eliminar la OV vacía creada
+                    # Re-renderizar el form
+                    context = {'form_ov': form_ov, 'formset_items': formset_items, 'titulo_seccion': 'Nueva Orden de Venta'}
+                    return render(request, 'ventas/ventas_crear_ov.html', context)
+
+
+                ov.total_ov = total_orden_calculado
+                ov.save(update_fields=['total_ov']) # Solo actualizar el total
+
+                messages.success(request, f'Orden de Venta "{ov.numero_ov}" creada con total ${ov.total_ov:.2f}.')
+
+                # RF-02: Generación automática de Órdenes de Producción
+                estado_op_inicial = EstadoOrden.objects.filter(nombre__iexact='Pendiente').first()
+                if not estado_op_inicial:
+                    messages.error(request, "Error crítico: El estado 'Pendiente' para OP no está configurado. Las OPs no se generarán.")
+                else:
+                    for item_ov in items_guardados_para_op: # Usar los items que realmente se guardaron
+                        try:
+                            op_count = OrdenProduccion.objects.count()
+                            next_op_number = f"OP-{str(op_count + 1).zfill(5)}"
+                            while OrdenProduccion.objects.filter(numero_op=next_op_number).exists():
+                                op_count += 1
+                                next_op_number = f"OP-{str(op_count + 1).zfill(5)}"
+                            
+                            OrdenProduccion.objects.create(
+                                numero_op=next_op_number,
+                                orden_venta_origen=ov,
+                                producto_a_producir=item_ov.producto_terminado,
+                                cantidad_a_producir=item_ov.cantidad,
+                                # cliente_final=ov.cliente, # Se puede obtener de ov.cliente en la plantilla
+                                fecha_solicitud=timezone.now(),
+                                estado_op=estado_op_inicial, # Usando el modelo EstadoOrden
+                            )
+                            messages.info(request, f'OP "{next_op_number}" para "{item_ov.producto_terminado.descripcion}" generada.')
+                        except Exception as e_op:
+                            messages.error(request, f'Error al generar OP para item "{item_ov.producto_terminado.descripcion}": {e_op}')
+                
+                return redirect('App_LUMINOVA:ventas_lista_ov')
+
+            except DjangoIntegrityError as e_int:
+                 if 'UNIQUE constraint' in str(e_int) and 'numero_ov' in str(e_int):
+                    messages.error(request, f"El número de orden de venta '{form_ov.cleaned_data.get('numero_ov')}' ya existe.")
+                 else:
+                    messages.error(request, f"Error de base de datos: {e_int}")
+            except Exception as e:
+                messages.error(request, f'Error inesperado al crear OV: {e}')
+        else:
+            # Construir un mensaje de error más detallado
+            error_txt = "Por favor, corrija los siguientes errores: "
+            for field, errors in form_ov.errors.items():
+                error_txt += f"{form_ov.fields[field].label or field}: {', '.join(errors)}. "
+            for i, form_item_errors in enumerate(formset_items.errors):
+                if form_item_errors:
+                    error_txt += f"Ítem {i+1}: "
+                    for field, errors in form_item_errors.items():
+                         error_txt += f"{formset_items.forms[i].fields[field].label or field}: {', '.join(errors)}. "
+            messages.error(request, error_txt)
+
+    else: # GET
+        form_ov = OrdenVentaForm(prefix='ov')
+        ov_count = OrdenVenta.objects.count()
+        next_ov_number = f"OV-{str(ov_count + 1).zfill(4)}"
+        while OrdenVenta.objects.filter(numero_ov=next_ov_number).exists():
+            ov_count += 1
+            next_ov_number = f"OV-{str(ov_count + 1).zfill(4)}"
+        form_ov.fields['numero_ov'].initial = next_ov_number
+        form_ov.fields['estado'].initial = 'PENDIENTE'
+        formset_items = ItemOrdenVentaFormSet(prefix='items', queryset=ItemOrdenVenta.objects.none())
+
+    context = {
+        'form_ov': form_ov,
+        'formset_items': formset_items,
+        'titulo_seccion': 'Nueva Orden de Venta',
+    }
+    return render(request, 'ventas/ventas_crear_ov.html', context)
+
+# ... (resto de tus vistas para Producción, Depósito, Admin, etc., ajustando nombres de modelos y campos si es necesario)
+
+
+# --- VISTAS PARA PRODUCCIÓN ---
+@login_required
+def produccion_lista_op_view(request):
+    
+    ordenes_prod = OrdenProduccion.objects.select_related(
+        'producto_a_producir__categoria', 
+        'orden_venta_origen__cliente', # Para obtener el cliente
+        'estado_op', # Nombre del campo en tu modelo OP
+        'sector_asignado_op'  # Nombre del campo en tu modelo OP
+    ).order_by('-fecha_solicitud')
+    
+    context = {
+        'ordenes_produccion_list': ordenes_prod,
+        'titulo_seccion': 'Listado de Órdenes de Producción',
+        'form_update_op': OrdenProduccionUpdateForm(), # Para el modal de edición
+    }
+    return render(request, 'produccion/produccion_lista_op.html', context)
+
+@login_required
+def produccion_detalle_op_view(request, op_id):
+    op = get_object_or_404(
+        OrdenProduccion.objects.select_related(
+            'producto_a_producir__categoria', # Para acceder a la categoría del producto
+            'orden_venta_origen__cliente',    # Para acceder al cliente desde la OV
+            'estado_op',                      # Para el nombre del estado
+            'sector_asignado_op'              # Para el nombre del sector
+        ), 
+        id=op_id
+    )
+    
+    insumos_necesarios_data = []
+    todos_los_insumos_disponibles = True # Asumir que sí
+    
+    if op.producto_a_producir: # Importante verificar que el producto existe en la OP
+        componentes_requeridos = ComponenteProducto.objects.filter(
+            producto_terminado=op.producto_a_producir
+        ).select_related('insumo') # Para acceder al stock del insumo
+        
+        if not componentes_requeridos.exists():
+            messages.warning(request, f"No se han definido componentes (BOM) para el producto '{op.producto_a_producir.descripcion}'.")
+            todos_los_insumos_disponibles = False 
+        
+        for comp in componentes_requeridos:
+            cantidad_total_requerida_para_op = comp.cantidad_necesaria * op.cantidad_a_producir
+            suficiente = comp.insumo.stock >= cantidad_total_requerida_para_op
+            if not suficiente:
+                todos_los_insumos_disponibles = False
+            insumos_necesarios_data.append({
+                'insumo_descripcion': comp.insumo.descripcion,
+                'cantidad_por_unidad_pt': comp.cantidad_necesaria,
+                'cantidad_total_requerida_op': cantidad_total_requerida_para_op,
+                'stock_actual_insumo': comp.insumo.stock,
+                'suficiente_stock': suficiente,
+                'insumo_id': comp.insumo.id
+            })
+    else:
+        # Esto manejará el "Error: La Orden de Producción no tiene un producto asociado."
+        messages.error(request, "La Orden de Producción no tiene un producto asociado. Contacte al administrador.")
+        todos_los_insumos_disponibles = False
+
+
+    form_update = OrdenProduccionUpdateForm(instance=op) # Instancia para GET
+    if request.method == 'POST':
+        form_update = OrdenProduccionUpdateForm(request.POST, instance=op)
+        if form_update.is_valid():
+            form_update.save()
+            messages.success(request, f"Orden de Producción {op.numero_op} actualizada.")
+            return redirect('App_LUMINOVA:produccion_detalle_op', op_id=op.id)
+        else:
+            messages.error(request, "Error al actualizar la OP. Revise los datos del formulario.")
+
+    context = {
+        'op': op, # El objeto OrdenProduccion principal
+        'insumos_necesarios_list': insumos_necesarios_data,
+        'form_update_op': form_update, # El formulario para la gestión
+        'todos_los_insumos_disponibles_variable_de_contexto': todos_los_insumos_disponibles, # Para el botón
+        'titulo_seccion': f'Detalle OP: {op.numero_op}',
+    }
+    return render(request, 'produccion/produccion_detalle_op.html', context)
+
+@login_required
+@transaction.atomic # Buena idea para operaciones que modifican stock
+def deposito_enviar_insumos_op_view(request, op_id):
+    op = get_object_or_404(OrdenProduccion, id=op_id)
+    
+    if request.method == 'POST':
+        # Lógica para descontar insumos del stock
+        # Esto se implementaría completamente después, pero la vista debe existir
+        insumos_descontados_correctamente = True
+        componentes_requeridos = ComponenteProducto.objects.filter(producto_terminado=op.producto_a_producir)
+        
+        for comp in componentes_requeridos:
+            cantidad_a_descontar = comp.cantidad_necesaria * op.cantidad_a_producir
+            if comp.insumo.stock >= cantidad_a_descontar:
+                # Insumo.objects.filter(id=comp.insumo.id).update(stock=F('stock') - cantidad_a_descontar) # Mejor para concurrencia
+                comp.insumo.stock -= cantidad_a_descontar
+                comp.insumo.save()
+            else:
+                messages.error(request, f"Stock insuficiente para '{comp.insumo.descripcion}'. Requeridos: {cantidad_a_descontar}, Disponible: {comp.insumo.stock}")
+                insumos_descontados_correctamente = False
+                break 
+        
+        if insumos_descontados_correctamente:
+            # Cambiar estado de la OP, por ejemplo a "En Proceso" o un estado "Insumos Entregados"
+            try:
+                # Asume que tienes un estado como "En Proceso" o "Insumos Listos"
+                estado_siguiente = EstadoOrden.objects.get(nombre__iexact='En Proceso') 
+                op.estado_op = estado_siguiente
+                op.save()
+                messages.success(request, f"Insumos para OP {op.numero_op} descontados del stock. OP ahora 'En Proceso'.")
+            except EstadoOrden.DoesNotExist:
+                 messages.warning(request, "Estado 'En Proceso' no encontrado para OP. Insumos descontados, pero el estado de la OP no se actualizó.")
+            # Redirigir a la lista de solicitudes de depósito o al detalle de la OP de producción
+            return redirect('App_LUMINOVA:deposito_solicitudes_insumos')
+        else:
+            # Si no se descontaron, redirige de nuevo al detalle de la solicitud en depósito para ver el error
+            return redirect('App_LUMINOVA:deposito_detalle_solicitud_op', op_id=op.id)
+
+    # Si es GET, podría redirigir o mostrar alguna confirmación, pero usualmente esta acción es POST.
+    # Por ahora, redirigimos a la página de detalle de la solicitud en depósito.
+    messages.info(request, "Para enviar insumos, confirme la acción desde la página de detalle de la solicitud.")
+    return redirect('App_LUMINOVA:deposito_detalle_solicitud_op', op_id=op.id)
+
+
+@login_required
+def planificacion_produccion_view(request):
+    # if not es_admin_o_rol(request.user, ['produccion', 'administrador']):
+    #     messages.error(request, "Acceso denegado.")
+    #     return redirect('App_LUMINOVA:dashboard')
+
+    # Obtener OPs que están pendientes de planificación (ej. estado 'Pendiente')
+    estado_pendiente = EstadoOrden.objects.filter(nombre__iexact='Pendiente').first()
+    ops_para_planificar = []
+    if estado_pendiente:
+        ops_para_planificar = OrdenProduccion.objects.filter(
+            estado_op=estado_pendiente
+        ).select_related('producto_a_producir', 'orden_venta_origen__cliente').order_by('fecha_solicitud')
+    
+    # Para los dropdowns en el formulario de cada OP
+    sectores = SectorAsignado.objects.all().order_by('nombre')
+    # Posibles estados a los que se puede pasar desde planificación
+    estados_siguientes = EstadoOrden.objects.filter(nombre__in=['En Proceso', 'Pendiente']).order_by('nombre')
+
+
+    if request.method == 'POST':
+        op_id_a_actualizar = request.POST.get('op_id')
+        op_a_actualizar = get_object_or_404(OrdenProduccion, id=op_id_a_actualizar)
+        
+        # Usar un formulario específico para la actualización desde la planificación si es necesario,
+        # o campos individuales. Por simplicidad, usamos campos individuales aquí.
+        
+        sector_id = request.POST.get(f'sector_asignado_op_{op_id_a_actualizar}')
+        estado_id = request.POST.get(f'estado_op_{op_id_a_actualizar}')
+        fecha_inicio_p = request.POST.get(f'fecha_inicio_planificada_{op_id_a_actualizar}')
+        fecha_fin_p = request.POST.get(f'fecha_fin_planificada_{op_id_a_actualizar}')
+
+        if sector_id:
+            op_a_actualizar.sector_asignado_op_id = sector_id
+        if estado_id:
+            op_a_actualizar.estado_op_id = estado_id
+        if fecha_inicio_p:
+            op_a_actualizar.fecha_inicio_planificada = fecha_inicio_p
+        if fecha_fin_p:
+            op_a_actualizar.fecha_fin_planificada = fecha_fin_p
+        
+        op_a_actualizar.save()
+        messages.success(request, f"OP {op_a_actualizar.numero_op} actualizada.")
+        return redirect('App_LUMINOVA:planificacion_produccion')
+
+
+    context = {
+        'ops_para_planificar_list': ops_para_planificar,
+        'sectores_list': sectores,
+        'estados_op_list': estados_siguientes,
+        'titulo_seccion': 'Planificación de Órdenes de Producción',
+    }
+    return render(request, 'produccion/planificacion.html', context)
+
+""" class Reportes(models.Model):
+    orden_produccion_asociada = models.ForeignKey(OrdenProduccion, on_delete=models.SET_NULL, null=True, blank=True, related_name="reportes_incidencia")
+    n_reporte = models.CharField(max_length=20, unique=True) # RP-XXXX
+    fecha = models.DateTimeField(default=timezone.now)
+    tipo_problema = models.CharField(max_length=100)
+    descripcion_problema = models.TextField(blank=True, null=True) # Cambiado de informe_reporte
+    reportado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True) # Quién lo reportó
+    sector_reporta = models.ForeignKey(SectorAsignado, on_delete=models.SET_NULL, null=True, blank=True) # Desde qué sector
+
+    def __str__(self):
+        return f"Reporte {self.n_reporte} (OP: {self.orden_produccion_asociada.numero_op if self.orden_produccion_asociada else 'N/A'})"
+ """
+@login_required
+def reportes_produccion_view(request):
+    # if not es_admin_o_rol(request.user, ['produccion', 'administrador']):
+    #     messages.error(request, "Acceso denegado.")
+    #     return redirect('App_LUMINOVA:dashboard')
+        
+    lista_reportes = Reportes.objects.select_related(
+        'orden_produccion_asociada', 
+        'reportado_por',
+        'sector_reporta'
+    ).order_by('-fecha')
+    
+    context = {
+        'reportes_list': lista_reportes,
+        'titulo_seccion': 'Reportes de Producción',
+    }
+    return render(request, 'produccion/reportes.html', context)
+
+# --- VISTAS PARA DEPÓSITO (Manejo de Insumos para OPs) ---
+
+@login_required
+def deposito_view(request): # Tu vista principal de depósito (ya la tienes, solo para contexto)
+    categorias_I = CategoriaInsumo.objects.all()
+    categorias_PT = CategoriaProductoTerminado.objects.all()
+    
+    # Podrías añadir un resumen de OPs esperando insumos aquí también
+    estado_requiere_insumos = EstadoOrden.objects.filter(nombre__iexact='En Proceso').first() # O un estado "Insumos Solicitados"
+    ops_pendientes_deposito_count = 0
+    if estado_requiere_insumos:
+        ops_pendientes_deposito_count = OrdenProduccion.objects.filter(estado_op=estado_requiere_insumos).count()
+
+    context = {
+        'categorias_I': categorias_I,
+        'categorias_PT': categorias_PT,
+        'ops_pendientes_deposito_count': ops_pendientes_deposito_count,
+        # ... (otro contexto que ya tenías)
+    }
+    return render(request, 'deposito/deposito.html', context)
+
+
+@login_required
+def deposito_solicitudes_insumos_view(request):
+    """
+    Muestra una lista de Órdenes de Producción que están en un estado
+    que requiere que el depósito prepare/envíe insumos.
+    Ej: Estado "En Proceso" o un estado específico como "Esperando Insumos".
+    """
+    # if not es_admin_o_rol(request.user, ['deposito', 'administrador']): # Control de permisos
+    #     messages.error(request, "Acceso denegado.")
+    #     return redirect('App_LUMINOVA:dashboard')
+
+    # Decide qué estado de OP significa "necesita insumos de depósito"
+    # Podría ser 'En Proceso', o podrías crear un estado específico como 'Insumos Solicitados'
+    # Aquí asumimos 'En Proceso' o un estado más específico que debes crear en el admin: 'Esperando Preparación Insumos'
+    try:
+        # Intenta con un estado específico si lo tienes
+        estado_objetivo = EstadoOrden.objects.get(nombre__iexact='Insumos Solicitados')
+    except EstadoOrden.DoesNotExist:
+        # Si no, usa 'En Proceso' como fallback o muestra un error
+        estado_objetivo = EstadoOrden.objects.filter(nombre__iexact='En Proceso').first()
+        if not estado_objetivo:
+            messages.warning(request, "No se ha configurado un estado de OP para la solicitud de insumos (ej. 'Insumos Solicitados' o 'En Proceso'). Mostrando todas las OPs pendientes.")
+            # Como fallback, podrías mostrar todas las OPs que no estén 'Terminado' o 'Cancelado'
+            ops_necesitan_insumos = OrdenProduccion.objects.exclude(
+                estado_op__nombre__iexact='Terminado'
+            ).exclude(
+                estado_op__nombre__iexact='Cancelado'
+            ).select_related('producto_a_producir', 'estado_op').order_by('fecha_solicitud')
+        else:
+            ops_necesitan_insumos = OrdenProduccion.objects.filter(
+                estado_op=estado_objetivo
+            ).select_related('producto_a_producir', 'estado_op').order_by('fecha_solicitud')
+
+
+    context = {
+        'ops_necesitan_insumos_list': ops_necesitan_insumos,
+        'titulo_seccion': 'Órdenes de Producción Pendientes de Insumos'
+    }
+    return render(request, 'deposito/deposito_solicitudes_insumos.html', context)
+
+
+@login_required
+def deposito_detalle_solicitud_op_view(request, op_id):
+    """
+    Muestra el detalle de una OP desde la perspectiva del depósito,
+    listando los insumos necesarios, su stock y si son suficientes.
+    Permite confirmar el envío/descuento de insumos.
+    """
+    # if not es_admin_o_rol(request.user, ['deposito', 'administrador']): # Control de permisos
+    #     messages.error(request, "Acceso denegado.")
+    #     return redirect('App_LUMINOVA:dashboard')
+
+    op = get_object_or_404(OrdenProduccion.objects.select_related('producto_a_producir', 'estado_op'), id=op_id)
+    insumos_necesarios_data = []
+    todos_los_insumos_disponibles = True # Asumir que sí hasta que se demuestre lo contrario
+
+    if op.producto_a_producir:
+        componentes_requeridos = ComponenteProducto.objects.filter(
+            producto_terminado=op.producto_a_producir
+        ).select_related('insumo')
+        
+        if not componentes_requeridos.exists():
+            messages.warning(request, f"No se ha definido el BOM (lista de componentes) para el producto '{op.producto_a_producir.descripcion}'. No se pueden determinar los insumos.")
+            todos_los_insumos_disponibles = False # No se puede proceder
+        
+        for comp in componentes_requeridos:
+            cantidad_total_req = comp.cantidad_necesaria * op.cantidad_a_producir
+            suficiente = comp.insumo.stock >= cantidad_total_req
+            if not suficiente:
+                todos_los_insumos_disponibles = False
+            insumos_necesarios_data.append({
+                'insumo_id': comp.insumo.id,
+                'insumo_descripcion': comp.insumo.descripcion,
+                'cantidad_total_requerida_op': cantidad_total_req,
+                'stock_actual_insumo': comp.insumo.stock,
+                'suficiente_stock': suficiente
+            })
+            
+    context = {
+        'op': op,
+        'insumos_necesarios_list': insumos_necesarios_data,
+        'todos_los_insumos_disponibles': todos_los_insumos_disponibles, # Para habilitar/deshabilitar botón
+        'titulo_seccion': f'Detalle Solicitud Insumos para OP: {op.numero_op}'
+    }
+    return render(request, 'deposito/deposito_detalle_solicitud_op.html', context)
+
+
+@login_required
+@transaction.atomic
+def deposito_enviar_insumos_op_view(request, op_id):
+    """
+    Procesa el envío/descuento de insumos para una OP.
+    Esta vista es llamada por un POST, usualmente desde deposito_detalle_solicitud_op.html.
+    """
+    # if not es_admin_o_rol(request.user, ['deposito', 'administrador']): # Control de permisos
+    #     messages.error(request, "Acción no permitida.")
+    #     return redirect('App_LUMINOVA:deposito_solicitudes_insumos')
+
+    op = get_object_or_404(OrdenProduccion, id=op_id)
+
+    if request.method == 'POST':
+        insumos_descontados_correctamente = True
+        componentes_requeridos = ComponenteProducto.objects.filter(producto_terminado=op.producto_a_producir)
+
+        if not componentes_requeridos.exists():
+            messages.error(request, f"No se puede procesar: No hay BOM definido para '{op.producto_a_producir.descripcion}'.")
+            return redirect('App_LUMINOVA:deposito_detalle_solicitud_op', op_id=op.id)
+
+        for comp in componentes_requeridos:
+            cantidad_a_descontar = comp.cantidad_necesaria * op.cantidad_a_producir
+            
+            # Re-chequear stock antes de descontar (importante por concurrencia, aunque F() es mejor)
+            insumo_a_actualizar = Insumo.objects.get(id=comp.insumo.id) # Obtener la instancia más reciente
+            if insumo_a_actualizar.stock >= cantidad_a_descontar:
+                insumo_a_actualizar.stock -= cantidad_a_descontar
+                insumo_a_actualizar.save(update_fields=['stock'])
+                # Mejor para concurrencia (pero requiere que 'cantidad_a_descontar' sea positivo):
+                # Insumo.objects.filter(id=comp.insumo.id, stock__gte=cantidad_a_descontar).update(stock=F('stock') - cantidad_a_descontar)
+                # updated_rows = Insumo.objects.filter(id=comp.insumo.id, stock__gte=cantidad_a_descontar).update(stock=F('stock') - cantidad_a_descontar)
+                # if updated_rows == 0: # No se pudo actualizar, probablemente stock insuficiente
+                #    insumos_descontados_correctamente = False
+                #    messages.error(request, f"Stock insuficiente o error al actualizar '{comp.insumo.descripcion}'.")
+                #    break
+            else:
+                messages.error(request, f"Stock insuficiente para '{comp.insumo.descripcion}'. Requeridos: {cantidad_a_descontar}, Disponible: {insumo_a_actualizar.stock}")
+                insumos_descontados_correctamente = False
+                break 
+        
+        if insumos_descontados_correctamente:
+            try:
+                # Actualizar estado de la OP, ej. a "En Proceso" (si antes era "Insumos Solicitados")
+                # o a "Insumos Entregados a Producción" si tienes ese estado.
+                # Aquí es crucial que tengas un estado "En Proceso" o el siguiente lógico.
+                estado_siguiente = EstadoOrden.objects.get(nombre__iexact='En Proceso') 
+                op.estado_op = estado_siguiente
+                op.fecha_inicio_real = timezone.now() # Opcional: marcar cuándo se entregaron los insumos como inicio real
+                op.save(update_fields=['estado_op', 'fecha_inicio_real'])
+                messages.success(request, f"Insumos para OP {op.numero_op} descontados. OP ahora '{estado_siguiente.nombre}'.")
+            except EstadoOrden.DoesNotExist:
+                 messages.warning(request, "Estado de OP para 'En Proceso' no encontrado. Insumos descontados, pero el estado de la OP no se actualizó.")
+            return redirect('App_LUMINOVA:deposito_solicitudes_insumos')
+        else:
+            # Si no se descontaron todos, se queda en la página de detalle para ver el error.
+            return redirect('App_LUMINOVA:deposito_detalle_solicitud_op', op_id=op.id)
+
+    # Si es GET, no debería hacer nada más que redirigir.
+    messages.info(request, "Para enviar insumos, confirme la acción desde la página de detalle de la solicitud de OP.")
+    return redirect('App_LUMINOVA:deposito_detalle_solicitud_op', op_id=op.id)

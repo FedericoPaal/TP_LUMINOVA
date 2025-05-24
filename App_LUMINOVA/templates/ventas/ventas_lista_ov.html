@@ -1,0 +1,86 @@
+{% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titulo_seccion|default:"Órdenes de Venta" }} | Luminova{% endblock %}
+
+{% block sidebar_content %}
+    {% include 'ventas/ventas_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ titulo_seccion }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'App_LUMINOVA:ventas_crear_ov' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Nueva Orden de Venta
+        </a>
+    </div>
+</div>
+
+
+
+<div class="table-responsive mt-3">
+    <table class="table table-striped table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>N° OV</th>
+                <th>Fecha Creación</th>
+                <th>Cliente</th>
+                <th>Items</th>
+                <th class="text-end">Total</th>
+                <th>Estado</th>
+                <th>OPs Generadas</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ov in ordenes_list %}
+            <tr>
+                <td><a href="#">{{ ov.numero_ov }}</a></td> {# Enlace a detalle de OV (futuro) #}
+                <td>{{ ov.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                <td>{{ ov.cliente.nombre|default_if_none:"N/A" }}</td>
+                <td>
+                    <ul class="list-unstyled mb-0 small">
+                    {% for item in ov.items_ov.all %}
+                        <li>{{ item.cantidad }} x {{ item.producto_terminado.descripcion|truncatechars:25 }}</li>
+                    {% empty %}
+                        <li>Sin ítems</li>
+                    {% endfor %}
+                    </ul>
+                </td>
+                <td class="text-end">${{ ov.total_ov|floatformat:2 }}</td>
+                <td>
+                    <span class="badge 
+                        {% if ov.estado == 'PENDIENTE' %}bg-warning text-dark
+                        {% elif ov.estado == 'CONFIRMADA' %}bg-info
+                        {% elif ov.estado == 'EN_PRODUCCION' %}bg-primary
+                        {% elif ov.estado == 'LISTA_ENTREGA' %}bg-secondary
+                        {% elif ov.estado == 'COMPLETADA' %}bg-success
+                        {% elif ov.estado == 'CANCELADA' %}bg-danger
+                        {% else %}bg-light text-dark{% endif %}">
+                        {{ ov.get_estado_display }} {# O ov.get_estado_display_custom si lo tienes #}
+                    </span>
+                </td>
+                <td>
+                    {% for op_gen in ov.ops_generadas.all %}
+                        <a href="{% url 'App_LUMINOVA:produccion_detalle_op' op_gen.id %}">{{ op_gen.numero_op }}</a>
+                        {% if not forloop.last %}<br>{% endif %}
+                    {% empty %}
+                        Ninguna
+                    {% endfor %}
+                </td>
+                <td class="text-center">
+                     <a href="#" class="btn btn-sm btn-outline-success" title="Generar Factura (Próximamente)"><i class="bi bi-receipt"></i></a>
+                     {# Podrías añadir botones para editar/cancelar OV aquí si el estado lo permite #}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="text-center fst-italic text-muted">No hay órdenes de venta registradas.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
