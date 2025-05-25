@@ -18,9 +18,9 @@ from .views import (
     compras_lista_oc_view, # Vista para el listado principal de Órdenes de Compra
     compras_desglose_detalle_oc_view, compras_desglose_view,
     compras_seguimiento_view, compras_tracking_pedido_view,
-    
+
     # Producción
-    
+
     produccion_lista_op_view,
     produccion_detalle_op_view,
     planificacion_produccion_view,
@@ -28,20 +28,23 @@ from .views import (
 
     # Depósito
     deposito_view, # Vista principal de depósito (categorías)
-    deposito_solicitudes_insumos_view, 
-    deposito_detalle_solicitud_op_view, 
-    deposito_enviar_insumos_op_view, 
-    # depo_seleccion, depo_enviar (Eliminar si ya no se usan directamente por el nuevo flujo)
+    deposito_solicitudes_insumos_view,
+    deposito_detalle_solicitud_op_view,
+    deposito_enviar_insumos_op_view,
+
+     depo_seleccion,# (Eliminar si ya no se usan directamente por el nuevo flujo)
 
     # CRUDs para Categorías, Insumos, Productos Terminados (Class-Based Views)
     Categoria_IDetailView, Categoria_ICreateView, Categoria_IUpdateView, Categoria_IDeleteView,
     Categoria_PTDetailView, Categoria_PTCreateView, Categoria_PTUpdateView, Categoria_PTDeleteView,
     InsumosListView, InsumoDetailView, InsumoCreateView, InsumoUpdateView, InsumoDeleteView,
     ProductoTerminadosListView, ProductoTerminadoDetailView, ProductoTerminadoCreateView, ProductoTerminadoUpdateView, ProductoTerminadoDeleteView,
+    ProveedorDetailView, ProveedorListView, ProveedorCreateView, ProveedorUpdateView, ProveedorDeleteView,
+    FabricanteCreateView, FabricanteDetailView, FabricanteListView, FabricanteUpdateView, FabricanteDeleteView,
 
     # Control de Calidad (Placeholder)
-    
-    
+
+
     # Vistas AJAX para Roles
     crear_rol_ajax, get_rol_data_ajax, editar_rol_ajax, eliminar_rol_ajax,
     get_permisos_rol_ajax, actualizar_permisos_rol_ajax,
@@ -87,21 +90,32 @@ urlpatterns = [
     path('produccion/orden/<int:op_id>/', produccion_detalle_op_view, name='produccion_detalle_op'),
     path('produccion/planificacion/', planificacion_produccion_view, name='planificacion_produccion'),
     path('produccion/reportes/', reportes_produccion_view, name='reportes_produccion'),
-    
+
     # --- Rutas de Depósito ---
-    path('deposito/', deposito_view, name='deposito_view'), 
+    path('deposito/', deposito_view, name='deposito_view'),
     path('deposito/solicitudes-insumos/', deposito_solicitudes_insumos_view, name='deposito_solicitudes_insumos'),
     path('deposito/solicitud-op/<int:op_id>/', deposito_detalle_solicitud_op_view, name='deposito_detalle_solicitud_op'),
     path('deposito/enviar-insumos-op/<int:op_id>/', deposito_enviar_insumos_op_view, name='deposito_enviar_insumos_op'),
-    #path('deposito/seleccion/', depo_seleccion, name='depo_seleccion'), # Eliminar si ya no se usa
+    path('deposito/seleccion/', depo_seleccion, name='depo_seleccion'), # Eliminar si ya no se usa
     # path('deposito/enviar/', depo_enviar, name='depo_enviar'),       # Eliminar si ya no se usa
+
+    # CRUDs para Fabricantes, Proveedores (Class-Based Views)
+    path('ventas/proveedores/proveedor/<int:pk>/', ProveedorDetailView.as_view(), name='proveedor_detail'),
+    path('ventas/proveedores/proveedor/crear/', ProveedorCreateView.as_view(), name='proveedor_create'),
+    path('ventas/proveedores/proveedor/editar/<int:pk>/', ProveedorUpdateView.as_view(), name='proveedor_edit'),
+    path('ventas/proveedores/proveedor/eliminar/<int:pk>/', ProveedorDeleteView.as_view(), name='proveedor_delete'),
+
+    path('ventas/fabricantes/<int:pk>/', FabricanteDetailView.as_view(), name='fabricante_detail'),
+    path('ventas/fabricantes/crear/', FabricanteCreateView.as_view(), name='fabricante_create'),
+    path('ventas/fabricantes/editar/<int:pk>/', FabricanteUpdateView.as_view(), name='fabricante_edit'),
+    path('ventas/fabricantes/eliminar/<int:pk>/', FabricanteDeleteView.as_view(), name='fabricante_delete'),
 
     # CRUDs para Categorías, Insumos, Productos Terminados (Class-Based Views)
     path('deposito/categorias-insumo/<int:pk>/', Categoria_IDetailView.as_view(), name='categoria_i_detail'),
     path('deposito/categorias-insumo/crear/', Categoria_ICreateView.as_view(), name='categoria_i_create'),
     path('deposito/categorias-insumo/editar/<int:pk>/', Categoria_IUpdateView.as_view(), name='categoria_i_edit'),
     path('deposito/categorias-insumo/eliminar/<int:pk>/', Categoria_IDeleteView.as_view(), name='categoria_i_delete'),
-    
+
     path('deposito/categorias-producto-terminado/<int:pk>/', Categoria_PTDetailView.as_view(), name='categoria_pt_detail'),
     path('deposito/categorias-producto-terminado/crear/', Categoria_PTCreateView.as_view(), name='categoria_pt_create'),
     path('deposito/categorias-producto-terminado/editar/<int:pk>/', Categoria_PTUpdateView.as_view(), name='categoria_pt_edit'),

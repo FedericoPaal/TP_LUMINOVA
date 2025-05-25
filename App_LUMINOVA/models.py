@@ -47,6 +47,14 @@ class Proveedor(models.Model):
     def __str__(self):
         return self.nombre
 
+class Fabricante(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+    contacto = models.CharField(max_length=100, blank=True)
+    telefono = models.CharField(max_length=25, blank=True) # Aumentado max_length
+    email = models.EmailField(blank=True, null=True)
+    def __str__(self):
+        return self.nombre
+
 class Insumo(models.Model):
     descripcion = models.CharField(max_length=255) # Aumentado max_length
     categoria = models.ForeignKey(CategoriaInsumo, on_delete=models.PROTECT, related_name='insumos')
@@ -97,7 +105,7 @@ class OrdenVenta(models.Model): # NUEVO: Específico para Ventas
 
     def __str__(self):
         return f"OV: {self.numero_ov} - {self.cliente.nombre}"
-    
+
     def actualizar_total(self):
         nuevo_total = sum(item.subtotal for item in self.items_ov.all())
         if self.total_ov != nuevo_total:
@@ -115,7 +123,7 @@ class ItemOrdenVenta(models.Model): # NUEVO: Detalle de la OV
         self.subtotal = self.cantidad * self.precio_unitario_venta
         super().save(*args, **kwargs)
         # La actualización del total de la OV se manejará en la vista o con una señal para evitar recursión infinita aquí.
-    
+
     def __str__(self):
         return f"{self.cantidad} x {self.producto_terminado.descripcion} en OV {self.orden_venta.numero_ov}"
 
@@ -135,10 +143,10 @@ class SectorAsignado(models.Model): # También, si es para OP, `SectorProduccion
 class OrdenProduccion(models.Model):
     numero_op = models.CharField(max_length=20, unique=True, verbose_name="N° Orden de Producción") # Cambiado de numero_orden
     orden_venta_origen = models.ForeignKey(OrdenVenta, on_delete=models.SET_NULL, null=True, blank=True, related_name='ops_generadas')
-    
+
     producto_a_producir = models.ForeignKey(ProductoTerminado, on_delete=models.PROTECT, related_name="ordenes_produccion") # Cambiado related_name
     cantidad_a_producir = models.PositiveIntegerField() # Cambiado de cantidad_prod
-    
+
     # El campo 'cliente' en OrdenProduccion es redundante si ya está en OrdenVenta.
     # Se puede acceder a través de orden_venta_origen.cliente. Lo quitamos para normalizar.
     # cliente_op = models.CharField(max_length=100, blank=True, null=True, verbose_name="Cliente (Referencia)")
@@ -148,7 +156,7 @@ class OrdenProduccion(models.Model):
     fecha_inicio_planificada = models.DateField(null=True, blank=True) # Cambiado de fecha_inicio
     fecha_fin_planificada = models.DateField(null=True, blank=True) # Añadido
     sector_asignado_op = models.ForeignKey(SectorAsignado, on_delete=models.SET_NULL, null=True, blank=True, related_name='ops_sector') # Cambiado related_name
-    notas = models.TextField(blank=True, verbose_name='Notas') # Añadido
+    notas = models.TextField(null=True, blank=True, verbose_name='Notas') # Añadido
 
     # Eliminado 'insumos_req' como ForeignKey a un solo Insumo. Se usará ComponenteProducto.
     # Eliminado 'nombre_categoria' y 'nombre_prod' ya que se accede vía producto_a_producir.
@@ -183,8 +191,8 @@ class AuditoriaAcceso(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     accion = models.CharField(max_length=255)
     fecha_hora = models.DateTimeField(auto_now_add=True)
-    ip_address = models.GenericIPAddressField(null=True, blank=True) 
-    user_agent = models.TextField(null=True, blank=True)            
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
     def __str__(self):
         user_display = self.usuario.username if self.usuario else "Usuario Desconocido/Eliminado"
         return f"{user_display} - {self.accion} @ {self.fecha_hora.strftime('%Y-%m-%d %H:%M')}"
@@ -212,16 +220,16 @@ class Orden(models.Model): # Este será para Órdenes de Compra
     fecha_creacion = models.DateTimeField(default=timezone.now)
     proveedor = models.ForeignKey(Proveedor, on_delete=models.PROTECT, related_name='ordenes_de_compra_a_proveedor')
     estado = models.CharField(max_length=30, choices=ESTADO_ORDEN_COMPRA_CHOICES, default='BORRADOR')
-    
+
     # Para el total de la OC, necesitaríamos items. Similar a OrdenVenta e ItemOrdenVenta.
     # Por ahora, lo dejamos simple o asumimos un solo insumo por OC.
     # Si es un solo insumo:
     insumo_principal = models.ForeignKey(Insumo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Insumo Principal")
     cantidad_principal = models.PositiveIntegerField(null=True, blank=True, verbose_name="Cantidad Insumo Principal")
     precio_unitario_compra = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Precio Unit. Compra")
-    
+
     total_orden_compra = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
-    
+
     fecha_estimada_entrega = models.DateField(null=True, blank=True)
     numero_tracking = models.CharField(max_length=50, null=True, blank=True)
     notas = models.TextField(blank=True, null=True)
@@ -242,7 +250,7 @@ class Orden(models.Model): # Este será para Órdenes de Compra
 #     cantidad = models.PositiveIntegerField()
 #     precio_unitario_compra = models.DecimalField(max_digits=10, decimal_places=2)
 #     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
-    
+
 #     def save(self, *args, **kwargs):
 #         self.subtotal = self.cantidad * self.precio_unitario_compra
 #         super().save(*args, **kwargs)

@@ -24,7 +24,7 @@ from .models import (
     Orden, # <--- Agregado para Órdenes de Compra
     OrdenVenta, ItemOrdenVenta, # <--- MODELO PARA ÓRDENES DE VENTA
     EstadoOrden, SectorAsignado, OrdenProduccion, # Modelos para Órdenes de Producción
-    Reportes, Factura, RolDescripcion,
+    Reportes, Factura, RolDescripcion, Fabricante,
 )
 
 # Importa los formularios que realmente existen y necesitas:
@@ -47,14 +47,14 @@ def compras_lista_oc_view(request):
         'proveedor', # Si el campo se llama 'proveedor' en el modelo Orden
         'insumo_principal'     # Si el campo se llama 'insumo' en el modelo Orden
     ).order_by('-fecha_creacion')
-    
+
     # Para un futuro modal de creación de OC
     # from .forms import OrdenCompraForm # Necesitarás crear este formulario
     # form_oc = OrdenCompraForm()
     # oc_count = Orden.objects.filter(tipo='compra').count()
     # next_oc_number = f"OC-{str(oc_count + 1).zfill(4)}"
     # form_oc.fields['numero_orden'].initial = next_oc_number
-    
+
     context = {
         'ordenes_list': ordenes_compra, # Nombre genérico para la plantilla
         'titulo_seccion': 'Listado de Órdenes de Compra',
@@ -72,7 +72,7 @@ def compras_desglose_view(request):
     # ordenes_pendientes_compra = []
     # if estado_pendiente:
     #     ordenes_pendientes_compra = Orden.objects.filter(tipo='compra', estado=estado_pendiente).order_by('-fecha_creacion')
-    
+
     context = {
         # 'ordenes_pendientes_list': ordenes_pendientes_compra,
         'ordenes_pendientes_list': [], # Placeholder por ahora
@@ -87,7 +87,7 @@ def compras_seguimiento_view(request):
     # ordenes_en_seguimiento = []
     # if estado_solicitada:
     #     ordenes_en_seguimiento = Orden.objects.filter(tipo='compra', estado=estado_solicitada).order_by('-fecha_creacion')
-        
+
     context = {
         # 'ordenes_solicitadas_list': ordenes_en_seguimiento,
         'ordenes_solicitadas_list': [], # Placeholder por ahora
@@ -164,7 +164,7 @@ def login_view(request):
         else:
             messages.error(request, 'Usuario o contraseña incorrectos.')
     # El template 'login.html' está en App_LUMINOVA/templates/login.html
-    return render(request, 'login.html') 
+    return render(request, 'login.html')
 
 @login_required
 def dashboard_view(request):
@@ -212,7 +212,7 @@ def crear_usuario(request):
         rol_name = request.POST.get('rol')
         estado_str = request.POST.get('estado')
         password = request.POST.get('password', 'temporal') # Deberías tener un campo de contraseña en el modal
-        
+
         errors = {}
         if not username: errors['username'] = 'Este campo es requerido.'
         if User.objects.filter(username=username).exists(): errors['username'] = 'Este nombre de usuario ya existe.'
@@ -249,12 +249,12 @@ def crear_usuario(request):
                     else:
                         messages.error(request, f"El rol '{rol_name}' no existe.")
                         return redirect('App_LUMINOVA:lista_usuarios')
-            
+
             user.save()
 
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({
-                    'success': True, 
+                    'success': True,
                     'user': { # Devuelve los datos del usuario para añadirlo a la tabla dinámicamente
                         'id': user.id,
                         'username': user.username,
@@ -273,7 +273,7 @@ def crear_usuario(request):
             else:
                 messages.error(request, f"Error al crear usuario: {str(e)}")
                 return redirect('App_LUMINOVA:lista_usuarios')
-    
+
     # Si es GET, podrías renderizar un formulario o simplemente no hacer nada si el modal se maneja en la misma página.
     # Por ahora, si no es POST, no hacemos nada especial, asumiendo que el modal está en lista_usuarios.html
     return redirect('App_LUMINOVA:lista_usuarios') # O renderizar la página con el modal
@@ -298,7 +298,7 @@ def editar_usuario(request, id):
         # Lógica manual para actualizar campos básicos, rol y estado
         usuario.username = request.POST.get('username', usuario.username)
         usuario.email = request.POST.get('email', usuario.email)
-        
+
         # Actualizar rol
         rol_name = request.POST.get('rol')
         usuario.groups.clear() # Limpiar roles existentes
@@ -308,12 +308,12 @@ def editar_usuario(request, id):
                 usuario.groups.add(group)
             except Group.DoesNotExist:
                 messages.error(request, f"El rol '{rol_name}' no existe.")
-        
+
         # Actualizar estado
         estado_str = request.POST.get('estado')
         if estado_str: # Asegurarse que 'estado' está en POST
             usuario.is_active = (estado_str == 'Activo')
-        
+
         usuario.save()
         messages.success(request, f"Usuario '{usuario.username}' actualizado exitosamente.")
         return redirect('App_LUMINOVA:lista_usuarios')
@@ -349,7 +349,7 @@ def crear_rol_ajax(request):
                 nuevo_grupo = Group.objects.create(name=nombre_rol)
                 if descripcion_rol:
                     RolDescripcion.objects.create(group=nuevo_grupo, descripcion=descripcion_rol)
-                
+
                 return JsonResponse({
                     'success': True,
                     'rol': {
@@ -372,7 +372,7 @@ def get_rol_data_ajax(request):
         descripcion_extendida = ""
         if hasattr(grupo, 'descripcion_extendida') and grupo.descripcion_extendida:
             descripcion_extendida = grupo.descripcion_extendida.descripcion
-        
+
         return JsonResponse({
             'success': True,
             'rol': {
@@ -395,7 +395,7 @@ def editar_rol_ajax(request):
         return JsonResponse({'success': False, 'errors': {'__all__': ['Rol no encontrado.']}}, status=404)
 
     form = RolForm(request.POST, initial={'rol_id': rol_id}) # Pasar rol_id para validación de unicidad
-    
+
     if form.is_valid():
         nombre_rol = form.cleaned_data['nombre']
         descripcion_rol = form.cleaned_data['descripcion']
@@ -407,7 +407,7 @@ def editar_rol_ajax(request):
                 desc_obj, created = RolDescripcion.objects.get_or_create(group=grupo_a_editar)
                 desc_obj.descripcion = descripcion_rol
                 desc_obj.save()
-            
+
             return JsonResponse({
                 'success': True,
                 'rol': {
@@ -431,11 +431,11 @@ def eliminar_rol_ajax(request):
         data = json.loads(request.body)
         rol_id = data.get('rol_id')
         grupo = Group.objects.get(id=rol_id)
-        
+
         # Opcional: Verificar si hay usuarios en este grupo antes de eliminar
         if grupo.user_set.exists():
             return JsonResponse({'success': False, 'error': 'No se puede eliminar el rol porque tiene usuarios asignados.'}, status=400)
-            
+
         grupo.delete() # RolDescripcion se borrará en cascada
         return JsonResponse({'success': True})
     except Group.DoesNotExist:
@@ -453,7 +453,7 @@ def get_permisos_rol_ajax(request):
     try:
         rol = Group.objects.get(id=rol_id)
         permisos_del_rol_ids = list(rol.permissions.values_list('id', flat=True))
-        
+
         todos_los_permisos = Permission.objects.select_related('content_type').all()
         permisos_data = []
         for perm in todos_los_permisos:
@@ -464,7 +464,7 @@ def get_permisos_rol_ajax(request):
                 'content_type_app_label': perm.content_type.app_label, # Nombre de la app (ej. auth, App_Luminova)
                 'content_type_model': perm.content_type.model # Nombre del modelo (ej. user, insumo)
             })
-            
+
         return JsonResponse({
             'success': True,
             'todos_los_permisos': permisos_data,
@@ -488,10 +488,10 @@ def actualizar_permisos_rol_ajax(request):
 
 
         rol = Group.objects.get(id=rol_id)
-        
+
         # Actualizar permisos
         rol.permissions.set(permisos_ids) # set() maneja agregar y quitar
-        
+
         return JsonResponse({'success': True, 'message': 'Permisos actualizados.'})
     except Group.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Rol no encontrado.'}, status=404)
@@ -542,7 +542,7 @@ def depo_enviar(request):
 # --- CRUD Categorias Insumo ---
 class Categoria_IListView(ListView):
     model = CategoriaInsumo
-    template_name = 'deposito/deposito.html' 
+    template_name = 'deposito/deposito_view.html'
     context_object_name = 'categorias_I' # Para diferenciar en el template deposito.html
 
 class Categoria_IDetailView(DetailView):
@@ -559,20 +559,20 @@ class Categoria_ICreateView(CreateView):
     model = CategoriaInsumo
     template_name = 'deposito/categoria_insumo_crear.html'
     fields = ('nombre', 'imagen')
-    success_url = reverse_lazy('App_LUMINOVA:deposito')
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 class Categoria_IUpdateView(UpdateView):
     model = CategoriaInsumo
     template_name = 'deposito/categoria_insumo_editar.html'
     fields = ('nombre', 'imagen')
     context_object_name = 'categoria'
-    success_url = reverse_lazy('App_LUMINOVA:deposito')
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 class Categoria_IDeleteView(DeleteView):
     model = CategoriaInsumo
     template_name = 'deposito/categoria_insumo_confirm_delete.html'
     context_object_name = 'categoria'
-    success_url = reverse_lazy('App_LUMINOVA:deposito')
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 
 # --- CRUD Categorias Producto Terminado ---
@@ -583,7 +583,7 @@ class Categoria_PTListView(ListView):
 
 class Categoria_PTDetailView(DetailView):
     model = CategoriaProductoTerminado
-    template_name = 'deposito/categoria_producto_terminado_detail.html' 
+    template_name = 'deposito/categoria_producto_terminado_detail.html'
     context_object_name = 'categoria_PT'
 
     def get_context_data(self, **kwargs):
@@ -593,22 +593,22 @@ class Categoria_PTDetailView(DetailView):
 
 class Categoria_PTCreateView(CreateView):
     model = CategoriaProductoTerminado
-    template_name = 'deposito/categoria_producto_terminado_crear.html' 
+    template_name = 'deposito/categoria_producto_terminado_crear.html'
     fields = ('nombre', 'imagen')
-    success_url = reverse_lazy('App_LUMINOVA:deposito')
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 class Categoria_PTUpdateView(UpdateView):
     model = CategoriaProductoTerminado
     template_name = 'deposito/categoria_producto_terminado_editar.html'
     fields = ('nombre', 'imagen')
     context_object_name = 'categoria'
-    success_url = reverse_lazy('App_LUMINOVA:deposito')
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 class Categoria_PTDeleteView(DeleteView):
     model = CategoriaProductoTerminado
     template_name = 'deposito/categoria_producto_terminado_confirm_delete.html'
     context_object_name = 'categoria'
-    success_url = reverse_lazy('App_LUMINOVA:deposito')
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 
 # Funciones para el CRUD de Insumos
@@ -626,20 +626,20 @@ class InsumoCreateView(CreateView):
     model = Insumo
     template_name = 'deposito/insumo_crear.html'
     fields = '__all__'
-    success_url = reverse_lazy('App_LUMINOVA:deposito') 
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 class InsumoUpdateView(UpdateView):
     model = Insumo
     template_name = 'deposito/insumo_editar.html'
     fields = '__all__'
     context_object_name = 'insumo'
-    success_url = reverse_lazy('App_LUMINOVA:deposito')
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 class InsumoDeleteView(DeleteView):
     model = Insumo
     template_name = 'deposito/insumo_confirm_delete.html'
     context_object_name = 'insumo'
-    success_url = reverse_lazy('App_LUMINOVA:deposito')
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 
 # Funciones para el CRUD de Productos Terminados
@@ -657,20 +657,80 @@ class ProductoTerminadoCreateView(CreateView):
     model = ProductoTerminado
     template_name = 'deposito/productoterminado_crear.html'
     fields = '__all__'
-    success_url = reverse_lazy('App_LUMINOVA:deposito')
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 class ProductoTerminadoUpdateView(UpdateView):
     model = ProductoTerminado
     template_name = 'deposito/productoterminado_editar.html'
     fields = '__all__'
-    context_object_name = 'producto_terminado' 
-    success_url = reverse_lazy('App_LUMINOVA:deposito')
+    context_object_name = 'producto_terminado'
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 class ProductoTerminadoDeleteView(DeleteView):
     model = ProductoTerminado
     template_name = 'deposito/productoterminado_confirm_delete.html'
     context_object_name = 'producto_terminado'
-    success_url = reverse_lazy('App_LUMINOVA:deposito')
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+
+
+class ProveedorListView(ListView):
+    model = Proveedor
+    template_name = 'ventas/proveedores/proveedor_list.html'
+    context_object_name = 'proveedores'
+
+class ProveedorDetailView(DetailView):
+    model = Proveedor
+    template_name = 'ventas/proveedores/proveedor_detail.html'
+    context_object_name = 'proveedor'
+
+class ProveedorCreateView(CreateView):
+    model = Proveedor
+    template_name = 'ventas/proveedores/proveedor_crear.html'
+    fields = '__all__'
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+
+class ProveedorUpdateView(UpdateView):
+    model = Proveedor
+    template_name = 'ventas/proveedores/proveedor_editar.html'
+    fields = '__all__'
+    context_object_name = 'proveedor'
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+
+class ProveedorDeleteView(DeleteView):
+    model = Proveedor
+    template_name = 'ventas/proveedores/proveedor_confirm_delete.html'
+    context_object_name = 'proveedor'
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+
+
+class FabricanteListView(ListView):
+    model = Fabricante
+    template_name = 'ventas/fabricantes/fabricante_list.html'
+    context_object_name = 'fabricantes'
+
+class FabricanteDetailView(DetailView):
+    model = Fabricante
+    template_name = 'ventas/fabricantes/fabricante_detail.html'
+    context_object_name = 'fabricante'
+
+class FabricanteCreateView(CreateView):
+    model = Fabricante
+    template_name = 'ventas/fabricantes/fabricante_crear.html'
+    fields = '__all__'
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+
+class FabricanteUpdateView(UpdateView):
+    model = Fabricante
+    template_name = 'ventas/fabricantes/fabricante_editar.html'
+    fields = '__all__'
+    context_object_name = 'fabricante'
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+
+class FabricanteDeleteView(DeleteView):
+    model = Fabricante
+    template_name = 'ventas/fabricantes/fabricante_confirm_delete.html'
+    context_object_name = 'fabricante'
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 
 
@@ -710,10 +770,10 @@ def lista_clientes_view(request):
     if not es_admin_o_rol(request.user, ['ventas', 'administrador']):
         messages.error(request, "Acceso denegado.")
         return redirect('App_LUMINOVA:dashboard')
-        
+
     clientes = Cliente.objects.all().order_by('nombre')
     form_para_crear = ClienteForm() # Instancia para el modal de creación
-    
+
     context = {
         'clientes_list': clientes,
         'cliente_form_crear': form_para_crear, # Para el modal de creación
@@ -745,7 +805,7 @@ def crear_cliente_view(request):
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{form.fields[field].label or field}: {error}")
-            return redirect('App_LUMINOVA:lista_clientes') 
+            return redirect('App_LUMINOVA:lista_clientes')
     return redirect('App_LUMINOVA:lista_clientes')
 
 # ... (editar_cliente_view y eliminar_cliente_view pueden permanecer similares a como estaban) ...
@@ -798,10 +858,10 @@ def ventas_lista_ov_view(request):
         return redirect('App_LUMINOVA:dashboard')
 
     ordenes = OrdenVenta.objects.select_related('cliente').prefetch_related(
-        'items_ov__producto_terminado', 
+        'items_ov__producto_terminado',
         'ops_generadas' # Usando el related_name de OrdenProduccion.orden_venta_origen
     ).order_by('-fecha_creacion')
-    
+
     context = {
         'ordenes_list': ordenes,
         'titulo_seccion': 'Órdenes de Venta',
@@ -823,8 +883,8 @@ def ventas_crear_ov_view(request):
             ov = form_ov.save(commit=False)
             # El estado viene del form, si no, default del modelo.
             # El total_ov se calcula después de guardar los items.
-            ov.total_ov = 0 
-            
+            ov.total_ov = 0
+
             try:
                 ov.save() # Guardar OV para obtener ID
 
@@ -842,7 +902,7 @@ def ventas_crear_ov_view(request):
                             total_orden_calculado += item.subtotal
                             item.save()
                             items_guardados_para_op.append(item)
-                
+
                 # formset_items.save_m2m() # No es necesario si no hay M2M directos en ItemOrdenVenta
 
                 if not items_guardados_para_op:
@@ -871,7 +931,7 @@ def ventas_crear_ov_view(request):
                             while OrdenProduccion.objects.filter(numero_op=next_op_number).exists():
                                 op_count += 1
                                 next_op_number = f"OP-{str(op_count + 1).zfill(5)}"
-                            
+
                             OrdenProduccion.objects.create(
                                 numero_op=next_op_number,
                                 orden_venta_origen=ov,
@@ -884,7 +944,7 @@ def ventas_crear_ov_view(request):
                             messages.info(request, f'OP "{next_op_number}" para "{item_ov.producto_terminado.descripcion}" generada.')
                         except Exception as e_op:
                             messages.error(request, f'Error al generar OP para item "{item_ov.producto_terminado.descripcion}": {e_op}')
-                
+
                 return redirect('App_LUMINOVA:ventas_lista_ov')
 
             except DjangoIntegrityError as e_int:
@@ -930,14 +990,14 @@ def ventas_crear_ov_view(request):
 # --- VISTAS PARA PRODUCCIÓN ---
 @login_required
 def produccion_lista_op_view(request):
-    
+
     ordenes_prod = OrdenProduccion.objects.select_related(
-        'producto_a_producir__categoria', 
+        'producto_a_producir__categoria',
         'orden_venta_origen__cliente', # Para obtener el cliente
         'estado_op', # Nombre del campo en tu modelo OP
         'sector_asignado_op'  # Nombre del campo en tu modelo OP
     ).order_by('-fecha_solicitud')
-    
+
     context = {
         'ordenes_produccion_list': ordenes_prod,
         'titulo_seccion': 'Listado de Órdenes de Producción',
@@ -953,22 +1013,22 @@ def produccion_detalle_op_view(request, op_id):
             'orden_venta_origen__cliente',    # Para acceder al cliente desde la OV
             'estado_op',                      # Para el nombre del estado
             'sector_asignado_op'              # Para el nombre del sector
-        ), 
+        ),
         id=op_id
     )
-    
+
     insumos_necesarios_data = []
     todos_los_insumos_disponibles = True # Asumir que sí
-    
+
     if op.producto_a_producir: # Importante verificar que el producto existe en la OP
         componentes_requeridos = ComponenteProducto.objects.filter(
             producto_terminado=op.producto_a_producir
         ).select_related('insumo') # Para acceder al stock del insumo
-        
+
         if not componentes_requeridos.exists():
             messages.warning(request, f"No se han definido componentes (BOM) para el producto '{op.producto_a_producir.descripcion}'.")
-            todos_los_insumos_disponibles = False 
-        
+            todos_los_insumos_disponibles = False
+
         for comp in componentes_requeridos:
             cantidad_total_requerida_para_op = comp.cantidad_necesaria * op.cantidad_a_producir
             suficiente = comp.insumo.stock >= cantidad_total_requerida_para_op
@@ -1011,13 +1071,13 @@ def produccion_detalle_op_view(request, op_id):
 @transaction.atomic # Buena idea para operaciones que modifican stock
 def deposito_enviar_insumos_op_view(request, op_id):
     op = get_object_or_404(OrdenProduccion, id=op_id)
-    
+
     if request.method == 'POST':
         # Lógica para descontar insumos del stock
         # Esto se implementaría completamente después, pero la vista debe existir
         insumos_descontados_correctamente = True
         componentes_requeridos = ComponenteProducto.objects.filter(producto_terminado=op.producto_a_producir)
-        
+
         for comp in componentes_requeridos:
             cantidad_a_descontar = comp.cantidad_necesaria * op.cantidad_a_producir
             if comp.insumo.stock >= cantidad_a_descontar:
@@ -1027,13 +1087,13 @@ def deposito_enviar_insumos_op_view(request, op_id):
             else:
                 messages.error(request, f"Stock insuficiente para '{comp.insumo.descripcion}'. Requeridos: {cantidad_a_descontar}, Disponible: {comp.insumo.stock}")
                 insumos_descontados_correctamente = False
-                break 
-        
+                break
+
         if insumos_descontados_correctamente:
             # Cambiar estado de la OP, por ejemplo a "En Proceso" o un estado "Insumos Entregados"
             try:
                 # Asume que tienes un estado como "En Proceso" o "Insumos Listos"
-                estado_siguiente = EstadoOrden.objects.get(nombre__iexact='En Proceso') 
+                estado_siguiente = EstadoOrden.objects.get(nombre__iexact='En Proceso')
                 op.estado_op = estado_siguiente
                 op.save()
                 messages.success(request, f"Insumos para OP {op.numero_op} descontados del stock. OP ahora 'En Proceso'.")
@@ -1064,7 +1124,7 @@ def planificacion_produccion_view(request):
         ops_para_planificar = OrdenProduccion.objects.filter(
             estado_op=estado_pendiente
         ).select_related('producto_a_producir', 'orden_venta_origen__cliente').order_by('fecha_solicitud')
-    
+
     # Para los dropdowns en el formulario de cada OP
     sectores = SectorAsignado.objects.all().order_by('nombre')
     # Posibles estados a los que se puede pasar desde planificación
@@ -1074,10 +1134,10 @@ def planificacion_produccion_view(request):
     if request.method == 'POST':
         op_id_a_actualizar = request.POST.get('op_id')
         op_a_actualizar = get_object_or_404(OrdenProduccion, id=op_id_a_actualizar)
-        
+
         # Usar un formulario específico para la actualización desde la planificación si es necesario,
         # o campos individuales. Por simplicidad, usamos campos individuales aquí.
-        
+
         sector_id = request.POST.get(f'sector_asignado_op_{op_id_a_actualizar}')
         estado_id = request.POST.get(f'estado_op_{op_id_a_actualizar}')
         fecha_inicio_p = request.POST.get(f'fecha_inicio_planificada_{op_id_a_actualizar}')
@@ -1091,7 +1151,7 @@ def planificacion_produccion_view(request):
             op_a_actualizar.fecha_inicio_planificada = fecha_inicio_p
         if fecha_fin_p:
             op_a_actualizar.fecha_fin_planificada = fecha_fin_p
-        
+
         op_a_actualizar.save()
         messages.success(request, f"OP {op_a_actualizar.numero_op} actualizada.")
         return redirect('App_LUMINOVA:planificacion_produccion')
@@ -1122,13 +1182,13 @@ def reportes_produccion_view(request):
     # if not es_admin_o_rol(request.user, ['produccion', 'administrador']):
     #     messages.error(request, "Acceso denegado.")
     #     return redirect('App_LUMINOVA:dashboard')
-        
+
     lista_reportes = Reportes.objects.select_related(
-        'orden_produccion_asociada', 
+        'orden_produccion_asociada',
         'reportado_por',
         'sector_reporta'
     ).order_by('-fecha')
-    
+
     context = {
         'reportes_list': lista_reportes,
         'titulo_seccion': 'Reportes de Producción',
@@ -1141,7 +1201,7 @@ def reportes_produccion_view(request):
 def deposito_view(request): # Tu vista principal de depósito (ya la tienes, solo para contexto)
     categorias_I = CategoriaInsumo.objects.all()
     categorias_PT = CategoriaProductoTerminado.objects.all()
-    
+
     # Podrías añadir un resumen de OPs esperando insumos aquí también
     estado_requiere_insumos = EstadoOrden.objects.filter(nombre__iexact='En Proceso').first() # O un estado "Insumos Solicitados"
     ops_pendientes_deposito_count = 0
@@ -1217,11 +1277,11 @@ def deposito_detalle_solicitud_op_view(request, op_id):
         componentes_requeridos = ComponenteProducto.objects.filter(
             producto_terminado=op.producto_a_producir
         ).select_related('insumo')
-        
+
         if not componentes_requeridos.exists():
             messages.warning(request, f"No se ha definido el BOM (lista de componentes) para el producto '{op.producto_a_producir.descripcion}'. No se pueden determinar los insumos.")
             todos_los_insumos_disponibles = False # No se puede proceder
-        
+
         for comp in componentes_requeridos:
             cantidad_total_req = comp.cantidad_necesaria * op.cantidad_a_producir
             suficiente = comp.insumo.stock >= cantidad_total_req
@@ -1234,7 +1294,7 @@ def deposito_detalle_solicitud_op_view(request, op_id):
                 'stock_actual_insumo': comp.insumo.stock,
                 'suficiente_stock': suficiente
             })
-            
+
     context = {
         'op': op,
         'insumos_necesarios_list': insumos_necesarios_data,
@@ -1267,7 +1327,7 @@ def deposito_enviar_insumos_op_view(request, op_id):
 
         for comp in componentes_requeridos:
             cantidad_a_descontar = comp.cantidad_necesaria * op.cantidad_a_producir
-            
+
             # Re-chequear stock antes de descontar (importante por concurrencia, aunque F() es mejor)
             insumo_a_actualizar = Insumo.objects.get(id=comp.insumo.id) # Obtener la instancia más reciente
             if insumo_a_actualizar.stock >= cantidad_a_descontar:
@@ -1283,14 +1343,14 @@ def deposito_enviar_insumos_op_view(request, op_id):
             else:
                 messages.error(request, f"Stock insuficiente para '{comp.insumo.descripcion}'. Requeridos: {cantidad_a_descontar}, Disponible: {insumo_a_actualizar.stock}")
                 insumos_descontados_correctamente = False
-                break 
-        
+                break
+
         if insumos_descontados_correctamente:
             try:
                 # Actualizar estado de la OP, ej. a "En Proceso" (si antes era "Insumos Solicitados")
                 # o a "Insumos Entregados a Producción" si tienes ese estado.
                 # Aquí es crucial que tengas un estado "En Proceso" o el siguiente lógico.
-                estado_siguiente = EstadoOrden.objects.get(nombre__iexact='En Proceso') 
+                estado_siguiente = EstadoOrden.objects.get(nombre__iexact='En Proceso')
                 op.estado_op = estado_siguiente
                 op.fecha_inicio_real = timezone.now() # Opcional: marcar cuándo se entregaron los insumos como inicio real
                 op.save(update_fields=['estado_op', 'fecha_inicio_real'])

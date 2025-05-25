@@ -6,7 +6,7 @@ from .models import (
     ComponenteProducto, Proveedor, Cliente,
     OrdenVenta, ItemOrdenVenta,
     EstadoOrden, SectorAsignado, OrdenProduccion, # Usando tus nombres actuales para EstadoOrden y SectorAsignado
-    Reportes, Factura, RolDescripcion, AuditoriaAcceso
+    Reportes, Factura, RolDescripcion, AuditoriaAcceso, Fabricante
 )
 
 class ComponenteProductoInline(admin.TabularInline):
@@ -100,3 +100,4 @@ admin.site.register(AuditoriaAcceso)
 #admin.site.register(CategoriaProductoTerminado)
 #admin.site.register(Proveedor)
 admin.site.register(ComponenteProducto) # Descomentado, puede ser útil para verlos todos
+admin.site.register(Fabricante)

@@ -125,7 +125,7 @@
                     </tr>
                     <tr>
                         <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 0px;"> <!-- Ajustado padding-left para centrar el botón -->
-                            <a class="btn border-white text-primary text-white" style="background-color: #014BAC; width: 180px; height: 40px; border-radius: 15px;" href="#">Seleccionar</a>
+                            <a class="btn border-white text-primary text-white" style="background-color: #014BAC; width: 180px; height: 40px; border-radius: 15px;" href="{% url 'App_LUMINOVA:depo_seleccion' %}">Seleccionar</a>
                         </td>
                     </tr>
                 </tbody>
@@ -177,9 +177,9 @@
             document.getElementById("insumos-content").style.display = "flex";
             document.getElementById("productos-content").style.display = "none";
             document.getElementById("insumos-tab").classList.add("active");
-            document.getElementById("insumos-tab").style.backgroundColor = "#014BAC"; 
+            document.getElementById("insumos-tab").style.backgroundColor = "#014BAC";
             document.getElementById("productos-tab").classList.remove("active");
-            document.getElementById("productos-tab").style.backgroundColor = "#0d6efd"; 
+            document.getElementById("productos-tab").style.backgroundColor = "#0d6efd";
         }
 
         function mostrarProductos() {
@@ -195,10 +195,10 @@
             mostrarInsumos();
         });
     </script>
-    
+
     <!-- Los modales se pueden mover a un archivo separado e incluirlos si son muy largos -->
 
-    
+
     <script src="{% static 'js/cards_deposito.js' %}"></script>
 
     <!-- Modal Modulos LED -->
@@ -296,225 +296,6 @@
         </div>
     </div>
 
-    <!-- Modal 1: Formulario para Agregar -->
-    <div class="modal fade" id="exampleModal_Agregar" aria-hidden="true" aria-labelledby="exampleModalToggleLabel_Agregar" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-        <div class="modal-header">
-            <h1 class="modal-title fs-5" id="exampleModalToggleLabel_Agregar">Agregar Artículo</h1>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-        <div class="modal-body">
-            <form id="formArticulo">
-                <label for="grupoEliminar" class="form-label">Seleccionar tipo de Articulo</label>
-                <select class="form-select" id="grupoEliminar" name="grupo">
-                    <option selected disabled>Sin asignar</option>
-                    <option value="Componente">Componente</option>
-                    <option value="Producto Terminado">Producto Terminado</option>
-                </select>
-            <div class="mb-3 d-flex align-items-center" style="padding-top: 20px;">
-                <label for="nombre" class="form-label" style="padding-right: 10px;">Nombre</label>
-                <input type="text" class="form-control" placeholder="Ingrese un Nombre" id="nombre" name="nombre" required>
-            </div>
-            <div class="mb-3 d-flex align-items-center">
-                <label for="id" class="form-label"  style="padding-right: 10px;">ID</label>
-                <input type="text" class="form-control" placeholder="Ingrese una ID" id="id" name="id" required>
-            </div>
-            <div class="mb-3 d-flex align-items-center">
-                <label for="imagen" class="form-label"  style="padding-right: 10px;">Imagen (URL)</label>
-                <input type="url" class="form-control" placeholder="Ingrese una URL" id="imagen" name="imagen">
-            </div>
-            <div class="mb-3 d-flex align-items-center">
-                <label for="proveedor" class="form-label"  style="padding-right: 10px;">Proveedor</label>
-                <input type="text" class="form-control" placeholder="Ingrese un Proveedor" id="proveedor" name="proveedor">
-            </div>
-            <div class="mb-3 d-flex align-items-center">
-                <label for="cantidad" class="form-label"  style="padding-right: 10px;">Cantidad</label>
-                <input type="number" class="form-control" placeholder="Ingrese una Cantidad" id="cantidad" name="cantidad" min="0">
-            </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-primary" data-bs-target="#exampleModal_Agregar2" data-bs-toggle="modal">Siguiente</button>
-        </div>
-        </div>
-    </div>
-    </div>
-
-    <!-- Modal 1: Confirmación -->
-    <div class="modal fade" id="exampleModal_Agregar2" aria-hidden="true" aria-labelledby="exampleModal_Agregar2" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-        <div class="modal-header">
-            <h1 class="modal-title fs-5" id="exampleModal_Agregar2">Confirmación</h1>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-        <div class="modal-body">
-            Los datos han sido registrados correctamente.
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" data-bs-target="#exampleModal_Agregar" data-bs-toggle="modal">Volver</button>
-            <button type="button" class="btn btn-success" data-bs-dismiss="modal">Aceptar</button>
-        </div>
-        </div>
-    </div>
-    </div>
-
-
-    <!-- Modal 2: Formulario para Buscar -->
-    <div class="modal fade" id="exampleModal_Buscar" aria-hidden="true" aria-labelledby="exampleModalToggleLabel_Buscar" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-        <div class="modal-header">
-            <h1 class="modal-title fs-5" id="exampleModalToggleLabel_Buscar">Buscar Artículo</h1>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-        <div class="modal-body">
-            <form id="formArticulo">
-                <label for="grupoEliminar" class="form-label">Seleccionar tipo de Articulo</label>
-                <select class="form-select" id="grupoEliminar" name="grupo">
-                    <option selected disabled>Sin asignar</option>
-                    <option value="Componente">Componente</option>
-                    <option value="Producto Terminado">Producto Terminado</option>
-                </select>
-            <div class="mb-3 d-flex align-items-center" style="padding-top: 20px;">
-                <label for="nombre" class="form-label" style="padding-right: 10px;">Nombre</label>
-                <input type="text" class="form-control" placeholder="Ingrese un Nombre" id="nombre" name="nombre" required>
-            </div>
-            <div class="mb-3 d-flex align-items-center">
-                <label for="id" class="form-label"  style="padding-right: 10px;">ID</label>
-                <input type="text" class="form-control" placeholder="Ingrese una ID" id="id" name="id" required>
-            </div>
-            <div class="mb-3 d-flex align-items-center">
-                <label for="proveedor" class="form-label"  style="padding-right: 10px;">Proveedor</label>
-                <input type="text" class="form-control" placeholder="Ingrese un Proveedor" id="proveedor" name="proveedor">
-            </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-primary" data-bs-target="#exampleModal_Buscar2" data-bs-toggle="modal">Siguiente</button>
-        </div>
-        </div>
-    </div>
-    </div>
-
-
-    <!-- Modal 3: Formulario para Modificar -->
-    <div class="modal fade" id="exampleModal_Modificar" aria-hidden="true" aria-labelledby="exampleModalToggleLabel_Modificar" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-        <div class="modal-header">
-            <h1 class="modal-title fs-5" id="exampleModalToggleLabel_Modificar">Modificar Artículo</h1>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-        <div class="modal-body">
-            <form id="formArticulo">
-                <label for="grupoEliminar" class="form-label">Seleccionar tipo de Articulo</label>
-                <select class="form-select" id="grupoEliminar" name="grupo">
-                    <option selected disabled>Sin asignar</option>
-                    <option value="Componente">Componente</option>
-                    <option value="Producto Terminado">Producto Terminado</option>
-                </select>
-            <div class="mb-3 d-flex align-items-center" style="padding-top: 20px;">
-                <label for="nombre" class="form-label" style="padding-right: 10px;">Nombre</label>
-                <input type="text" class="form-control" placeholder="Modifique el Nombre" id="nombre" name="nombre" required>
-            </div>
-            <div class="mb-3 d-flex align-items-center">
-                <label for="id" class="form-label"  style="padding-right: 10px;">ID</label>
-                <input type="text" class="form-control" placeholder="Modifique la ID" id="id" name="id" required>
-            </div>
-            <div class="mb-3 d-flex align-items-center">
-                <label for="imagen" class="form-label"  style="padding-right: 10px;">Imagen (URL)</label>
-                <input type="url" class="form-control" placeholder="Modifique la URL" id="imagen" name="imagen">
-            </div>
-            <div class="mb-3 d-flex align-items-center">
-                <label for="proveedor" class="form-label"  style="padding-right: 10px;">Proveedor</label>
-                <input type="text" class="form-control" placeholder="Modifique el Proveedor" id="proveedor" name="proveedor">
-            </div>
-            <div class="mb-3 d-flex align-items-center">
-                <label for="cantidad" class="form-label"  style="padding-right: 10px;">Cantidad</label>
-                <input type="number" class="form-control" placeholder="Modifique la Cantidad" id="cantidad" name="cantidad" min="0">
-            </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-primary" data-bs-target="#exampleModal_Modificar2" data-bs-toggle="modal">Siguiente</button>
-        </div>
-        </div>
-    </div>
-    </div>
-
-    <!-- Modal 3: Confirmación -->
-    <div class="modal fade" id="exampleModal_Modificar2" aria-hidden="true" aria-labelledby="exampleModal_Modificar2" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-        <div class="modal-header">
-            <h1 class="modal-title fs-5" id="exampleModal_Modificar2">Confirmación</h1>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-        <div class="modal-body">
-            Los datos han sido registrados correctamente.
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-secondary" data-bs-target="#exampleModal_Modificar" data-bs-toggle="modal">Volver</button>
-            <button type="button" class="btn btn-success" data-bs-dismiss="modal">Aceptar</button>
-        </div>
-        </div>
-    </div>
-    </div>
-
-
-<!-- Modal 2: Formulario para Eliminar -->
-<div class="modal fade" id="exampleModal_Eliminar" aria-hidden="true" aria-labelledby="exampleModalLabel_Eliminar" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h1 class="modal-title fs-5" id="exampleModalLabel_Eliminar">Eliminar Artículo</h1>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body">
-        <form id="formEliminar">
-            <label for="grupoEliminar" class="form-label">Seleccionar tipo de Articulo</label>
-            <select class="form-select" id="grupoEliminar" name="grupo">
-                <option selected disabled>Sin asignar</option>
-                <option value="Componente">Componente</option>
-                <option value="Producto Terminado">Producto Terminado</option>
-            </select>
-            <label for="grupoEliminar" class="form-label">Seleccionar Articulo</label>
-            <select class="form-select" id="grupoEliminar" name="grupo">
-                <option selected disabled>Sin asignar</option>
-                <option value="Articulo 1">Articulo 1</option>
-                <option value="Articulo 2">Articulo 2</option>
-                <option value="Articulo 3">Articulo 3</option>
-            </select>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <!-- Abre el segundo modal de confirmación -->
-        <button class="btn btn-danger" data-bs-target="#exampleModal_Eliminar2" data-bs-toggle="modal" data-bs-dismiss="modal">Eliminar</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Modal 4: Confirmación -->
-<div class="modal fade" id="exampleModal_Eliminar2" aria-hidden="true" aria-labelledby="exampleModalLabel_Eliminar2" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h1 class="modal-title fs-5" id="exampleModalLabel_Eliminar2">Confirmación</h1>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body">
-        El artículo ha sido eliminado correctamente.
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-target="#exampleModal_Eliminar" data-bs-toggle="modal">Volver</button>
-        <button type="button" class="btn btn-success" data-bs-dismiss="modal">Aceptar</button>
-      </div>
-    </div>
-  </div>
-</div>
 
 
 {% endblock %}
