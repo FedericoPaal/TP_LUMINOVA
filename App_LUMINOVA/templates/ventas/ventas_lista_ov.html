@@ -37,7 +37,7 @@
         <tbody>
             {% for ov in ordenes_list %}
             <tr>
-                <td><a href="#">{{ ov.numero_ov }}</a></td> 
+                <td><a href="{% url 'App_LUMINOVA:ventas_detalle_ov' ov.id %}">{{ ov.numero_ov }}</a></td>
                 <td>{{ ov.fecha_creacion|date:"d/m/Y H:i" }}</td>
                 <td>{{ ov.cliente.nombre|default_if_none:"N/A" }}</td>
                 <td>
