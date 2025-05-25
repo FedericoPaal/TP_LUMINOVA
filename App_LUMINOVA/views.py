@@ -722,7 +722,49 @@ class ProductoTerminadoDeleteView(DeleteView):
     model = ProductoTerminado
     template_name = 'deposito/productoterminado_confirm_delete.html'
     context_object_name = 'producto_terminado'
-    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+    # success_url = reverse_lazy('App_LUMINOVA:deposito_view') # Se manejará con get_success_url
+
+    def get_success_url(self):
+        # Redirigir al detalle de la categoría del producto, o a la vista principal de depósito
+        if hasattr(self.object, 'categoria') and self.object.categoria:
+            return reverse_lazy('App_LUMINOVA:categoria_pt_detail', kwargs={'pk': self.object.categoria.pk})
+        return reverse_lazy('App_LUMINOVA:deposito_view')
+
+    def form_valid(self, form):
+        # Guardar descripción para el mensaje antes de borrar
+        producto_descripcion = self.object.descripcion
+        response = super().form_valid(form)
+        messages.success(self.request, f"El producto terminado '{producto_descripcion}' ha sido eliminado exitosamente.")
+        return response
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object() # Cargar el objeto para tener acceso a él en caso de error
+        try:
+            return super().delete(request, *args, **kwargs)
+        except ProtectedError as e:
+            protecting_objects_details = []
+            if hasattr(e, 'protected_objects'):
+                for obj in e.protected_objects:
+                    if isinstance(obj, ItemOrdenVenta):
+                        protecting_objects_details.append(f"la Orden de Venta N° {obj.orden_venta.numero_ov}")
+                    elif isinstance(obj, OrdenProduccion):
+                        protecting_objects_details.append(f"la Orden de Producción N° {obj.numero_op}")
+                    # Añade más 'elif isinstance' si ProductoTerminado es FK en otros modelos con PROTECT
+                    else:
+                        protecting_objects_details.append(f"un registro del tipo '{obj.__class__.__name__}'")
+            
+            error_message = (
+                f"No se puede eliminar el producto terminado '{self.object.descripcion}' porque está referenciado y protegido."
+            )
+            if protecting_objects_details:
+                error_message += " Específicamente, es usado por: " + ", ".join(protecting_objects_details) + "."
+            error_message += " Por favor, primero elimine o modifique estas referencias."
+            
+            messages.error(request, error_message)
+            # Redirigir de vuelta a una página relevante donde se muestre el mensaje
+            if hasattr(self.object, 'categoria') and self.object.categoria:
+                 return redirect(reverse_lazy('App_LUMINOVA:categoria_pt_detail', kwargs={'pk': self.object.categoria.pk}))
+            return redirect(reverse_lazy('App_LUMINOVA:deposito_view'))
 
 
 class ProveedorListView(ListView):
