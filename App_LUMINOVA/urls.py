@@ -8,7 +8,7 @@ from .views import (
 
     # Admin
     roles_permisos_view, auditoria_view,
-    lista_usuarios, crear_usuario, editar_usuario, eliminar_usuario,
+    lista_usuarios, crear_usuario, editar_usuario, eliminar_usuario, ventas_detalle_ov_view, ventas_generar_factura_view,
 
     # Ventas
     ventas_lista_ov_view, ventas_crear_ov_view,
@@ -75,6 +75,8 @@ urlpatterns = [
     path('ventas/clientes/crear/', crear_cliente_view, name='crear_cliente'),
     path('ventas/clientes/editar/<int:cliente_id>/', editar_cliente_view, name='editar_cliente'),
     path('ventas/clientes/eliminar/<int:cliente_id>/', eliminar_cliente_view, name='eliminar_cliente'),
+    path('ventas/orden/<int:ov_id>/', ventas_detalle_ov_view, name='ventas_detalle_ov'),
+    path('ventas/orden/<int:ov_id>/generar-factura/', ventas_generar_factura_view, name='ventas_generar_factura'),
 
     # --- Rutas de Compras ---
     path('compras/', compras_lista_oc_view, name='compras_lista_oc'), # Vista principal de compras
@@ -109,6 +111,7 @@ urlpatterns = [
     path('ventas/fabricantes/crear/', FabricanteCreateView.as_view(), name='fabricante_create'),
     path('ventas/fabricantes/editar/<int:pk>/', FabricanteUpdateView.as_view(), name='fabricante_edit'),
     path('ventas/fabricantes/eliminar/<int:pk>/', FabricanteDeleteView.as_view(), name='fabricante_delete'),
+    
 
     # CRUDs para Categorías, Insumos, Productos Terminados (Class-Based Views)
     path('deposito/categorias-insumo/<int:pk>/', Categoria_IDetailView.as_view(), name='categoria_i_detail'),
