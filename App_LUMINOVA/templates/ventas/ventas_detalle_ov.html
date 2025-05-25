@@ -1,0 +1,114 @@
+{% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titulo_seccion|default:"Detalle Orden de Venta" }}{% endblock %}
+
+{% block sidebar_content %}
+    {% include 'ventas/ventas_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">{{ titulo_seccion }}</h1>
+        <a href="{% url 'App_LUMINOVA:ventas_lista_ov' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left-circle"></i> Volver al Listado de OVs
+        </a>
+    </div>
+
+    {% bootstrap_messages %}
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    Información de la Orden de Venta
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-3">N° OV:</dt><dd class="col-sm-9">{{ ov.numero_ov }}</dd>
+                        <dt class="col-sm-3">Cliente:</dt><dd class="col-sm-9">{{ ov.cliente.nombre }}</dd>
+                        <dt class="col-sm-3">Fecha Creación:</dt><dd class="col-sm-9">{{ ov.fecha_creacion|date:"d/m/Y H:i" }}</dd>
+                        <dt class="col-sm-3">Estado OV:</dt>
+                        <dd class="col-sm-9">
+                            <span class="badge {% if ov.estado == 'PENDIENTE' %}bg-warning text-dark{% elif ov.estado == 'CONFIRMADA' %}bg-info{% elif ov.estado == 'EN_PRODUCCION' %}bg-primary{% elif ov.estado == 'LISTA_ENTREGA' %}bg-secondary{% elif ov.estado == 'COMPLETADA' %}bg-success{% elif ov.estado == 'CANCELADA' %}bg-danger{% else %}bg-light text-dark{% endif %}">
+                                {{ ov.get_estado_display }}
+                            </span>
+                        </dd>
+                        <dt class="col-sm-3">Notas:</dt><dd class="col-sm-9">{{ ov.notas|default_if_none:"-"|linebreaksbr }}</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">Ítems de la Orden</div>
+                <div class="card-body p-0">
+                    {% if items_ov %}
+                    <ul class="list-group list-group-flush">
+                        {% for item in items_ov %}
+                        <li class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ item.producto_terminado.descripcion }}</h6>
+                                <small class="text-muted">Subtotal: ${{ item.subtotal|floatformat:2 }}</small>
+                            </div>
+                            <small class="text-muted">Cantidad: {{ item.cantidad }} @ ${{ item.precio_unitario_venta|floatformat:2 }} c/u</small>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="p-3 text-muted">Esta orden no tiene ítems.</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer fw-bold fs-5 text-end">
+                    Total Orden: ${{ ov.total_ov|floatformat:2 }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header">Facturación</div>
+                <div class="card-body">
+                    {% if ov.factura_asociada %}
+                        <p><strong>Factura Generada:</strong></p>
+                        <p>N° Factura: {{ ov.factura_asociada.numero_factura }}</p>
+                        <p>Fecha Emisión: {{ ov.factura_asociada.fecha_emision|date:"d/m/Y H:i" }}</p>
+                        <p>Total Facturado: ${{ ov.factura_asociada.total_facturado|floatformat:2 }}</p>
+                        {<a href="#" class="btn btn-sm btn-outline-info"><i class="bi bi-printer"></i> Ver/Imprimir Factura</a> 
+                    {% elif factura_form %}
+                        <p>Esta orden está lista para ser facturada.</p>
+                        <form method="post" action="{% url 'App_LUMINOVA:ventas_generar_factura' ov.id %}">
+                            {% csrf_token %}
+                            {% bootstrap_form factura_form layout='vertical' %}
+                            <div class="d-grid mt-3">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-receipt-cutoff"></i> Generar Factura
+                                </button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <p class="text-muted">La orden no está en un estado que permita la facturación o ya ha sido facturada.</p>
+                        {% if ov.estado == 'PENDIENTE' or ov.estado == 'EN_PRODUCCION' %}
+                        <small>(Estado actual: {{ ov.get_estado_display }})</small>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if ov.ops_generadas.all %}
+            <div class="card shadow-sm mt-4">
+                <div class="card-header">Órdenes de Producción Asociadas</div>
+                <ul class="list-group list-group-flush">
+                    {% for op in ov.ops_generadas.all %}
+                        <li class="list-group-item">
+                            <a href="{% url 'App_LUMINOVA:produccion_detalle_op' op.id %}">{{ op.numero_op }}</a> - {{ op.producto_a_producir.descripcion|truncatechars:20 }} ({{ op.get_estado_op_display }})
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
