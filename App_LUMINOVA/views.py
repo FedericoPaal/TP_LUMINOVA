@@ -30,7 +30,7 @@ from .models import (
 
 # Importa los formularios que realmente existen y necesitas:
 from .forms import (
-    RolForm, PermisosRolForm, ClienteForm, ProveedorForm, # Asegúrate que ProveedorForm exista si lo usas
+    FacturaForm, RolForm, PermisosRolForm, ClienteForm, ProveedorForm, # Asegúrate que ProveedorForm exista si lo usas
     OrdenVentaForm, ItemOrdenVentaFormSet, OrdenProduccionUpdateForm,
 )
 # Create your views here.
@@ -1458,3 +1458,81 @@ def deposito_enviar_insumos_op_view(request, op_id):
     # Si es GET, no debería hacer nada más que redirigir.
     messages.info(request, "Para enviar insumos, confirme la acción desde la página de detalle de la solicitud de OP.")
     return redirect('App_LUMINOVA:deposito_detalle_solicitud_op', op_id=op.id)
+
+# --- VISTAS PARA ÓRDENES DE VENTA ---
+@login_required
+def ventas_detalle_ov_view(request, ov_id):
+    # if not es_admin_o_rol(request.user, ['ventas', 'administrador']):
+    #     messages.error(request, "Acceso denegado.")
+    #     return redirect('App_LUMINOVA:dashboard')
+
+    orden_venta = get_object_or_404(
+        OrdenVenta.objects.select_related('cliente').prefetch_related(
+            'items_ov__producto_terminado', 
+            'ops_generadas', # Si quieres mostrar OPs asociadas
+            'factura_asociada' # Para acceder a la factura si existe
+        ), 
+        id=ov_id
+    )
+    
+    # Formulario para generar factura (si no existe una)
+    factura_form = None
+    if not hasattr(orden_venta, 'factura_asociada') or not orden_venta.factura_asociada:
+        # Solo mostrar el form si la OV está en un estado facturable
+        if orden_venta.estado in ['LISTA_ENTREGA', 'COMPLETADA']: # Ajusta estos estados según tu lógica
+            factura_form = FacturaForm()
+
+
+    context = {
+        'ov': orden_venta,
+        'items_ov': orden_venta.items_ov.all(), # Pasar los items explícitamente
+        'factura_form': factura_form,
+        'titulo_seccion': f"Detalle Orden de Venta: {orden_venta.numero_ov}",
+    }
+    return render(request, 'ventas/ventas_detalle_ov.html', context)
+
+
+@login_required
+@transaction.atomic
+def ventas_generar_factura_view(request, ov_id):
+    # if not es_admin_o_rol(request.user, ['ventas', 'administrador']):
+    #     messages.error(request, "Acción no permitida.")
+    #     return redirect('App_LUMINOVA:ventas_lista_ov')
+
+    orden_venta = get_object_or_404(OrdenVenta, id=ov_id)
+
+    # Verificar si ya existe una factura para esta OV
+    if hasattr(orden_venta, 'factura_asociada') and orden_venta.factura_asociada:
+        messages.warning(request, f"La Orden de Venta {orden_venta.numero_ov} ya tiene una factura asociada (N° {orden_venta.factura_asociada.numero_factura}).")
+        return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
+
+    # Verificar si la OV está en un estado facturable
+    if orden_venta.estado not in ['LISTA_ENTREGA']: # Ajusta según tu flujo
+        messages.error(request, f"La Orden de Venta {orden_venta.numero_ov} no está en un estado facturable (Estado actual: {orden_venta.get_estado_display()}).")
+        return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
+
+    if request.method == 'POST':
+        form = FacturaForm(request.POST)
+        if form.is_valid():
+            try:
+                factura = form.save(commit=False)
+                factura.orden_venta = orden_venta
+                factura.total_facturado = orden_venta.total_ov # El total de la factura es el total de la OV
+                factura.cliente = orden_venta.cliente # Redundante si se accede vía orden_venta, pero puede ser útil
+                factura.fecha_emision = timezone.now() # O permitir seleccionarla
+                factura.save()
+                messages.success(request, f"Factura N° {factura.numero_factura} generada para la OV {orden_venta.numero_ov}.")
+                return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
+            except DjangoIntegrityError:
+                 messages.error(request, f"Error: El número de factura '{form.cleaned_data.get('numero_factura')}' ya existe.")
+            except Exception as e:
+                messages.error(request, f"Error al generar la factura: {e}")
+        else:
+            # Si el formulario no es válido, mostrar errores y redirigir al detalle de OV
+            for field, errors in form.errors.items():
+                 for error in errors:
+                    messages.error(request, f"{form.fields[field].label or field}: {error}")
+    
+    # Si es GET o el form no es válido, redirige de vuelta al detalle de la OV
+    # (el modal de facturación debería estar en la página de detalle de OV)
+    return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
