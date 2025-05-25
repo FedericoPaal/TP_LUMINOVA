@@ -13,8 +13,9 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_exempt # Usar con precaución
-from django.db import transaction, IntegrityError as DjangoIntegrityError # Para transacciones y error de Django
+from django.db import transaction, IntegrityError as DjangoIntegrityError  # Para transacciones y error de Django
 from django.utils import timezone # Para fechas y horas
+from django.db.models import ProtectedError
 
 # Importa los modelos que realmente existen y necesitas:
 from .models import (
@@ -559,7 +560,11 @@ class Categoria_ICreateView(CreateView):
     model = CategoriaInsumo
     template_name = 'deposito/categoria_insumo_crear.html'
     fields = ('nombre', 'imagen')
+<<<<<<< Updated upstream
     success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+=======
+    success_url = reverse_lazy('App_LUMINOVA:_view')
+>>>>>>> Stashed changes
 
 class Categoria_IUpdateView(UpdateView):
     model = CategoriaInsumo
@@ -626,7 +631,11 @@ class InsumoCreateView(CreateView):
     model = Insumo
     template_name = 'deposito/insumo_crear.html'
     fields = '__all__'
+<<<<<<< Updated upstream
     success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+=======
+    success_url = reverse_lazy('App_LUMINOVA:deposito_view') 
+>>>>>>> Stashed changes
 
 class InsumoUpdateView(UpdateView):
     model = Insumo
@@ -639,7 +648,59 @@ class InsumoDeleteView(DeleteView):
     model = Insumo
     template_name = 'deposito/insumo_confirm_delete.html'
     context_object_name = 'insumo'
+<<<<<<< Updated upstream
     success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+=======
+    # success_url = reverse_lazy('App_LUMINOVA:deposito_view') # success_url se maneja en get_success_url
+
+    def get_success_url(self):
+        # Redirigir al detalle de la categoría del insumo eliminado, o a la vista principal de depósito
+        if hasattr(self.object, 'categoria') and self.object.categoria: # self.object es el insumo borrado
+            return reverse_lazy('App_LUMINOVA:categoria_i_detail', kwargs={'pk': self.object.categoria.pk})
+        return reverse_lazy('App_LUMINOVA:deposito_view')
+
+    def form_valid(self, form):
+        # Este método se llama DESPUÉS de que la eliminación fue exitosa (si no hay ProtectedError)
+        # Aquí se guarda el nombre para usarlo en el mensaje ANTES de que self.object se elimine completamente.
+        insumo_descripcion = self.object.descripcion 
+        response = super().form_valid(form)
+        messages.success(self.request, f"El insumo '{insumo_descripcion}' ha sido eliminado exitosamente.")
+        return response
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object() # Cargar el objeto para tener acceso a él en caso de error
+        try:
+            # Intenta llamar al método delete de la clase base, que es lo que realmente borra
+            # y donde se podría lanzar ProtectedError.
+            # Si la eliminación es exitosa, se llamará a form_valid y luego a get_success_url.
+            return super().delete(request, *args, **kwargs)
+        except ProtectedError as e:
+            # Construir un mensaje más detallado sobre qué está protegiendo la eliminación
+            protecting_objects = []
+            if hasattr(e, 'protected_objects'): # e.protected_objects contiene los objetos que causan la protección
+                for obj in e.protected_objects:
+                    if isinstance(obj, ComponenteProducto):
+                        protecting_objects.append(f"el producto terminado '{obj.producto_terminado.descripcion}' (usa {obj.cantidad_necesaria} unidades)")
+                    else:
+                        protecting_objects.append(str(obj)) # Representación genérica
+            
+            error_message = (
+                f"No se puede eliminar el insumo '{self.object.descripcion}' porque está referenciado y protegido."
+            )
+            if protecting_objects:
+                error_message += " Específicamente, es usado por: " + ", ".join(protecting_objects) + "."
+            error_message += " Por favor, primero elimine o modifique estas referencias."
+            
+            messages.error(request, error_message)
+            # Redirigir de vuelta a la página de confirmación de borrado o a una página relevante
+            # Podrías redirigir al detalle del insumo o a la lista donde el usuario pueda ver el error
+            # o incluso a la página desde donde vino.
+            # Para simplificar, redirigimos a donde iría si la eliminación fuera exitosa (ej. la categoría o depósito)
+            # para que vea el mensaje de error allí.
+            if hasattr(self.object, 'categoria') and self.object.categoria:
+                 return redirect(reverse_lazy('App_LUMINOVA:categoria_i_detail', kwargs={'pk': self.object.categoria.pk}))
+            return redirect(reverse_lazy('App_LUMINOVA:deposito_view'))
+>>>>>>> Stashed changes
 
 
 # Funciones para el CRUD de Productos Terminados
@@ -663,7 +724,11 @@ class ProductoTerminadoUpdateView(UpdateView):
     model = ProductoTerminado
     template_name = 'deposito/productoterminado_editar.html'
     fields = '__all__'
+<<<<<<< Updated upstream
     context_object_name = 'producto_terminado'
+=======
+    context_object_name = 'producto_terminado' 
+>>>>>>> Stashed changes
     success_url = reverse_lazy('App_LUMINOVA:deposito_view')
 
 class ProductoTerminadoDeleteView(DeleteView):
@@ -671,6 +736,7 @@ class ProductoTerminadoDeleteView(DeleteView):
     template_name = 'deposito/productoterminado_confirm_delete.html'
     context_object_name = 'producto_terminado'
     success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+<<<<<<< Updated upstream
 
 
 class ProveedorListView(ListView):
@@ -731,6 +797,8 @@ class FabricanteDeleteView(DeleteView):
     template_name = 'ventas/fabricantes/fabricante_confirm_delete.html'
     context_object_name = 'fabricante'
     success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+=======
+>>>>>>> Stashed changes
 
 
 

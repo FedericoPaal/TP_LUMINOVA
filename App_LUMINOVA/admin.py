@@ -26,9 +26,9 @@ class ProductoTerminadoAdmin(admin.ModelAdmin):
 
 @admin.register(Insumo)
 class InsumoAdmin(admin.ModelAdmin):
-    list_display = ('descripcion', 'categoria', 'proveedor', 'stock', 'precio_unitario') # cambiado a proveedor
+    list_display = ('descripcion', 'categoria', 'proveedor', 'stock', 'precio_unitario')
     list_filter = ('categoria', 'proveedor')
-    search_fields = ('descripcion', 'fabricante', 'categoria__nombre', 'proveedor__nombre') # Asegurado que funcione
+    search_fields = ('descripcion', 'fabricante', 'categoria__nombre', 'proveedor__nombre')
     autocomplete_fields = ['categoria', 'proveedor']
 
 class ItemOrdenVentaInline(admin.TabularInline):
@@ -36,7 +36,7 @@ class ItemOrdenVentaInline(admin.TabularInline):
     fields = ('producto_terminado', 'cantidad', 'precio_unitario_venta', 'subtotal')
     readonly_fields = ('subtotal',)
     extra = 1
-    autocomplete_fields = ['producto_terminado'] # ProductoTerminadoAdmin ya tiene search_fields
+    autocomplete_fields = ['producto_terminado'] 
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "producto_terminado":
@@ -47,7 +47,7 @@ class ItemOrdenVentaInline(admin.TabularInline):
 class OrdenVentaAdmin(admin.ModelAdmin):
     list_display = ('numero_ov', 'cliente', 'fecha_creacion', 'estado', 'total_ov')
     list_filter = ('estado', 'fecha_creacion', 'cliente')
-    search_fields = ('numero_ov', 'cliente__nombre') # <--- AÑADIDO/ASEGURADO
+    search_fields = ('numero_ov', 'cliente__nombre') 
     inlines = [ItemOrdenVentaInline]
     readonly_fields = ('fecha_creacion', 'total_ov')
 
@@ -55,7 +55,7 @@ class OrdenVentaAdmin(admin.ModelAdmin):
 class OrdenProduccionAdmin(admin.ModelAdmin):
     list_display = ('numero_op', 'producto_a_producir', 'cantidad_a_producir', 'get_estado_op_nombre', 'get_sector_asignado_nombre', 'fecha_solicitud')
     list_filter = ('estado_op', 'sector_asignado_op', 'fecha_solicitud')
-    search_fields = ('numero_op', 'producto_a_producir__descripcion', 'orden_venta_origen__numero_ov', 'cliente_final__nombre') # Añadido cliente_final__nombre
+    search_fields = ('numero_op', 'producto_a_producir__descripcion', 'orden_venta_origen__numero_ov', 'cliente_final__nombre')
     autocomplete_fields = ['producto_a_producir', 'orden_venta_origen', 'estado_op', 'sector_asignado_op']
     readonly_fields = ('fecha_solicitud',)
 
@@ -70,27 +70,27 @@ class OrdenProduccionAdmin(admin.ModelAdmin):
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    search_fields = ('nombre', 'email') # Ya lo tenías
+    search_fields = ('nombre', 'email') 
 
 @admin.register(Proveedor)
 class ProveedorAdmin(admin.ModelAdmin):
-    search_fields = ('nombre',) # Ya lo tenías
+    search_fields = ('nombre',) 
 
 @admin.register(CategoriaInsumo)
 class CategoriaInsumoAdmin(admin.ModelAdmin):
-    search_fields = ('nombre',) # Ya lo tenías
+    search_fields = ('nombre',) 
 
 @admin.register(CategoriaProductoTerminado)
 class CategoriaProductoTerminadoAdmin(admin.ModelAdmin):
-    search_fields = ('nombre',) # Ya lo tenías
+    search_fields = ('nombre',) 
 
-@admin.register(EstadoOrden) # Usando tu modelo EstadoOrden
+@admin.register(EstadoOrden) 
 class EstadoOrdenAdmin(admin.ModelAdmin):
-    search_fields = ['nombre'] # <--- AÑADIDO
+    search_fields = ['nombre'] 
 
-@admin.register(SectorAsignado) # Usando tu modelo SectorAsignado
+@admin.register(SectorAsignado) 
 class SectorAsignadoAdmin(admin.ModelAdmin):
-    search_fields = ['nombre'] # <--- AÑADIDO
+    search_fields = ['nombre'] 
 
 # Registros simples
 admin.site.register(Reportes)
@@ -99,5 +99,9 @@ admin.site.register(RolDescripcion)
 admin.site.register(AuditoriaAcceso)
 #admin.site.register(CategoriaProductoTerminado)
 #admin.site.register(Proveedor)
+<<<<<<< Updated upstream
 admin.site.register(ComponenteProducto) # Descomentado, puede ser útil para verlos todos
 admin.site.register(Fabricante)
+=======
+admin.site.register(ComponenteProducto) 
+>>>>>>> Stashed changes

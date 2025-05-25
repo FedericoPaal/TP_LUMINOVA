@@ -110,12 +110,10 @@ class OrdenProduccionUpdateForm(forms.ModelForm):
         }
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Usando los nombres de modelo correctos de tu models.py
-        self.fields['estado_op'].queryset = EstadoOrden.objects.all().order_by('nombre') # Tu modelo se llama EstadoOrden
+        self.fields['estado_op'].queryset = EstadoOrden.objects.all().order_by('nombre')
         self.fields['estado_op'].empty_label = "Seleccionar Estado..."
-        self.fields['sector_asignado_op'].queryset = SectorAsignado.objects.all().order_by('nombre') # Tu modelo se llama SectorAsignado
+        self.fields['sector_asignado_op'].queryset = SectorAsignado.objects.all().order_by('nombre')
         self.fields['sector_asignado_op'].empty_label = "Seleccionar Sector..."
-        # Hacer opcionales los campos que pueden serlo
         self.fields['fecha_inicio_planificada'].required = False
         self.fields['fecha_fin_planificada'].required = False
         self.fields['sector_asignado_op'].required = False
@@ -124,7 +122,7 @@ class OrdenProduccionUpdateForm(forms.ModelForm):
 class ProveedorForm(forms.ModelForm):
     class Meta:
         model = Proveedor
-        fields = ['nombre', 'contacto', 'telefono', 'email'] # O los campos que quieras en el form
+        fields = ['nombre', 'contacto', 'telefono', 'email']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'Nombre del Proveedor'}),
             'contacto': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'Persona de contacto'}),

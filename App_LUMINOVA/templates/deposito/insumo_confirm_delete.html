@@ -34,9 +34,61 @@
     </nav>
 {% endblock %}
 
-{% block content %}        
-        <p>Esta seguro que desea eliminar el insumo?</p>
-        <button type="submit" class="btn btn-primary">Confirmar</button>
-        <a href="{% url 'App_LUMINOVA:deposito_view' %}" class="btn btn-secondary">Cancelar</a>
-    </>
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación de Insumo</h4>
+                </div>
+                <div class="card-body">
+                    {% if insumo %}
+                        <p class="fs-5">¿Estás seguro de que deseas eliminar permanentemente el insumo:</p>
+                        <p class="lead"><strong>"{{ insumo.descripcion }}"</strong>?</p>
+                        
+                        <p class="text-muted small">Esta acción no se puede deshacer.</p>
+                        {% if insumo.usado_en_bom.all %} 
+                            <div class="alert alert-warning mt-3" role="alert">
+                                <h5 class="alert-heading">¡Atención! Insumo en Uso</h5>
+                                <p>Este insumo (<strong>{{ insumo.descripcion }}</strong>) es utilizado actualmente por los siguientes productos terminados y no puede ser eliminado directamente mientras esté referenciado:</p>
+                                <ul class="mb-0">
+                                {% for componente in insumo.usado_en_bom.all %}
+                                    <li>
+                                        <a href="{% url 'admin:App_LUMINOVA_productoterminado_change' componente.producto_terminado.id %}" target="_blank">
+                                            {{ componente.producto_terminado.descripcion }}
+                                        </a> 
+                                        (se necesitan {{ componente.cantidad_necesaria }})
+                                    </li>
+                                {% endfor %}
+                                </ul>
+                                <hr>
+                                <p class="mb-0 small">Para poder eliminar este insumo, primero debe removerlo o reemplazarlo de todas las Listas de Materiales (BOM) de los productos listados arriba.</p>
+                            </div>
+                        {% endif %}
+
+                        <form method="post" action="{% url 'App_LUMINOVA:insumo_delete' insumo.pk %}">
+                            {% csrf_token %}
+                            <hr class="my-4">
+                            <div class="d-flex justify-content-end mt-3">
+                                <a href="{% if insumo.categoria_id %}{% url 'App_LUMINOVA:categoria_i_detail' insumo.categoria.id %}{% else %}{% url 'App_LUMINOVA:deposito_view' %}{% endif %}" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-x-circle"></i> Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-danger" 
+                                        {% if insumo.usado_en_bom.all and insumo.componenteproducto_set.model.insumo.field.remote_field.on_delete == models.PROTECT %} 
+                                            disabled title="No se puede eliminar: el insumo está en uso y la relación está protegida."
+                                        {% endif %}>
+                                    <i class="bi bi-trash3-fill"></i> Sí, Eliminar Insumo
+                                </button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <p class="text-danger">Error: No se ha especificado un insumo para eliminar.</p>
+                        <a href="{% url 'App_LUMINOVA:deposito_view' %}" class="btn btn-primary">Volver a Depósito</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

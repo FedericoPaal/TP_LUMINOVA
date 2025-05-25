@@ -57,7 +57,7 @@
                     <img src="{{ categoria.imagen.url }}" alt="{{ categoria.nombre }}" style="max-height: 100px; border-radius: 5px; border: 1px solid #ddd;">
                 </div>
             {% endif %}
-            {{ form.imagen }} {# Esto mostrará el input para cambiar/borrar la imagen #}
+            {{ form.imagen }} 
             {% if form.imagen.errors %}<div class="invalid-feedback d-block">{{ form.imagen.errors }}</div>{% endif %}
             {% if form.imagen.help_text %}
                 <small class="form-text text-muted">{{ form.imagen.help_text }}</small>

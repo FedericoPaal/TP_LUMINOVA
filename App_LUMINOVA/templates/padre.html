@@ -22,7 +22,7 @@
                 {# Lógica para incluir el sidebar correcto basado en request.path o un context_processor #}
                 {% include 'shared/sidebar_logic.html' %} {# Crear este archivo o poner la lógica aquí #}
             {% endblock %}
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4"> {# Añadido py-4 para padding vertical #}
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4"> {# Añadido py-4 para padding vertical #}
                 {% bootstrap_messages %} 
                 {% block content %}{% endblock %}
             </main>

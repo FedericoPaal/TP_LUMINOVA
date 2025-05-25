@@ -94,7 +94,6 @@
                 </div>
                  {% if insumos_necesarios_list %}
                 <div class="card-footer text-end">
-                    {# Botón para solicitar/descontar insumos a Depósito #}
                     <a href="{% url 'App_LUMINOVA:deposito_enviar_insumos_op' op.id %}" class="btn btn-info btn-sm {% if not todos_los_insumos_disponibles_variable_de_contexto %}disabled{% endif %}">
                         <i class="bi bi-box-arrow-down"></i> Solicitar/Descontar Insumos
                     </a>
@@ -102,15 +101,13 @@
                 {% endif %}
             </div>
         </div>
-
-        {# Columna Derecha: Gestionar OP (Estado, Sector) #}
         <div class="col-lg-5">
             <div class="card shadow-sm">
                 <div class="card-header">
                     Gestionar Orden de Producción
                 </div>
                 <div class="card-body">
-                    <form method="post"> {# El action es la URL actual por defecto #}
+                    <form method="post"> 
                         {% csrf_token %}
                         {% bootstrap_form form_update_op layout='vertical' %}
                         <div class="d-grid mt-3">

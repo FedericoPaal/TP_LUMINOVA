@@ -106,9 +106,6 @@
                 {% if form.imagen.errors %}<div class="invalid-feedback d-block">{{ form.imagen.errors }}</div>{% endif %}
             </div>
         </div>
-
-        {# Si prefieres la forma simple: {{ form.as_p }} #}
-
         <div class="mt-3">
             <button type="submit" class="btn btn-primary">Guardar Producto</button>
             <a href="{% url 'App_LUMINOVA:deposito_view' %}" class="btn btn-secondary">Cancelar</a>
@@ -118,7 +115,7 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        var form = document.querySelector('form'); // Selecciona el primer formulario de la página
+        var form = document.querySelector('form');
         if (form) {
             var elements = form.elements;
             for (var i = 0; i < elements.length; i++) {
@@ -130,7 +127,6 @@
                 } else if (element.tagName === 'TEXTAREA') {
                     element.classList.add('form-control');
                 } else if (element.tagName === 'INPUT' && element.type === 'file') {
-                    // Bootstrap 5 usa form-control para file inputs también.
                     element.classList.add('form-control');
                 }
             }

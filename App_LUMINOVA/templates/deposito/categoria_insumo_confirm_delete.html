@@ -35,7 +35,7 @@
                 </div>
                 <div class="card-body">
                     <p class="fs-5">¿Estás seguro de que deseas eliminar la categoría de insumo "<strong>{{ categoria.nombre }}</strong>"?</p>
-                    {% if categoria.insumos.all %} {# Asumiendo related_name='insumos' en ForeignKey de Insumo a CategoriaInsumo #}
+                    {% if categoria.insumos.all %} 
                         <div class="alert alert-warning" role="alert">
                             <strong>¡Atención!</strong> Esta categoría contiene <strong>{{ categoria.insumos.count }}</strong> insumo(s).
                             Eliminar la categoría podría afectar a estos insumos (dependiendo de tu configuración `on_delete` en el modelo Insumo).

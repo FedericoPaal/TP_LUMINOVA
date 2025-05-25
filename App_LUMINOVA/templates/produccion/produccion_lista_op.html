@@ -12,7 +12,6 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">{{ titulo_seccion }}</h1>
-    {# ... botón opcional para crear OP manual ... #}
 </div>
 
 {% bootstrap_messages %}
@@ -33,7 +32,7 @@
             </tr>
         </thead>
         <tbody>
-            {% for op in ordenes_produccion_list %} {# <--- AQUÍ ESTÁ EL CICLO FOR #}
+            {% for op in ordenes_produccion_list %}
             <tr id="op-{{ op.id }}">
                 <td><a href="{% url 'App_LUMINOVA:produccion_detalle_op' op.id %}">{{ op.numero_op }}</a></td>
                 <td>
@@ -65,11 +64,11 @@
                     </a>
                 </td>
             </tr>
-            {% empty %} {# Se ejecuta si ordenes_produccion_list está vacía #}
+            {% empty %}
             <tr>
                 <td colspan="9" class="text-center fst-italic text-muted">No hay órdenes de producción registradas.</td>
             </tr>
-            {% endfor %} {# <--- FIN DEL CICLO FOR #}
+            {% endfor %}
         </tbody>
     </table>
 </div>

@@ -6,12 +6,11 @@
 {% url 'App_LUMINOVA:auditoria' as auditoria_url %}
 
 {% url 'App_LUMINOVA:ventas_lista_ov' as ventas_url %}
-{% url 'App_LUMINOVA:lista_clientes' as clientes_url %} {# Asumiendo que tienes esta URL #}
-
+{% url 'App_LUMINOVA:lista_clientes' as clientes_url %}
 {% url 'App_LUMINOVA:produccion_lista_op' as produccion_url %}
 
 {% url 'App_LUMINOVA:deposito' as deposito_url %}
-{# ... y así para las otras secciones principales ... #}
+
 
 
 {% if request.resolver_match.app_name == 'App_LUMINOVA' %}
