@@ -44,3 +44,16 @@ nav.sidebar .nav-link.custom-active-button.active {
     background-color: #0d6efd !important;
     color: white !important;
 }
+
+/* NUEVAS CLASES PARA FILAS DE TABLA con mayor especificidad */
+.table > tbody > tr.table-row-even > td,
+.table > tbody > tr.table-row-even > th { /* Añadir th por si tienes encabezados en el tbody */
+    background-color: #3E83E8 !important; /* Color para filas pares (ej. azul oscuro) */
+    color: white !important; /* Asegurar que el texto sea legible */
+}
+
+.table > tbody > tr.table-row-odd > td,
+.table > tbody > tr.table-row-odd > th {
+    background-color: #61B5FA !important; /* Color para filas impares (ej. azul claro) */
+    color: white !important; /* Asegurar que el texto sea legible */
+}
