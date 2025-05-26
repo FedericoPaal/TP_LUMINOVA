@@ -15,7 +15,7 @@ from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_exempt # Usar con precaución
 from django.db import transaction, IntegrityError as DjangoIntegrityError  # Para transacciones y error de Django
 from django.utils import timezone # Para fechas y horas
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Q # Para manejar relaciones protegidas
 
 # Importa los modelos que realmente existen y necesitas:
 from .models import (
@@ -1105,27 +1105,27 @@ def produccion_lista_op_view(request):
     return render(request, 'produccion/produccion_lista_op.html', context)
 
 @login_required
-@transaction.atomic # Asegurar que ambas actualizaciones ocurran o ninguna
+@transaction.atomic
 def produccion_detalle_op_view(request, op_id):
     op = get_object_or_404(
         OrdenProduccion.objects.select_related(
             'producto_a_producir', 
-            'orden_venta_origen__cliente', # Necesario para el cliente
+            'orden_venta_origen__cliente',
             'estado_op', 
             'sector_asignado_op'
         ), 
         id=op_id
     )
     
-    # ... (lógica para insumos_necesarios_data) ...
+    # --- Lógica para insumos (sin cambios) ---
     insumos_necesarios_data = []
     todos_los_insumos_disponibles = True 
-    if op.producto_a_producir:
+    if op.producto_a_producir: 
         componentes_requeridos = ComponenteProducto.objects.filter(
             producto_terminado=op.producto_a_producir
         ).select_related('insumo')
         if not componentes_requeridos.exists():
-            messages.warning(request, f"No se han definido componentes (BOM) para el producto '{op.producto_a_producir.descripcion}'.")
+            # messages.warning(request, f"No se han definido componentes (BOM) para el producto '{op.producto_a_producir.descripcion}'.")
             todos_los_insumos_disponibles = False 
         for comp in componentes_requeridos:
             cantidad_total_requerida_para_op = comp.cantidad_necesaria * op.cantidad_a_producir
@@ -1141,42 +1141,88 @@ def produccion_detalle_op_view(request, op_id):
                 'insumo_id': comp.insumo.id
             })
     else:
-        messages.error(request, "La Orden de Producción no tiene un producto asociado.")
+        # messages.error(request, "La Orden de Producción no tiene un producto asociado.")
         todos_los_insumos_disponibles = False
+    # --- FIN Lógica para insumos ---
 
     if request.method == 'POST':
         form_update = OrdenProduccionUpdateForm(request.POST, instance=op)
         if form_update.is_valid():
-            op_actualizada = form_update.save() # Guardar la OP
-            messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.estado_op.nombre}'.")
-
-            # --- LÓGICA PARA ACTUALIZAR ESTADO DE OV ---
+            op_actualizada = form_update.save()
+            messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.estado_op.nombre if op_actualizada.estado_op else 'N/A'}'.")
+            
             if op_actualizada.orden_venta_origen and op_actualizada.estado_op:
                 orden_venta_asociada = op_actualizada.orden_venta_origen
+                estado_op_actual_nombre_lower = op_actualizada.estado_op.nombre.lower()
                 
-                # Definir qué estado de OP significa "producción completada para este item/OP"
-                # Asegúrate de que 'Terminado' sea el nombre exacto de tu EstadoOrden
-                if op_actualizada.estado_op.nombre.lower() == 'completada':
-                    # Verificar si TODAS las OPs asociadas a esta OV están terminadas
-                    todas_ops_terminadas = True
-                    # .ops_generadas es el related_name de OrdenVenta a OrdenProduccion
-                    for otra_op in orden_venta_asociada.ops_generadas.all(): 
-                        if not otra_op.estado_op or otra_op.estado_op.nombre.lower() != 'completada':
-                            todas_ops_terminadas = False
-                            break
-                    
-                    if todas_ops_terminadas:
-                        orden_venta_asociada.estado = 'LISTA_ENTREGA' # O el estado que uses para facturable
+                nuevo_estado_ov_sugerido = None
+
+                ESTADO_OP_COMPLETADA_NOMBRE = 'completada' 
+                ESTADO_OP_CANCELADA_NOMBRE = 'cancelada'
+                ESTADO_OP_PAUSADA_NOMBRE = 'pausada'
+                ESTADOS_OP_PRODUCCION_ACTIVA_NOMBRES = ['insumos solicitados', 'producción iniciada']
+
+                OV_ESTADO_PRODUCCION_INICIADA = 'PRODUCCION_INICIADA'
+                OV_ESTADO_LISTA_ENTREGA = 'LISTA_ENTREGA'
+                OV_ESTADO_PRODUCCION_CON_PROBLEMAS = 'PRODUCCION_CON_PROBLEMAS'
+                OV_ESTADO_CONFIRMADA = 'CONFIRMADA'
+                # OV_ESTADO_PENDIENTE = 'PENDIENTE' # No se usa para setear, solo para comparar
+
+                # 1. Obtener el objeto EstadoOrden para "Completada"
+                estado_completada_op_obj = EstadoOrden.objects.filter(nombre__iexact=ESTADO_OP_COMPLETADA_NOMBRE).first()
+                
+                if not estado_completada_op_obj:
+                    messages.error(request, f"Error crítico: El estado de OP '{ESTADO_OP_COMPLETADA_NOMBRE}' no existe en la base de datos. No se puede procesar la lógica de finalización.")
+                else:
+                    # 2. Verificar si todas las OPs de la OV asociada están completadas
+                    # Contar OPs de esta OV que NO están en el estado 'Completada'
+                    ops_no_completadas_count = orden_venta_asociada.ops_generadas.exclude(estado_op=estado_completada_op_obj).count()
+                    todas_ops_realmente_completadas = (ops_no_completadas_count == 0 and orden_venta_asociada.ops_generadas.exists())
+                    print(f"DEBUG: Para OV {orden_venta_asociada.numero_ov}, OPs no completadas: {ops_no_completadas_count}, ¿Todas completadas?: {todas_ops_realmente_completadas}")
+
+                    if todas_ops_realmente_completadas:
+                        nuevo_estado_ov_sugerido = OV_ESTADO_LISTA_ENTREGA
+                        print(f"DEBUG: Todas OPs completadas para OV {orden_venta_asociada.numero_ov}. OV sugerida: LISTA_ENTREGA.")
+                    else:
+                        # Si no todas están completadas, evaluamos el estado actual de la OP que se modificó
+                        if estado_op_actual_nombre_lower == ESTADO_OP_CANCELADA_NOMBRE or \
+                           estado_op_actual_nombre_lower == ESTADO_OP_PAUSADA_NOMBRE:
+                            nuevo_estado_ov_sugerido = OV_ESTADO_PRODUCCION_CON_PROBLEMAS
+                            print(f"DEBUG: OP {op_actualizada.numero_op} cancelada/pausada. OV sugerida: PRODUCCION_CON_PROBLEMAS.")
+                        else:
+                            # Verificar si alguna OP (incluyendo la actual si su estado es activo) está en producción activa
+                            q_ops_activas = Q()
+                            for nombre_estado_activo in ESTADOS_OP_PRODUCCION_ACTIVA_NOMBRES:
+                                q_ops_activas |= Q(estado_op__nombre__iexact=nombre_estado_activo)
+                            
+                            hay_alguna_op_activa_en_ov = orden_venta_asociada.ops_generadas.filter(q_ops_activas).exists()
+
+                            if hay_alguna_op_activa_en_ov:
+                                if orden_venta_asociada.estado not in [OV_ESTADO_PRODUCCION_INICIADA, OV_ESTADO_LISTA_ENTREGA, OV_ESTADO_PRODUCCION_CON_PROBLEMAS, 'COMPLETADA', 'CANCELADA']: # Evitar volver atrás si ya está avanzada o con problemas
+                                    nuevo_estado_ov_sugerido = OV_ESTADO_PRODUCCION_INICIADA
+                                    print(f"DEBUG: Hay OPs activas. OV {orden_venta_asociada.numero_ov} sugerida: PRODUCCION_INICIADA.")
+                            else: # No hay OPs activas Y no todas están completadas
+                                if orden_venta_asociada.estado not in ['CANCELADA', OV_ESTADO_PRODUCCION_CON_PROBLEMAS]: # No cambiar si ya está cancelada o con problemas
+                                    nuevo_estado_ov_sugerido = OV_ESTADO_CONFIRMADA 
+                                    print(f"DEBUG: No hay OPs activas y no todas completas. OV {orden_venta_asociada.numero_ov} sugerida: CONFIRMADA.")
+                
+                # Aplicar el nuevo estado a la OV
+                if nuevo_estado_ov_sugerido and orden_venta_asociada.estado != nuevo_estado_ov_sugerido:
+                    valid_ov_states = [choice[0] for choice in OrdenVenta.ESTADO_CHOICES]
+                    if nuevo_estado_ov_sugerido in valid_ov_states:
+                        orden_venta_asociada.estado = nuevo_estado_ov_sugerido
                         orden_venta_asociada.save(update_fields=['estado'])
-                        messages.info(request, f"Todos los productos para la OV {orden_venta_asociada.numero_ov} están listos. Estado de OV actualizado a 'Lista para Entrega'.")
-            # --- FIN LÓGICA ACTUALIZAR ESTADO DE OV ---
+                        messages.info(request, f"Estado de OV {orden_venta_asociada.numero_ov} actualizado a '{orden_venta_asociada.get_estado_display()}'.")
+                    else:
+                        messages.error(request, f"Intento de actualizar OV a un estado inválido: {nuevo_estado_ov_sugerido}")
             
             return redirect('App_LUMINOVA:produccion_detalle_op', op_id=op_actualizada.id)
-        else:
+        else: # form_update no es válido
             messages.error(request, "Error al actualizar la OP. Revise los datos del formulario.")
-            # Re-renderizar con el form con errores (ya se hace abajo)
-    else: # GET
-        form_update = OrdenProduccionUpdateForm(instance=op)
+            # La plantilla se renderizará con el form con errores al final de la vista
+    
+    # Lógica GET o si el form POST no fue válido
+    form_update = OrdenProduccionUpdateForm(instance=op)
 
     context = {
         'op': op,
@@ -1563,3 +1609,101 @@ def ventas_generar_factura_view(request, ov_id):
     # Si es GET o el form no es válido, redirige de vuelta al detalle de la OV
     # (el modal de facturación debería estar en la página de detalle de OV)
     return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
+
+@login_required
+@transaction.atomic
+def ventas_editar_ov_view(request, ov_id):
+    # if not es_admin_o_rol(request.user, ['ventas', 'administrador']):
+    #     messages.error(request, "Acción no permitida.")
+    #     return redirect('App_LUMINOVA:ventas_lista_ov')
+
+    orden_venta = get_object_or_404(OrdenVenta, id=ov_id)
+
+    # RESTRICCIÓN: Solo editar si está en estados permitidos y OPs no avanzadas
+    if orden_venta.estado not in ['PENDIENTE', 'CONFIRMADA'] or \
+       orden_venta.ops_generadas.exclude(estado_op__nombre__iexact='Pendiente').exists():
+        messages.error(request, f"La Orden de Venta {orden_venta.numero_ov} no se puede editar porque su producción ya ha avanzado o su estado no lo permite.")
+        return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
+
+    if request.method == 'POST':
+        form_ov = OrdenVentaForm(request.POST, instance=orden_venta, prefix='ov')
+        formset_items = ItemOrdenVentaFormSet(request.POST, instance=orden_venta, prefix='items')
+
+        if form_ov.is_valid() and formset_items.is_valid():
+            ov_actualizada = form_ov.save(commit=False)
+            # Guardar ítems primero para recalcular total
+            items_actualizados = formset_items.save(commit=False)
+            
+            total_recalculado = 0
+            for item in items_actualizados:
+                item.precio_unitario_venta = item.producto_terminado.precio_unitario # Re-asegurar precio
+                item.subtotal = item.cantidad * item.precio_unitario_venta
+                total_recalculado += item.subtotal
+                item.save() # Guardar cada item
+            
+            # Guardar items marcados para eliminar
+            for form_item_deleted in formset_items.deleted_forms:
+                if form_item_deleted.instance.pk: # Solo si el item ya existía
+                    form_item_deleted.instance.delete()
+            
+            formset_items.save_m2m()
+
+
+            ov_actualizada.total_ov = total_recalculado
+            ov_actualizada.save() # Guardar la OV actualizada
+            
+            messages.success(request, f"Orden de Venta {ov_actualizada.numero_ov} actualizada exitosamente.")
+            # Aquí deberías decidir qué hacer con las OPs si los ítems cambiaron.
+            # Por ahora, solo actualizamos la OV. Una lógica más compleja podría cancelar OPs antiguas y crear nuevas.
+            return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=ov_actualizada.id)
+        else:
+            messages.error(request, "Por favor, corrija los errores en el formulario.")
+    else: # GET
+        form_ov = OrdenVentaForm(instance=orden_venta, prefix='ov')
+        formset_items = ItemOrdenVentaFormSet(instance=orden_venta, prefix='items')
+
+    context = {
+        'form_ov': form_ov,
+        'formset_items': formset_items,
+        'orden_venta': orden_venta, # Para el título y otros datos
+        'titulo_seccion': f'Editar Orden de Venta: {orden_venta.numero_ov}',
+    }
+    return render(request, 'ventas/ventas_editar_ov.html', context)
+
+
+@login_required
+@transaction.atomic
+@require_POST # Esta acción solo debe ser por POST desde el modal
+def ventas_cancelar_ov_view(request, ov_id):
+    # if not es_admin_o_rol(request.user, ['ventas', 'administrador']):
+    #     messages.error(request, "Acción no permitida.")
+    #     return redirect('App_LUMINOVA:ventas_lista_ov')
+
+    orden_venta = get_object_or_404(OrdenVenta, id=ov_id)
+
+    if orden_venta.estado in ['COMPLETADA', 'CANCELADA']:
+        messages.warning(request, f"La Orden de Venta {orden_venta.numero_ov} ya está {orden_venta.get_estado_display()} y no puede cancelarse nuevamente.")
+        return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=ov_id)
+
+    estado_op_cancelada = EstadoOrden.objects.filter(nombre__iexact='Cancelada').first()
+    estado_op_completada = EstadoOrden.objects.filter(nombre__iexact='Completada').first() # O 'Terminado'
+
+    if not estado_op_cancelada:
+        messages.error(request, "Error crítico: El estado 'Cancelada' para OP no está configurado.")
+        return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=ov_id)
+
+    ops_asociadas = orden_venta.ops_generadas.all()
+    for op in ops_asociadas:
+        if op.estado_op != estado_op_completada: # No cancelar OPs que ya se completaron
+            op.estado_op = estado_op_cancelada
+            op.save(update_fields=['estado_op'])
+            messages.info(request, f"Orden de Producción {op.numero_op} asociada ha sido cancelada.")
+        else:
+            messages.warning(request, f"Orden de Producción {op.numero_op} ya está completada y no se cancelará.")
+
+
+    orden_venta.estado = 'CANCELADA'
+    orden_venta.save(update_fields=['estado'])
+    messages.success(request, f"Orden de Venta {orden_venta.numero_ov} ha sido cancelada.")
+    
+    return redirect('App_LUMINOVA:ventas_lista_ov')

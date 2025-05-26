@@ -5,3 +5,4 @@ _EV_LUMINOVA/
 env/
 __pycache__/
 migrations/__pycache__/
+staticfiles/

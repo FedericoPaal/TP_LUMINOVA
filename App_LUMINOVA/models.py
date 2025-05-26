@@ -90,16 +90,18 @@ class Cliente(models.Model):
 class OrdenVenta(models.Model): # NUEVO: Específico para Ventas
     ESTADO_CHOICES = [
         ('PENDIENTE', 'Pendiente Confirmación'),
-        ('CONFIRMADA', 'Confirmada'),
-        ('EN_PRODUCCION', 'En Producción'),
+        ('CONFIRMADA', 'Confirmada (Esperando Producción)'),
+        ('PRODUCCION_INICIADA', 'Producción Iniciada'), # NUEVO
+        ('PRODUCCION_PARCIAL', 'Producción Parcial'), # Opcional
+        ('PRODUCCION_CON_PROBLEMAS', 'Producción con Problemas'), # NUEVO
         ('LISTA_ENTREGA', 'Lista para Entrega'),
-        ('COMPLETADA', 'Completada'),
+        ('COMPLETADA', 'Completada/Entregada'),
         ('CANCELADA', 'Cancelada'),
     ]
     numero_ov = models.CharField(max_length=20, unique=True, verbose_name="N° Orden de Venta")
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name="ordenes_venta")
     fecha_creacion = models.DateTimeField(default=timezone.now)
-    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='PENDIENTE')
+    estado = models.CharField(max_length=50, choices=ESTADO_CHOICES, default='PENDIENTE')
     total_ov = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Total OV")
     notas = models.TextField(blank=True, null=True)
 

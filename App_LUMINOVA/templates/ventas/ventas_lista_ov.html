@@ -1,8 +1,9 @@
+{# App_LUMINOVA/templates/ventas/ventas_lista_ov.html #}
 {% extends 'padre.html' %}
 {% load static %}
 {% load django_bootstrap5 %}
 
-{% block title %}{{ titulo_seccion|default:"Órdenes de Venta" }} | Luminova{% endblock %}
+{% block title %}{{ titulo_seccion|default:"Órdenes de Venta" }}{% endblock %}
 
 {% block sidebar_content %}
     {% include 'ventas/ventas_sidebar.html' %}
@@ -18,10 +19,10 @@
     </div>
 </div>
 
-
+{% bootstrap_messages %}
 
 <div class="table-responsive mt-3">
-    <table class="table table-striped table-hover">
+    <table class="table table-striped table-hover align-middle"> {# align-middle para centrar verticalmente el contenido de las celdas #}
         <thead class="table-light">
             <tr>
                 <th>N° OV</th>
@@ -54,12 +55,13 @@
                     <span class="badge 
                         {% if ov.estado == 'PENDIENTE' %}bg-warning text-dark
                         {% elif ov.estado == 'CONFIRMADA' %}bg-info
-                        {% elif ov.estado == 'EN_PRODUCCION' %}bg-primary
-                        {% elif ov.estado == 'LISTA_ENTREGA' %}bg-secondary
+                        {% elif ov.estado == 'PRODUCCION_INICIADA' %}bg-primary 
+                        {% elif ov.estado == 'PRODUCCION_CON_PROBLEMAS' %}bg-danger
+                        {% elif ov.estado == 'LISTA_ENTREGA' %}bg-secondary text-dark  {# Usar un color más distintivo #}
                         {% elif ov.estado == 'COMPLETADA' %}bg-success
-                        {% elif ov.estado == 'CANCELADA' %}bg-danger
+                        {% elif ov.estado == 'CANCELADA' %}bg-dark {# Usar un color más distintivo #}
                         {% else %}bg-light text-dark{% endif %}">
-                        {{ ov.get_estado_display }} 
+                        {{ ov.get_estado_display }}
                     </span>
                 </td>
                 <td>
@@ -71,8 +73,19 @@
                     {% endfor %}
                 </td>
                 <td class="text-center">
-                     <a href="#" class="btn btn-sm btn-outline-success" title="Generar Factura (Próximamente)"><i class="bi bi-receipt"></i></a>
-                     {# Podrías añadir botones para editar/cancelar OV aquí si el estado lo permite #}
+                     <a href="{% url 'App_LUMINOVA:ventas_detalle_ov' ov.id %}" class="btn btn-sm btn-outline-info me-1" title="Ver Detalle OV">
+                         <i class="bi bi-eye-fill"></i>
+                     </a>
+                    {% if ov.estado == 'PENDIENTE' or ov.estado == 'CONFIRMADA' %} {# Solo permitir editar en estos estados #}
+                     <a href="{% url 'App_LUMINOVA:ventas_editar_ov' ov.id %}" class="btn btn-sm btn-outline-primary me-1" title="Editar OV">
+                         <i class="bi bi-pencil-square"></i>
+                     </a>
+                    {% endif %}
+                    {% if ov.estado != 'CANCELADA' and ov.estado != 'COMPLETADA' %} {# No cancelar si ya está finalizada o cancelada #}
+                     <a href="#" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelarOVModal{{ov.id}}" title="Cancelar OV">
+                         <i class="bi bi-x-circle-fill"></i>
+                     </a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
@@ -83,4 +96,32 @@
         </tbody>
     </table>
 </div>
+
+{# Modales de Confirmación de Cancelación (uno por cada OV) #}
+{% for ov in ordenes_list %}
+    {% if ov.estado != 'CANCELADA' and ov.estado != 'COMPLETADA' %}
+    <div class="modal fade" id="cancelarOVModal{{ov.id}}" tabindex="-1" aria-labelledby="cancelarOVModalLabel{{ov.id}}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form method="post" action="{% url 'App_LUMINOVA:ventas_cancelar_ov' ov.id %}">
+                    {% csrf_token %}
+                    <div class="modal-header bg-warning">
+                        <h5 class="modal-title" id="cancelarOVModalLabel{{ov.id}}"><i class="bi bi-exclamation-triangle-fill"></i> Confirmar Cancelación</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>¿Estás seguro de que deseas cancelar la Orden de Venta <strong>{{ ov.numero_ov }}</strong>?</p>
+                        <p class="small text-muted">Esto también intentará cancelar las Órdenes de Producción asociadas que aún no estén completadas.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, mantener</button>
+                        <button type="submit" class="btn btn-danger">Sí, Cancelar OV</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
+
 {% endblock %}

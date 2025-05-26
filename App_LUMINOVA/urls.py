@@ -8,7 +8,7 @@ from .views import (
 
     # Admin
     roles_permisos_view, auditoria_view,
-    lista_usuarios, crear_usuario, editar_usuario, eliminar_usuario, ventas_detalle_ov_view, ventas_generar_factura_view,
+    lista_usuarios, crear_usuario, editar_usuario, eliminar_usuario, ventas_cancelar_ov_view, ventas_detalle_ov_view, ventas_editar_ov_view, ventas_generar_factura_view,
 
     # Ventas
     ventas_lista_ov_view, ventas_crear_ov_view,
@@ -78,6 +78,8 @@ urlpatterns = [
     path('ventas/clientes/eliminar/<int:cliente_id>/', eliminar_cliente_view, name='eliminar_cliente'),
     path('ventas/orden/<int:ov_id>/', ventas_detalle_ov_view, name='ventas_detalle_ov'),
     path('ventas/orden/<int:ov_id>/generar-factura/', ventas_generar_factura_view, name='ventas_generar_factura'),
+    path('ventas/orden/<int:ov_id>/editar/', ventas_editar_ov_view, name='ventas_editar_ov'),   # NUEVA
+    path('ventas/orden/<int:ov_id>/cancelar/', ventas_cancelar_ov_view, name='ventas_cancelar_ov'), # NUEVA
 
     # --- Rutas de Compras ---
     path('compras/', compras_lista_oc_view, name='compras_lista_oc'), # Vista principal de compras
