@@ -33,6 +33,11 @@
                     <i class="bi bi-gear-fill me-2"></i> <span class="ms-2">Ver Órdenes Producción</span>
                 </a>
             </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link {% if '/auditoria/' in request.path %}active{% endif %} text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:proveedor_list' %}" style="border-radius: 25px;">
+                    <i class="bi bi-clock-history me-2"></i> <span class="ms-2">Ver Proveedores</span>
+                </a>
+            </li>
             {# Futuro: Botón para "Generar Facturas" podría ir aquí o ser una acción en la lista de OVs #}
         </ul>
     </div>

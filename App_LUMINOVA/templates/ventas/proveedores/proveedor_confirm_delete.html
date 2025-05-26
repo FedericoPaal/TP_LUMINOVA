@@ -1,0 +1,43 @@
+{% extends 'padre.html' %}
+
+{% block sidebar_content %}
+    {% include 'ventas/ventas_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-lg">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Eliminación de Proveedor</h4>
+                </div>
+                <div class="card-body">
+                    {% if proveedor %}
+                        <p class="fs-5">¿Estás seguro de que deseas eliminar permanentemente el proveedor:</p>
+                        <p class="lead"><strong>"{{ proveedor.nombre }}"</strong>?</p>
+
+
+
+                        <form method="post" action="{% url 'App_LUMINOVA:proveedor_delete' proveedor.pk %}">
+                            {% csrf_token %}
+                            <hr class="my-4">
+                            <div class="d-flex justify-content-end mt-3">
+                                <a href="{% url 'App_LUMINOVA:proveedor_list' %}" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-x-circle"></i> Cancelar
+                                </a>
+                                <button type="submit" class="btn btn-danger"
+                                    <i class="bi bi-trash3-fill"></i> Sí, Eliminar Proveedor
+                                </button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <p class="text-danger">Error: No se ha especificado un proveedor para eliminar.</p>
+                        <a href="{% url 'App_LUMINOVA:proveedor_list' %}" class="btn btn-primary">Volver a lista de Proveedores</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
