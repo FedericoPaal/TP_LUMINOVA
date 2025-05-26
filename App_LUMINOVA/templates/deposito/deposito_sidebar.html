@@ -1,0 +1,48 @@
+{% load static %}
+
+{% url 'App_LUMINOVA:deposito_view' as url_deposito_principal %}
+{% url 'App_LUMINOVA:insumo_create' as url_insumo_create %}
+{% url 'App_LUMINOVA:producto_terminado_create' as url_pt_create %}
+{% url 'App_LUMINOVA:categoria_i_create' as url_cat_i_create %}
+{% url 'App_LUMINOVA:categoria_pt_create' as url_cat_pt_create %}
+{% url 'App_LUMINOVA:deposito_solicitudes_insumos' as url_deposito_solicitudes %}
+
+
+<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+    <div class="position-sticky pt-4">
+        <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+            <a href="{{ url_deposito_principal }}"><span style="color: white;">Depósito</span></a>
+        </h6>
+        <hr class="text-white">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_deposito_solicitudes %}active{% endif %}" href="{{ url_deposito_solicitudes }}">
+                    <i class="bi bi-card-list me-2"></i> <span class="ms-2">Solicitudes de Insumos</span>
+                     {% if ops_pendientes_deposito_count > 0 %}
+                        <span class="badge bg-danger ms-auto">{{ ops_pendientes_deposito_count }}</span>
+                    {% endif %}
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_insumo_create %}active{% endif %}" href="{{ url_insumo_create }}">
+                    <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Insumo</span>
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_pt_create %}active{% endif %}" href="{{ url_pt_create }}">
+                    <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Prod. Term.</span>
+                </a>
+            </li>
+             <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_cat_i_create %}active{% endif %}" href="{{ url_cat_i_create }}">
+                    <i class="bi bi-bookmark-plus-fill me-2"></i> <span class="ms-2">Agregar Cat. Insumo</span>
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_cat_pt_create %}active{% endif %}" href="{{ url_cat_pt_create }}">
+                    <i class="bi bi-bookmark-plus-fill me-2"></i> <span class="ms-2">Agregar Cat. Prod. Term.</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>

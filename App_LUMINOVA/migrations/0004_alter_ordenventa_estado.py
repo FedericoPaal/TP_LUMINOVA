@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='ordenventa',
             name='estado',
-            field=models.CharField(choices=[('PENDIENTE', 'Pendiente Confirmación'), ('CONFIRMADA', 'Confirmada (Esperando Producción)'), ('PRODUCCION_INICIADA', 'Producción Iniciada'), ('PRODUCCION_CON_PROBLEMAS', 'Producción con Problemas'), ('LISTA_ENTREGA', 'Lista para Entrega'), ('COMPLETADA', 'Completada/Entregada'), ('CANCELADA', 'Cancelada')], default='PENDIENTE', max_length=50),
+            field=models.CharField(choices=[('PENDIENTE', 'Pendiente Confirmación'), ('INSUMOS_SOLICITADOS', 'Insumos Solicitados'), ('CONFIRMADA', 'Confirmada (Esperando Producción)'), ('PRODUCCION_INICIADA', 'Producción Iniciada'), ('PRODUCCION_CON_PROBLEMAS', 'Producción con Problemas'), ('LISTA_ENTREGA', 'Lista para Entrega'), ('COMPLETADA', 'Completada/Entregada'), ('CANCELADA', 'Cancelada')], default='PENDIENTE', max_length=50),
         ),
     ]

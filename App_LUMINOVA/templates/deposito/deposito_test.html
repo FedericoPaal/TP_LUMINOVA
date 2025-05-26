@@ -1,0 +1,10 @@
+<h1>Prueba de Productos en Stock</h1>
+<p>Contenido de la lista: {{ productos_terminados_en_stock_list }}</p>
+<p>Cantidad: {{ productos_terminados_en_stock_list|length }}</p>
+<ul>
+{% for item in productos_terminados_en_stock_list %}
+    <li>ID: {{ item.id }} - {{ item.descripcion }} - Stock: {{ item.stock }}</li>
+{% empty %}
+    <li>No hay productos en la lista.</li>
+{% endfor %}
+</ul>

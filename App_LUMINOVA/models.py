@@ -91,6 +91,7 @@ class OrdenVenta(models.Model): # NUEVO: Específico para Ventas
     ESTADO_CHOICES = [
         ('PENDIENTE', 'Pendiente Confirmación'),
         ('CONFIRMADA', 'Confirmada (Esperando Producción)'),
+        ('INSUMOS_SOLICITADOS', 'Insumos Solicitados'),
         ('PRODUCCION_INICIADA', 'Producción Iniciada'), # NUEVO
         ('PRODUCCION_PARCIAL', 'Producción Parcial'), # Opcional
         ('PRODUCCION_CON_PROBLEMAS', 'Producción con Problemas'), # NUEVO
@@ -155,7 +156,9 @@ class OrdenProduccion(models.Model):
 
     estado_op = models.ForeignKey(EstadoOrden, on_delete=models.SET_NULL, null=True, blank=True, related_name='ops_estado') # Cambiado related_name
     fecha_solicitud = models.DateTimeField(default=timezone.now) # Añadido
+    fecha_inicio_real = models.DateTimeField(null=True, blank=True)
     fecha_inicio_planificada = models.DateField(null=True, blank=True) # Cambiado de fecha_inicio
+    fecha_fin_real = models.DateTimeField(null=True, blank=True)
     fecha_fin_planificada = models.DateField(null=True, blank=True) # Añadido
     sector_asignado_op = models.ForeignKey(SectorAsignado, on_delete=models.SET_NULL, null=True, blank=True, related_name='ops_sector') # Cambiado related_name
     notas = models.TextField(null=True, blank=True, verbose_name='Notas') # Añadido

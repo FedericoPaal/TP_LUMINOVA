@@ -1,0 +1,82 @@
+{% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titulo_seccion|default:"Detalle Solicitud Insumos OP" }}{% endblock %}
+
+{% block sidebar_content %}
+    {% include 'deposito/deposito_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">{{ titulo_seccion }}</h1>
+        <a href="{% url 'App_LUMINOVA:deposito_solicitudes_insumos' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left-circle"></i> Volver a Solicitudes
+        </a>
+    </div>
+
+    {% bootstrap_messages %}
+
+    <div class="row g-3">
+        <div class="col-md-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-info">
+                    Información de la Orden de Producción
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">N° OP:</dt><dd class="col-sm-8">{{ op.numero_op }}</dd>
+                        <dt class="col-sm-4">Producto:</dt><dd class="col-sm-8">{{ op.producto_a_producir.descripcion }}</dd>
+                        <dt class="col-sm-4">Cantidad:</dt><dd class="col-sm-8">{{ op.cantidad_a_producir }}</dd>
+                        <dt class="col-sm-4">Estado OP:</dt><dd class="col-sm-8"><span class="badge bg-info text-dark">{{ op.estado_op.nombre }}</span></dd>
+                        <dt class="col-sm-4">OV Origen:</dt><dd class="col-sm-8">{{ op.orden_venta_origen.numero_ov|default_if_none:"N/A" }}</dd>
+                        <dt class="col-sm-4">Cliente:</dt><dd class="col-sm-8">{{ op.orden_venta_origen.cliente.nombre|default_if_none:"N/A" }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-info">
+                    Insumos Requeridos y Stock Actual
+                </div>
+                <div class="card-body p-0" style="max-height: 400px; overflow-y: auto;">
+                    {% if insumos_necesarios_list %}
+                    <ul class="list-group list-group-flush">
+                        {% for item in insumos_necesarios_list %}
+                        <li class="list-group-item {% if not item.suficiente_stock %}list-group-item-danger{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1 small">{{ item.insumo_descripcion }}</h6>
+                                <span class="badge {% if item.suficiente_stock %}bg-success-subtle text-success-emphasis{% else %}bg-danger-subtle text-danger-emphasis{% endif %} rounded-pill small">
+                                    Stock Actual: {{ item.stock_actual_insumo }}
+                                </span>
+                            </div>
+                            <small class="text-muted">Total Requerido para OP: <strong>{{ item.cantidad_total_requerida_op }}</strong></small>
+                            {% if not item.suficiente_stock %}
+                                <small class="d-block text-danger fw-bold">¡Stock insuficiente!</small>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="p-3 text-muted">No hay componentes definidos (BOM) para el producto de esta OP.</p>
+                    {% endif %}
+                </div>
+                {% if insumos_necesarios_list %}
+                <div class="card-footer text-center">
+                    <form method="post" action="{% url 'App_LUMINOVA:deposito_enviar_insumos_op' op.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success w-100" {% if not todos_los_insumos_disponibles %}disabled title="No hay stock suficiente para todos los insumos."{% endif %}>
+                            <i class="bi bi-check-circle-fill"></i> Confirmar y Enviar Insumos (Descontar Stock)
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

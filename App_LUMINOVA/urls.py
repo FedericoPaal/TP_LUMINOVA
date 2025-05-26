@@ -8,7 +8,7 @@ from .views import (
 
     # Admin
     roles_permisos_view, auditoria_view,
-    lista_usuarios, crear_usuario, editar_usuario, eliminar_usuario, ventas_cancelar_ov_view, ventas_detalle_ov_view, ventas_editar_ov_view, ventas_generar_factura_view,
+    lista_usuarios, crear_usuario, editar_usuario, eliminar_usuario, solicitar_insumos_op_view, ventas_cancelar_ov_view, ventas_detalle_ov_view, ventas_editar_ov_view, ventas_generar_factura_view,
 
     # Ventas
     ventas_lista_ov_view, ventas_crear_ov_view,
@@ -96,6 +96,7 @@ urlpatterns = [
     path('produccion/ordenes/', produccion_lista_op_view, name='produccion_lista_op'), # Puede ser redundante si la de arriba ya es la lista
     path('produccion/orden/<int:op_id>/', produccion_detalle_op_view, name='produccion_detalle_op'),
     path('produccion/planificacion/', planificacion_produccion_view, name='planificacion_produccion'),
+    path('produccion/orden/<int:op_id>/solicitar-insumos/', solicitar_insumos_op_view, name='produccion_solicitar_insumos_op'),
     path('produccion/reportes/', reportes_produccion_view, name='reportes_produccion'),
 
     # --- Rutas de Depósito ---

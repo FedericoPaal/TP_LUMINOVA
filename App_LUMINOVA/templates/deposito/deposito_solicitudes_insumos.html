@@ -1,0 +1,67 @@
+{% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titulo_seccion|default:"Solicitudes de Insumos" }}{% endblock %}
+
+{% block sidebar_content %}
+    {% include 'deposito/deposito_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ titulo_seccion }}</h1>
+</div>
+
+
+
+{% if ops_necesitan_insumos_list %}
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th>N° OP</th>
+                <th>Producto</th>
+                <th class="text-center">Cantidad a Producir</th>
+                <th>Cliente OV</th>
+                <th>Fecha Solicitud OP</th>
+                <th>Estado OP</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for op_solicitud in ops_necesitan_insumos_list %}
+            <tr>
+                <td>{{ op_solicitud.numero_op }}</td>
+                <td>{{ op_solicitud.producto_a_producir.descripcion|truncatechars:30 }}</td>
+                <td class="text-center">{{ op_solicitud.cantidad_a_producir }}</td>
+                <td>{{ op_solicitud.orden_venta_origen.cliente.nombre|default_if_none:"N/A" }}</td>
+                <td>{{ op_solicitud.fecha_solicitud|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <span class="badge bg-info text-dark">{{ op_solicitud.estado_op.nombre|default:"N/A" }}</span>
+                </td>
+                <td class="text-center">
+                    <a href="{% url 'App_LUMINOVA:deposito_detalle_solicitud_op' op_solicitud.id %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-eye-fill"></i> Ver Detalle y Preparar
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            {# Este bloque no se alcanzará si la lista está vacía debido al if externo #}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-success mt-3" role="alert">
+    <i class="bi bi-check-circle-fill"></i> ¡Buen trabajo! No hay Órdenes de Producción pendientes de preparación de insumos en este momento.
+</div>
+{% endif %}
+
+<div class="mt-4">
+    <a href="{% url 'App_LUMINOVA:deposito_view' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> Volver al Panel de Depósito
+    </a>
+</div>
+
+{% endblock %}
