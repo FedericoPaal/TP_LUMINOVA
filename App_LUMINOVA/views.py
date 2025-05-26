@@ -87,14 +87,14 @@ def compras_seguimiento_view(request):
     # estado_solicitada = EstadoOrden.objects.filter(nombre__iexact='Solicitada').first() # Necesitarías EstadoOrden para OC
     # ordenes_en_seguimiento = []
     # if estado_solicitada:
-    #     ordenes_en_seguimiento = Orden.objects.filter(tipo='compra', estado=estado_solicitada).order_by('-fecha_creacion')
+    ordenes = Orden.objects.filter(tipo='compra', estado='estado_solicitada').order_by('-fecha_creacion')
 
     context = {
         # 'ordenes_solicitadas_list': ordenes_en_seguimiento,
-        'ordenes_solicitadas_list': [], # Placeholder por ahora
+        'ordenes_solicitadas_list': ordenes, # Placeholder por ahora
         'titulo_seccion': 'Seguimiento de Órdenes de Compra',
     }
-    return render(request, 'compras/compras_seguimiento.html', context)
+    return render(request, 'compras/seguimiento.html', context)
 
 @login_required
 def compras_tracking_pedido_view(request, numero_orden_track):
@@ -520,6 +520,12 @@ def tracking(req):
 def desglose2(req):
     return render(req, "compras/desglose2.html")
 
+def desglose3(req, producto_id):
+    context = {
+        'producto_id': producto_id,
+    }
+    return render(req, "desglose3.html", context)
+
 #  Funciones para los botones del sidebar de Produccion
 def ordenes(request):
     return render(request, 'produccion/ordenes.html')
@@ -752,14 +758,14 @@ class ProductoTerminadoDeleteView(DeleteView):
                     # Añade más 'elif isinstance' si ProductoTerminado es FK en otros modelos con PROTECT
                     else:
                         protecting_objects_details.append(f"un registro del tipo '{obj.__class__.__name__}'")
-            
+
             error_message = (
                 f"No se puede eliminar el producto terminado '{self.object.descripcion}' porque está referenciado y protegido."
             )
             if protecting_objects_details:
                 error_message += " Específicamente, es usado por: " + ", ".join(protecting_objects_details) + "."
             error_message += " Por favor, primero elimine o modifique estas referencias."
-            
+
             messages.error(request, error_message)
             # Redirigir de vuelta a una página relevante donde se muestre el mensaje
             if hasattr(self.object, 'categoria') and self.object.categoria:
@@ -1468,13 +1474,13 @@ def ventas_detalle_ov_view(request, ov_id):
 
     orden_venta = get_object_or_404(
         OrdenVenta.objects.select_related('cliente').prefetch_related(
-            'items_ov__producto_terminado', 
+            'items_ov__producto_terminado',
             'ops_generadas', # Si quieres mostrar OPs asociadas
             'factura_asociada' # Para acceder a la factura si existe
-        ), 
+        ),
         id=ov_id
     )
-    
+
     # Formulario para generar factura (si no existe una)
     factura_form = None
     if not hasattr(orden_venta, 'factura_asociada') or not orden_venta.factura_asociada:
@@ -1532,7 +1538,7 @@ def ventas_generar_factura_view(request, ov_id):
             for field, errors in form.errors.items():
                  for error in errors:
                     messages.error(request, f"{form.fields[field].label or field}: {error}")
-    
+
     # Si es GET o el form no es válido, redirige de vuelta al detalle de la OV
     # (el modal de facturación debería estar en la página de detalle de OV)
     return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)

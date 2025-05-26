@@ -39,3 +39,8 @@ nav.sidebar .nav-link.custom-active-button.active {
 .card-text {
     margin-bottom: 0; /* Elimina el margen inferior predeterminado del párrafo */
 }
+
+.color-thead{
+    background-color: #0d6efd !important;
+    color: white !important;
+}

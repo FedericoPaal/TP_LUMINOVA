@@ -18,6 +18,7 @@ from .views import (
     compras_lista_oc_view, # Vista para el listado principal de Órdenes de Compra
     compras_desglose_detalle_oc_view, compras_desglose_view,
     compras_seguimiento_view, compras_tracking_pedido_view,
+    desglose3,
 
     # Producción
 
@@ -81,6 +82,7 @@ urlpatterns = [
     # --- Rutas de Compras ---
     path('compras/', compras_lista_oc_view, name='compras_lista_oc'), # Vista principal de compras
     path('compras/desglose/', compras_desglose_view, name='compras_desglose'),
+    path("desglose3/<int:producto_id>/", desglose3, name="desglose3"),
     path('compras/seguimiento/', compras_seguimiento_view, name='compras_seguimiento'),
     path('compras/tracking/<str:numero_orden_track>/', compras_tracking_pedido_view, name='compras_tracking_pedido'),
     path('compras/desglose-oc/<str:numero_orden_desglose>/', compras_desglose_detalle_oc_view, name='compras_desglose_detalle_oc'),
@@ -111,7 +113,7 @@ urlpatterns = [
     path('ventas/fabricantes/crear/', FabricanteCreateView.as_view(), name='fabricante_create'),
     path('ventas/fabricantes/editar/<int:pk>/', FabricanteUpdateView.as_view(), name='fabricante_edit'),
     path('ventas/fabricantes/eliminar/<int:pk>/', FabricanteDeleteView.as_view(), name='fabricante_delete'),
-    
+
 
     # CRUDs para Categorías, Insumos, Productos Terminados (Class-Based Views)
     path('deposito/categorias-insumo/<int:pk>/', Categoria_IDetailView.as_view(), name='categoria_i_detail'),
