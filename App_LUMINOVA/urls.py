@@ -13,6 +13,7 @@ from .views import (
     # Ventas
     ventas_lista_ov_view, ventas_crear_ov_view,
     lista_clientes_view, crear_cliente_view, editar_cliente_view, eliminar_cliente_view,
+    proveedor_create_view,
 
     # Compras (Renombrar vistas si es necesario en views.py)
     compras_lista_oc_view, # Vista para el listado principal de Órdenes de Compra
@@ -40,7 +41,7 @@ from .views import (
     Categoria_PTDetailView, Categoria_PTCreateView, Categoria_PTUpdateView, Categoria_PTDeleteView,
     InsumosListView, InsumoDetailView, InsumoCreateView, InsumoUpdateView, InsumoDeleteView,
     ProductoTerminadosListView, ProductoTerminadoDetailView, ProductoTerminadoCreateView, ProductoTerminadoUpdateView, ProductoTerminadoDeleteView,
-    ProveedorDetailView, ProveedorListView, ProveedorCreateView, ProveedorUpdateView, ProveedorDeleteView,
+    ProveedorDetailView, ProveedorListView, ProveedorUpdateView, ProveedorDeleteView,
     FabricanteCreateView, FabricanteDetailView, FabricanteListView, FabricanteUpdateView, FabricanteDeleteView,
 
     # Control de Calidad (Placeholder)
@@ -106,8 +107,9 @@ urlpatterns = [
     # path('deposito/enviar/', depo_enviar, name='depo_enviar'),       # Eliminar si ya no se usa
 
     # CRUDs para Fabricantes, Proveedores (Class-Based Views)
+    path('ventas/proveedores/proveedor/', ProveedorListView.as_view(), name='proveedor_list'),
     path('ventas/proveedores/proveedor/<int:pk>/', ProveedorDetailView.as_view(), name='proveedor_detail'),
-    path('ventas/proveedores/proveedor/crear/', ProveedorCreateView.as_view(), name='proveedor_create'),
+    path('ventas/proveedores/proveedor/crear/', proveedor_create_view, name='proveedor_create'),
     path('ventas/proveedores/proveedor/editar/<int:pk>/', ProveedorUpdateView.as_view(), name='proveedor_edit'),
     path('ventas/proveedores/proveedor/eliminar/<int:pk>/', ProveedorDeleteView.as_view(), name='proveedor_delete'),
 
