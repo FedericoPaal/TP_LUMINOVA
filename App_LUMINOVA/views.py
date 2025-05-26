@@ -1105,29 +1105,28 @@ def produccion_lista_op_view(request):
     return render(request, 'produccion/produccion_lista_op.html', context)
 
 @login_required
+@transaction.atomic # Asegurar que ambas actualizaciones ocurran o ninguna
 def produccion_detalle_op_view(request, op_id):
     op = get_object_or_404(
         OrdenProduccion.objects.select_related(
-            'producto_a_producir__categoria', # Para acceder a la categoría del producto
-            'orden_venta_origen__cliente',    # Para acceder al cliente desde la OV
-            'estado_op',                      # Para el nombre del estado
-            'sector_asignado_op'              # Para el nombre del sector
-        ),
+            'producto_a_producir', 
+            'orden_venta_origen__cliente', # Necesario para el cliente
+            'estado_op', 
+            'sector_asignado_op'
+        ), 
         id=op_id
     )
-
+    
+    # ... (lógica para insumos_necesarios_data) ...
     insumos_necesarios_data = []
-    todos_los_insumos_disponibles = True # Asumir que sí
-
-    if op.producto_a_producir: # Importante verificar que el producto existe en la OP
+    todos_los_insumos_disponibles = True 
+    if op.producto_a_producir:
         componentes_requeridos = ComponenteProducto.objects.filter(
             producto_terminado=op.producto_a_producir
-        ).select_related('insumo') # Para acceder al stock del insumo
-
+        ).select_related('insumo')
         if not componentes_requeridos.exists():
             messages.warning(request, f"No se han definido componentes (BOM) para el producto '{op.producto_a_producir.descripcion}'.")
-            todos_los_insumos_disponibles = False
-
+            todos_los_insumos_disponibles = False 
         for comp in componentes_requeridos:
             cantidad_total_requerida_para_op = comp.cantidad_necesaria * op.cantidad_a_producir
             suficiente = comp.insumo.stock >= cantidad_total_requerida_para_op
@@ -1142,26 +1141,48 @@ def produccion_detalle_op_view(request, op_id):
                 'insumo_id': comp.insumo.id
             })
     else:
-        # Esto manejará el "Error: La Orden de Producción no tiene un producto asociado."
-        messages.error(request, "La Orden de Producción no tiene un producto asociado. Contacte al administrador.")
+        messages.error(request, "La Orden de Producción no tiene un producto asociado.")
         todos_los_insumos_disponibles = False
 
-
-    form_update = OrdenProduccionUpdateForm(instance=op) # Instancia para GET
     if request.method == 'POST':
         form_update = OrdenProduccionUpdateForm(request.POST, instance=op)
         if form_update.is_valid():
-            form_update.save()
-            messages.success(request, f"Orden de Producción {op.numero_op} actualizada.")
-            return redirect('App_LUMINOVA:produccion_detalle_op', op_id=op.id)
+            op_actualizada = form_update.save() # Guardar la OP
+            messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.estado_op.nombre}'.")
+
+            # --- LÓGICA PARA ACTUALIZAR ESTADO DE OV ---
+            if op_actualizada.orden_venta_origen and op_actualizada.estado_op:
+                orden_venta_asociada = op_actualizada.orden_venta_origen
+                
+                # Definir qué estado de OP significa "producción completada para este item/OP"
+                # Asegúrate de que 'Terminado' sea el nombre exacto de tu EstadoOrden
+                if op_actualizada.estado_op.nombre.lower() == 'completada':
+                    # Verificar si TODAS las OPs asociadas a esta OV están terminadas
+                    todas_ops_terminadas = True
+                    # .ops_generadas es el related_name de OrdenVenta a OrdenProduccion
+                    for otra_op in orden_venta_asociada.ops_generadas.all(): 
+                        if not otra_op.estado_op or otra_op.estado_op.nombre.lower() != 'completada':
+                            todas_ops_terminadas = False
+                            break
+                    
+                    if todas_ops_terminadas:
+                        orden_venta_asociada.estado = 'LISTA_ENTREGA' # O el estado que uses para facturable
+                        orden_venta_asociada.save(update_fields=['estado'])
+                        messages.info(request, f"Todos los productos para la OV {orden_venta_asociada.numero_ov} están listos. Estado de OV actualizado a 'Lista para Entrega'.")
+            # --- FIN LÓGICA ACTUALIZAR ESTADO DE OV ---
+            
+            return redirect('App_LUMINOVA:produccion_detalle_op', op_id=op_actualizada.id)
         else:
             messages.error(request, "Error al actualizar la OP. Revise los datos del formulario.")
+            # Re-renderizar con el form con errores (ya se hace abajo)
+    else: # GET
+        form_update = OrdenProduccionUpdateForm(instance=op)
 
     context = {
-        'op': op, # El objeto OrdenProduccion principal
+        'op': op,
         'insumos_necesarios_list': insumos_necesarios_data,
-        'form_update_op': form_update, # El formulario para la gestión
-        'todos_los_insumos_disponibles_variable_de_contexto': todos_los_insumos_disponibles, # Para el botón
+        'form_update_op': form_update,
+        'todos_los_insumos_disponibles_variable_de_contexto': todos_los_insumos_disponibles,
         'titulo_seccion': f'Detalle OP: {op.numero_op}',
     }
     return render(request, 'produccion/produccion_detalle_op.html', context)

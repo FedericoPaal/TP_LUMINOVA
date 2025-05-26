@@ -52,7 +52,7 @@
                                 <h6 class="mb-1">{{ item.producto_terminado.descripcion }}</h6>
                                 <small class="text-muted">Subtotal: ${{ item.subtotal|floatformat:2 }}</small>
                             </div>
-                            <small class="text-muted">Cantidad: {{ item.cantidad }} @ ${{ item.precio_unitario_venta|floatformat:2 }} c/u</small>
+                            <small class="text-muted">Cantidad: {{ item.cantidad }} Unidades -  ${{ item.precio_unitario_venta|floatformat:2 }} c/u</small>
                         </li>
                         {% endfor %}
                     </ul>
@@ -75,7 +75,7 @@
                         <p>N° Factura: {{ ov.factura_asociada.numero_factura }}</p>
                         <p>Fecha Emisión: {{ ov.factura_asociada.fecha_emision|date:"d/m/Y H:i" }}</p>
                         <p>Total Facturado: ${{ ov.factura_asociada.total_facturado|floatformat:2 }}</p>
-                        {<a href="#" class="btn btn-sm btn-outline-info"><i class="bi bi-printer"></i> Ver/Imprimir Factura</a> 
+                        <a href="#" class="btn btn-sm btn-outline-info"><i class="bi bi-printer"></i> Ver/Imprimir Factura</a> 
                     {% elif factura_form %}
                         <p>Esta orden está lista para ser facturada.</p>
                         <form method="post" action="{% url 'App_LUMINOVA:ventas_generar_factura' ov.id %}">
