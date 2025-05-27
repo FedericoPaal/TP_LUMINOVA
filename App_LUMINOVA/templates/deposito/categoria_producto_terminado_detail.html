@@ -50,7 +50,7 @@
                 <table class="table mb-0">
                     <thead>
                         <tr>
-                            <th colspan="10" class="text-white text-center py-3" style="background-color: #014BAC;">
+                            <th colspan="10" class="text-center py-3 color-title-depo">
                                 <div class="d-flex justify-content-center align-items-center">
 
                                     <h3 class="mb-0">{{ categoria_PT.nombre }}</h3>
@@ -58,19 +58,19 @@
                             </th>
                         </tr>
                         <tr>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;"></th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Imagen</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">ID</th>
-                            <th scope="col" class="text-white" style="background-color: #808080; vertical-align: middle;">Descripción</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Modelo</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Potencia</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Color de Luz</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Material</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Cantidad</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; vertical-align: middle;">Acciones</th>
+                            <th scope="col" class="text-center color-thead-depo"></th>
+                            <th scope="col" class="text-center color-thead-depo">Imagen</th>
+                            <th scope="col" class="text-center color-thead-depo">ID</th>
+                            <th scope="col" class="color-thead-depo">Descripción</th>
+                            <th scope="col" class="text-center color-thead-depo">Modelo</th>
+                            <th scope="col" class="text-center color-thead-depo">Potencia</th>
+                            <th scope="col" class="text-center color-thead-depo">Color de Luz</th>
+                            <th scope="col" class="text-center color-thead-depo">Material</th>
+                            <th scope="col" class="text-center color-thead-depo">Cantidad</th>
+                            <th scope="col" class="text-center color-thead-depo">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody style="background-color: #0d6efd; color: white;">
+                    <tbody>
                         {% for producto in productos_de_categoria %}
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.2);">
                             <td class="text-center align-middle">
@@ -115,15 +115,15 @@
                 <strong class="me-3">Estados de Stock:</strong>
                 <div class="d-flex align-items-center me-3">
                     <div style="width: 15px; height: 15px; background-color: green; border-radius: 3px; margin-right: 5px;"></div>
-                    <span>Alto (>= 50)</span>
+                    <span>De 50 en adelante</span>
                 </div>
                 <div class="d-flex align-items-center me-3">
                     <div style="width: 15px; height: 15px; background-color: yellow; border-radius: 3px; margin-right: 5px;"></div>
-                    <span>Medio (10-49)</span>
+                    <span>Entre 10 hasta 49</span>
                 </div>
                 <div class="d-flex align-items-center">
                     <div style="width: 15px; height: 15px; background-color: red; border-radius: 3px; margin-right: 5px;"></div>
-                    <span>Bajo (< 10)</span>
+                    <span>De 10 para abajo</span>
                 </div>
             </div>
         {% else %}

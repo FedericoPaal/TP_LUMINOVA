@@ -43,9 +43,9 @@
         {% if insumos_de_categoria %}
             <div class="table-responsive rounded">
                 <table class="table mb-0">
-                    <thead style="background-color: #014BAC;">
+                    <thead>
                         <tr>
-                            <th colspan="8" class="text-white text-center py-3" style="background-color: #014BAC;">
+                            <th colspan="8" class="text-center py-3 color-title-depo">
                                 <div class="d-flex justify-content-center align-items-center">
 
                                     <h3 class="mb-0">{{ categoria_I.nombre }}</h3>
@@ -53,17 +53,17 @@
                             </th>
                         </tr>
                         <tr>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; width: 5%; vertical-align: middle;"></th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; width: 10%; vertical-align: middle;">Imagen</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; width: 5%; vertical-align: middle;">ID</th>
-                            <th scope="col" class="text-white" style="background-color: #808080; width: 35%; vertical-align: middle;">Descripción</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; width: 15%; vertical-align: middle;">Fabricante</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; width: 15%; vertical-align: middle;">Proveedor</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; width: 10%; vertical-align: middle;">Cantidad</th>
-                            <th scope="col" class="text-center text-white" style="background-color: #808080; width: 20%; vertical-align: middle;">Acciones</th>
+                            <th scope="col" class="text-center color-thead-depo"></th>
+                            <th scope="col" class="text-center color-thead-depo">Imagen</th>
+                            <th scope="col" class="text-center color-thead-depo" >ID</th>
+                            <th scope="col" class="color-thead-depo" >Descripción</th>
+                            <th scope="col" class="text-center color-thead-depo" >Fabricante</th>
+                            <th scope="col" class="text-center color-thead-depo" >Proveedor</th>
+                            <th scope="col" class="text-center color-thead-depo" >Cantidad</th>
+                            <th scope="col" class="text-center color-thead-depo" >Acciones</th>
                         </tr>
                     </thead>
-                    <tbody style="background-color: #0d6efd; color: white;">
+                    <tbody>
                         {% for insumo in insumos_de_categoria %}
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.2);">
                             <td class="text-center align-middle">

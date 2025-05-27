@@ -4,31 +4,20 @@
     <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end full-height" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
         <div class="position-sticky pt-4">
             <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
-                <span>Depósito</span>
+                <a href="{% url 'App_LUMINOVA:deposito_view' %}"><span style="color: white;">Depósito</span></a>
             </h6>
             <hr class="text-white">
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Agregar">
-                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Artículo</span>
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:insumo_create' %}?categoria={{ categoria_I.id }}">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Insumo</span>
                     </a>
                 </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Buscar">
-                        <i class="bi bi-search me-2"></i> <span class="ms-2">Buscar Artículo</span>
+                 <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:deposito_view' %}">
+                        <i class="bi bi-arrow-left-circle-fill me-2"></i> <span class="ms-2">Volver a Depósito</span>
                     </a>
                 </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Modificar">
-                        <i class="bi bi-pencil-square me-2"></i> <span class="ms-2">Modificar Artículo</span>
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Eliminar">
-                        <i class="bi bi-trash-fill me-2"></i> <span class="ms-2">Eliminar Artículo</span>
-                    </a>
-                </li>
-
             </ul>
         </div>
     </nav>
@@ -78,7 +67,7 @@
                     {% if form.precio_unitario.errors %}<div class="invalid-feedback d-block">{{ form.precio_unitario.errors }}</div>{% endif %}
                 </div>
                 <div class="col-md-4 mb-3">
-                    <label for="{{ form.tiempo_entrega.id_for_label }}" class="form-label">{{ form.tiempo_entrega.label }} (días)</label>
+                    <label for="{{ form.tiempo_entrega.id_for_label }}" class="form-label">{{ form.tiempo_entrega.label }}</label>
                     {{ form.tiempo_entrega }}
                     {% if form.tiempo_entrega.errors %}<div class="invalid-feedback d-block">{{ form.tiempo_entrega.errors }}</div>{% endif %}
                 </div>

@@ -83,7 +83,7 @@
                 {% if form.precio_unitario.errors %}<div class="invalid-feedback d-block">{{ form.precio_unitario.errors }}</div>{% endif %}
             </div>
             <div class="col-md-4 mb-3">
-                <label for="{{ form.tiempo_entrega.id_for_label }}" class="form-label">{{ form.tiempo_entrega.label }} (días)</label>
+                <label for="{{ form.tiempo_entrega.id_for_label }}" class="form-label">{{ form.tiempo_entrega.label }}</label>
                 {{ form.tiempo_entrega }}
                 {% if form.tiempo_entrega.errors %}<div class="invalid-feedback d-block">{{ form.tiempo_entrega.errors }}</div>{% endif %}
             </div>

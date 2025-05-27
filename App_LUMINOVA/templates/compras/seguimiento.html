@@ -32,7 +32,7 @@
 
 {% block content %}
 
-    <h1 class = "text-center">Ordenes de compra pendiente</h1>
+    <h1 class = "text-center">Seguimiento de Órdenes de Compra</h1>
 
 
 
@@ -40,27 +40,27 @@
       <table class="table">
         <thead class="table-primary rounded-top">
           <tr>
-            <th scope="col" class="text-center align-middle" style="background-color: #0d6efd; color: white;">N°OC</th>
-            <th scope="col" class="text-center align-middle" style="background-color: #0d6efd; color: white;">Estado de OC</th>
-            <th scope="col" class="text-center align-middle" style="background-color: #0d6efd; color: white;">Categoria</th>
-            <th scope="col" class="text-center align-middle" style="background-color: #0d6efd; color: white;">Fecha</th>
-            <th scope="col" class="text-center align-middle" style="background-color: #0d6efd; color: white;">Cantidad de items</th>
-            <th scope="col" class="text-center align-middle" style="background-color: #0d6efd; color: white;">Monto Total (US$$)</th>
-            <th scope="col" class="text-center align-middle" style="background-color: #0d6efd; color: white;">Fecha Estimada de Entrega</th>
-            <th scope="col" class="text-center align-middle" style="background-color: #0d6efd; color: white;">N°Tracking</th>
+            <th scope="col" class="align-middle color-thead">N°OC</th>
+            <th scope="col" class="align-middle color-thead">Estado de OC</th>
+            <th scope="col" class="align-middle color-thead">Categoría</th>
+            <th scope="col" class="align-middle color-thead">Fecha</th>
+            <th scope="col" class="align-middle color-thead">Cantidad de items</th>
+            <th scope="col" class="align-middle color-thead">Monto Total (US$$)</th>
+            <th scope="col" class="align-middle color-thead">Fecha Estimada de Entrega</th>
+            <th scope="col" class="align-middle color-thead">N°Tracking</th>
           </tr>
         </thead>
         <tbody>
           {% for oc in ordenes_solicitadas_list %}
             <tr>
-              <td class="text-center align-middle">{{ oc.numero_orden }}</td>
-              <td class="text-center align-middle">{{ oc.estado.nombre }}</td>
-              <td class="text-center align-middle">{{ oc.insumo_principal.descripcion }}</td>
-              <td class="text-center align-middle">{{ oc.fecha_creacion|date:"d/m/Y" }}</td>
-              <td class="text-center align-middle">{{ oc.cantidad_principal }}</td>
-              <td class="text-center align-middle">{{ oc.total_orden_compra }}</td>
-              <td class="text-center align-middle">{{ oc.fecha_estimada_entrega|date:"d/m/Y" }}</td>
-              <td class="text-center">
+              <td class="align-middle">{{ oc.numero_orden }}</td>
+              <td class="align-middle">{{ oc.estado.nombre }}</td>
+              <td class="align-middle">{{ oc.insumo_principal.descripcion }}</td>
+              <td class="align-middle">{{ oc.fecha_creacion|date:"d/m/Y" }}</td>
+              <td class="align-middle">{{ oc.cantidad_principal }}</td>
+              <td class="align-middle">{{ oc.total_orden_compra }}</td>
+              <td class="align-middle">{{ oc.fecha_estimada_entrega|date:"d/m/Y" }}</td>
+              <td>
                 {% if oc.numero_tracking %}
                   <a href="{% url 'App_LUMINOVA:compras_tracking_pedido' oc.numero_orden %}">{{ oc.numero_tracking }}</a>
 

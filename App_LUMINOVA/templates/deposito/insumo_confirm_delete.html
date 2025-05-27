@@ -4,31 +4,20 @@
     <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end full-height" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
         <div class="position-sticky pt-4">
             <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
-                <span>Depósito</span>
+                <a href="{% url 'App_LUMINOVA:deposito_view' %}"><span style="color: white;">Depósito</span></a>
             </h6>
             <hr class="text-white">
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Agregar">
-                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Artículo</span>
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:insumo_create' %}?categoria={{ categoria_I.id }}">
+                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Insumo</span>
                     </a>
                 </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Buscar">
-                        <i class="bi bi-search me-2"></i> <span class="ms-2">Buscar Artículo</span>
+                 <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:deposito_view' %}">
+                        <i class="bi bi-arrow-left-circle-fill me-2"></i> <span class="ms-2">Volver a Depósito</span>
                     </a>
                 </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Modificar">
-                        <i class="bi bi-pencil-square me-2"></i> <span class="ms-2">Modificar Artículo</span>
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#" data-bs-toggle="modal" data-bs-target="#exampleModal_Eliminar">
-                        <i class="bi bi-trash-fill me-2"></i> <span class="ms-2">Eliminar Artículo</span>
-                    </a>
-                </li>
-
             </ul>
         </div>
     </nav>
@@ -46,9 +35,9 @@
                     {% if insumo %}
                         <p class="fs-5">¿Estás seguro de que deseas eliminar permanentemente el insumo:</p>
                         <p class="lead"><strong>"{{ insumo.descripcion }}"</strong>?</p>
-                        
+
                         <p class="text-muted small">Esta acción no se puede deshacer.</p>
-                        {% if insumo.usado_en_bom.all %} 
+                        {% if insumo.usado_en_bom.all %}
                             <div class="alert alert-warning mt-3" role="alert">
                                 <h5 class="alert-heading">¡Atención! Insumo en Uso</h5>
                                 <p>Este insumo (<strong>{{ insumo.descripcion }}</strong>) es utilizado actualmente por los siguientes productos terminados y no puede ser eliminado directamente mientras esté referenciado:</p>
@@ -57,7 +46,7 @@
                                     <li>
                                         <a href="{% url 'admin:App_LUMINOVA_productoterminado_change' componente.producto_terminado.id %}" target="_blank">
                                             {{ componente.producto_terminado.descripcion }}
-                                        </a> 
+                                        </a>
                                         (se necesitan {{ componente.cantidad_necesaria }})
                                     </li>
                                 {% endfor %}
@@ -74,8 +63,8 @@
                                 <a href="{% if insumo.categoria_id %}{% url 'App_LUMINOVA:categoria_i_detail' insumo.categoria.id %}{% else %}{% url 'App_LUMINOVA:deposito_view' %}{% endif %}" class="btn btn-outline-secondary me-2">
                                     <i class="bi bi-x-circle"></i> Cancelar
                                 </a>
-                                <button type="submit" class="btn btn-danger" 
-                                        {% if insumo.usado_en_bom.all and insumo.componenteproducto_set.model.insumo.field.remote_field.on_delete == models.PROTECT %} 
+                                <button type="submit" class="btn btn-danger"
+                                        {% if insumo.usado_en_bom.all and insumo.componenteproducto_set.model.insumo.field.remote_field.on_delete == models.PROTECT %}
                                             disabled title="No se puede eliminar: el insumo está en uso y la relación está protegida."
                                         {% endif %}>
                                     <i class="bi bi-trash3-fill"></i> Sí, Eliminar Insumo

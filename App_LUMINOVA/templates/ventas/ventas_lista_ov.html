@@ -25,14 +25,14 @@
     <table class="table table-striped table-hover align-middle"> {# align-middle para centrar verticalmente el contenido de las celdas #}
         <thead class="table-light">
             <tr>
-                <th>N° OV</th>
-                <th>Fecha Creación</th>
-                <th>Cliente</th>
-                <th>Items</th>
-                <th class="text-end">Total</th>
-                <th>Estado</th>
-                <th>OPs Generadas</th>
-                <th class="text-center">Acciones</th>
+                <th class="align-middle color-thead">N° OV</th>
+                <th class="align-middle color-thead">Fecha Creación</th>
+                <th class="align-middle color-thead">Cliente</th>
+                <th class="align-middle color-thead">Items</th>
+                <th class="align-middle color-thead">Total</th>
+                <th class="align-middle color-thead">Estado</th>
+                <th class="align-middle color-thead">OPs Generadas</th>
+                <th class="text-center align-middle color-thead">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -50,17 +50,17 @@
                     {% endfor %}
                     </ul>
                 </td>
-                <td class="text-end">${{ ov.total_ov|floatformat:2 }}</td>
+                <td>${{ ov.total_ov|floatformat:2 }}</td>
                 <td>
-                    <span class="badge 
+                    <span class="badge
                         {% if ov.estado == 'PENDIENTE' %}bg-warning text-dark
                         {% elif ov.estado == 'CONFIRMADA' %}bg-secondary
                         {% elif ov.estado == 'INSUMOS_SOLICITADOS' %}bg-info-subtle text-info-emphasis border border-info-subtle
-                        {% elif ov.estado == 'PRODUCCION_INICIADA' %}bg-primary 
+                        {% elif ov.estado == 'PRODUCCION_INICIADA' %}bg-primary
                         {% elif ov.estado == 'PRODUCCION_CON_PROBLEMAS' %}bg-danger-subtle text-danger-emphasis border border-danger-subtle
                         {% elif ov.estado == 'LISTA_ENTREGA' %}bg-primary-subtle text-primary-emphasis border border-primary-subtle
                         {% elif ov.estado == 'COMPLETADA' %}bg-success
-                        {% elif ov.estado == 'CANCELADA' %}bg-dark 
+                        {% elif ov.estado == 'CANCELADA' %}bg-dark
                         {% else %}bg-light text-dark{% endif %}">
                         {{ ov.get_estado_display }}
                     </span>

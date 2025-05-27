@@ -57,3 +57,14 @@ nav.sidebar .nav-link.custom-active-button.active {
     background-color: #61B5FA !important; /* Color para filas impares (ej. azul claro) */
     color: white !important; /* Asegurar que el texto sea legible */
 }
+.color-thead-depo{
+    background-color: #808080 !important;
+    color: white !important;
+    width: 5% !important;
+    vertical-align: middle !important;
+}
+
+.color-title-depo{
+    background-color: #014BAC !important;
+    color: white !important;
+}

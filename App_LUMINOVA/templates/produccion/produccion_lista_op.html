@@ -20,15 +20,15 @@
     <table class="table table-striped table-hover">
         <thead class="table-light">
             <tr>
-                <th>N° OP</th>
-                <th>OV Origen</th>
-                <th>Producto a Producir</th>
-                <th class="text-center">Cantidad</th>
-                <th>Cliente Final</th>
-                <th>Fecha Solicitud</th>
-                <th>Estado</th>
-                <th>Sector Asignado</th>
-                <th class="text-center">Acciones</th>
+                <th class="align-middle color-thead">N° OP</th>
+                <th class="align-middle color-thead">OV Origen</th>
+                <th class="align-middle color-thead">Producto a Producir</th>
+                <th class=" align-middle color-thead">Cantidad</th>
+                <th class="align-middle color-thead">Cliente Final</th>
+                <th class="align-middle color-thead">Fecha Solicitud</th>
+                <th class="align-middle color-thead">Estado</th>
+                <th class="align-middle color-thead">Sector Asignado</th>
+                <th class="text-center align-middle color-thead">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -43,11 +43,11 @@
                     {% endif %}
                 </td>
                 <td>{{ op.producto_a_producir.descripcion|truncatechars:30|default:"PRODUCTO NO ASIGNADO" }}</td>
-                <td class="text-center">{{ op.cantidad_a_producir }}</td>
+                <td>{{ op.cantidad_a_producir }}</td>
                 <td>{{ op.orden_venta_origen.cliente.nombre|default_if_none:"N/A" }}</td>
                 <td>{{ op.fecha_solicitud|date:"d/m/Y H:i" }}</td>
                 <td>
-                    <span class="badge 
+                    <span class="badge
                         {% if op.estado_op.nombre|lower == 'pendiente' %}bg-warning text-dark
                         {% elif op.estado_op.nombre|lower == 'en proceso' %}bg-primary
                         {% elif op.estado_op.nombre|lower == 'terminado' %}bg-success
