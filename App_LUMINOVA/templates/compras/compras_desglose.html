@@ -1,92 +1,101 @@
 {% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
 
-{% block title %}Compras - Luminova{% endblock %}
+{% block title %}{{ titulo_seccion|default:"Desglose de Componentes" }}{% endblock %}
 
 {% block sidebar_content %}
-    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
-        <div class="position-sticky pt-4">
-            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
-                <span>Compras</span>
-            </h6>
-            <hr class="text-white">
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:compras_lista_oc' %}">
-                        <i class="bi bi-list-ul me-2"></i> <span class="ms-2">Listado de OC</span>
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:compras_desglose' %}">
-                        <i class="bi bi-box-seam-fill"></i> <span class="ms-2">Desglose de Componentes</span>
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:compras_seguimiento' %}">
-                        <i class="bi bi-truck me-2"></i> <span class="ms-2">Seguimiento de Compras</span>
-                    </a>
-                </li>
-                </ul>
-        </div>
-    </nav>
+    {% include 'compras/compras_sidebar.html' %}
 {% endblock %}
 
 {% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ titulo_seccion }}</h1>
+</div>
 
-    <h1 class = "text-center">Órdenes de Compra Pendiente</h1>
 
-    <table class="table">
-  <thead class="table-primary rounded-top">
-    <tr>
-      <th scope="col" class="align-middle color-thead">N°OC</th>
-      <th scope="col" class="align-middle color-thead">Estado de OC</th>
-      <th scope="col" class="align-middle color-thead">Categoría</th>
-      <th scope="col" class="align-middle color-thead">Fecha</th>
-      <th scope="col" class="align-middle color-thead">Cantidad de items</th>
-      <th scope="col" class="align-middle color-thead">Monto Total (US$$)</th>
-      <th scope="col" class="align-middle color-thead">Fecha Estimada de Entrega</th>
-      <th scope="col" class="align-middle color-thead">N°Tracking</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td class="align-middle"><a href="#">OCOOO5</a></td>
-      <td class="align-middle">• Pendiente a comprar</td>
-      <td class="align-middle">Modulos led</td>
-      <td class="align-middle">22/07/2025</td>
-      <td class="text-center align-middle">4</td>
-      <td class="align-middle"></td>
-      <td class="align-middle"></td>
-      <td class="align-middle"></td>
-    </tr>
-    <tr>
-      <td class="align-middle">OCOOO4</td>
-      <td class="align-middle">• Pendiente a comprar</td>
-      <td class="align-middle">Reflector led</td>
-      <td class="align-middle">22/07/2025</td>
-      <td class="text-center align-middle">4</td>
-      <td class="align-middle"></td>
-      <td class="align-middle"></td>
-      <td class="align-middle"></td>
-    </tr>
-    <tr>
-      <td class="align-middle">OCOOO3</td>
-      <td class="align-middle">• Pendiente a comprar</td>
-      <td class="align-middle">Lentes para iluminación led</td>
-      <td class="align-middle">22/07/2025</td>
-      <td class="text-center align-middle">4</td>
-      <td class="align-middle"></td>
-      <td class="align-middle"></td>
-      <td class="align-middle"></td>
-    </tr>
+<h3 class="mt-4">Insumos con Stock Bajo (Menor a {{ umbral_stock_bajo }})</h3>
+{% if insumos_criticos_list %}
+<div class="table-responsive mt-3">
+    <table class="table table-hover table-sm">
+        <thead class="color-thead">
+            <tr>
+                <th>ID</th>
+                <th>Insumo (Descripción)</th>
+                <th>Categoría</th>
+                <th>Proveedor Principal</th>
+                <th class="text-center">Stock Actual</th>
+                <th class="text-center">Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for insumo in insumos_criticos_list %}
+            <tr>
+                <td>{{ insumo.id }}</td>
+                <td>
+                    {% if insumo.imagen %}
+                        <img src="{{ insumo.imagen.url }}" alt="{{ insumo.descripcion }}" style="width: 30px; height: 30px; object-fit: cover; border-radius: 3px; margin-right: 5px;">
+                    {% endif %}
+                    {{ insumo.descripcion|truncatechars:40 }}
+                </td>
+                <td>{{ insumo.categoria.nombre|default_if_none:"N/A" }}</td>
+                <td>{{ insumo.proveedor.nombre|default_if_none:"No asignado" }}</td>
+                <td class="text-center fw-bold text-danger">{{ insumo.stock }}</td>
+                <td class="text-center">
+                    <a href="{% url 'App_LUMINOVA:compras_crear_oc_desde_insumo' insumo.id %}" class="btn btn-sm btn-warning" title="Iniciar Orden de Compra para {{ insumo.descripcion }}">
+                        <i class="bi bi-cart-plus-fill"></i> Iniciar OC
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-success mt-3">
+    <i class="bi bi-check-circle-fill"></i> ¡Excelente! No hay insumos con stock por debajo del umbral de {{ umbral_stock_bajo }}.
+</div>
+{% endif %}
 
-  </tbody>
-</table>
-<style>
-    thead.rounded-top th:first-child {
-        border-top-left-radius: 10px;
-    }
-    thead.rounded-top th:last-child {
-        border-top-right-radius: 10px;
-    }
-</style>
+{# --- (Opcional) Aquí podrías mostrar la tabla de OCs "Pendientes a comprar" si la mantienes --- #}
+
+{% if ordenes_compra_pendientes_list %}
+<h3 class="mt-5">Órdenes de Compra Pendientes de Gestión</h3>
+<div class="table-responsive mt-3">
+    <table class="table table-hover">
+        <thead class="color-thead">
+             <tr>
+                <th>N° OC</th>
+                <th>Estado</th>
+                <th>Insumo Principal</th>
+                <th>Proveedor</th>
+                <th>...más columnas...</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for oc in ordenes_compra_pendientes_list %}
+            <tr>
+                <td>{{ oc.numero_orden }}</td>
+                <td><span class="badge bg-info text-dark">{{ oc.get_estado_display_custom }}</span></td>
+                <td>{{ oc.insumo_principal.descripcion|default:"N/A" }}</td>
+                <td>{{ oc.proveedor.nombre|default:"N/A" }}</td>
+                <td>...</td>
+                <td>
+                    <a href="#" class="btn btn-sm btn-primary">Gestionar OC</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+
+<div class="mt-4">
+    <a href="{% url 'App_LUMINOVA:deposito_view' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> Volver a Depósito
+    </a>
+</div>
+
 {% endblock %}

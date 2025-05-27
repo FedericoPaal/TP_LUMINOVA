@@ -1,0 +1,52 @@
+{% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titulo_seccion|default:"Gestionar Orden de Compra" }}{% endblock %}
+
+{% block sidebar_content %}
+    {% include 'compras/compras_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-9 col-xl-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">{{ titulo_seccion }}</h4>
+                </div>
+                <div class="card-body p-4">
+                    {% bootstrap_messages %}
+
+                    {% if insumo_preseleccionado %}
+                        <div class="alert alert-info small p-2"> {# La clase p-2 para menos padding #}
+                            <i class="bi bi-info-circle-fill"></i>
+                            Iniciando orden de compra para el insumo: <strong>{{ insumo_preseleccionado.descripcion }}</strong>
+                            (Stock actual: {{ insumo_preseleccionado.stock }}).
+                            {% if insumo_preseleccionado.proveedor %} {# Este es el if de la línea 26 #}
+                                Proveedor sugerido: {{ insumo_preseleccionado.proveedor.nombre }}.
+                            {% endif %} {# <--- AÑADE ESTE ENDIF #}
+                        </div>
+                    {% endif %}
+
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        {% bootstrap_form form_oc layout='vertical' %}
+                        
+                        <hr class="my-4">
+                        <div class="d-flex justify-content-end">
+                            <a href="{% if insumo_preseleccionado %}{% url 'App_LUMINOVA:deposito_view' %}{% else %}{% url 'App_LUMINOVA:compras_lista_oc' %}{% endif %}" class="btn btn-outline-secondary me-2">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save-fill"></i> Guardar Orden de Compra
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
