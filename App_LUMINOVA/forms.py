@@ -3,6 +3,7 @@ from django.contrib.auth.models import  Group, Permission
 from .models import (
     Cliente,
     Factura,
+    OfertaProveedor,
     Orden, 
     Proveedor, # Asegúrate de importar el modelo Proveedor
     OrdenVenta, ItemOrdenVenta, ProductoTerminado,
@@ -152,10 +153,10 @@ class OrdenCompraForm(forms.ModelForm):
         model = Orden
         fields = [
             'numero_orden', 
-            'proveedor', 
-            'insumo_principal', 
+            'proveedor', # Este es el proveedor al que se le hace la OC
+            'insumo_principal', # El insumo principal de la OC
             'cantidad_principal', 
-            'precio_unitario_compra', 
+            'precio_unitario_compra', # Precio ACORDADO para esta OC para este insumo con este proveedor
             'fecha_estimada_entrega', 
             'numero_tracking', 
             'notas'
@@ -185,41 +186,53 @@ class OrdenCompraForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        self.insumo_para_ofertas = kwargs.pop('insumo_para_ofertas', None) # Nuevo: para pasar el insumo objetivo
         super().__init__(*args, **kwargs)
-        
-        # Poblar QuerySets y empty_labels
-        self.fields['proveedor'].queryset = Proveedor.objects.all().order_by('nombre')
-        self.fields['proveedor'].empty_label = "Seleccionar Proveedor..."
         
         self.fields['insumo_principal'].queryset = Insumo.objects.all().order_by('descripcion')
         self.fields['insumo_principal'].empty_label = "Seleccionar Insumo..."
 
-        # Campos opcionales (no requeridos por defecto si blank=True en el modelo)
-        self.fields['fecha_estimada_entrega'].required = False
-        self.fields['numero_tracking'].required = False
-        self.fields['notas'].required = False
-        self.fields['precio_unitario_compra'].required = False # Puede ser que el precio se defina después
-        self.fields['cantidad_principal'].required = False # Puede ser que la cantidad se defina después
-
-        # Sugerir N° de OC si es una instancia nueva (no se está editando)
-        if not self.instance.pk: 
+        # El queryset de proveedores ahora podría filtrarse si un insumo está preseleccionado
+        # y si queremos mostrar solo proveedores que *ofrecen* ese insumo.
+        if self.insumo_para_ofertas:
+            # Obtener IDs de proveedores que tienen una oferta para self.insumo_para_ofertas
+            proveedor_ids_con_oferta = OfertaProveedor.objects.filter(insumo=self.insumo_para_ofertas).values_list('proveedor_id', flat=True)
+            self.fields['proveedor'].queryset = Proveedor.objects.filter(id__in=proveedor_ids_con_oferta).order_by('nombre')
+            if not self.fields['proveedor'].queryset.exists(): # Fallback si no hay ofertas registradas
+                 self.fields['proveedor'].queryset = Proveedor.objects.all().order_by('nombre')
+        else:
+            self.fields['proveedor'].queryset = Proveedor.objects.all().order_by('nombre')
+        self.fields['proveedor'].empty_label = "Seleccionar Proveedor..."
+        
+        # ... (lógica de campos opcionales y número de OC inicial) ...
+        if not self.instance.pk:
+            # ... (sugerencia de numero_orden)
             last_oc = Orden.objects.filter(tipo='compra').order_by('id').last()
-            # Genera un número simple basado en el último ID. Puedes hacerlo más robusto.
             next_id = (last_oc.id + 1) if last_oc else 1
             next_oc_number = f"OC-{str(next_id).zfill(5)}" 
-            # Asegurarse de que el número no exista ya (en caso de borrados o IDs no secuenciales)
             while Orden.objects.filter(numero_orden=next_oc_number).exists():
                 next_id += 1
                 next_oc_number = f"OC-{str(next_id).zfill(5)}"
             self.fields['numero_orden'].initial = next_oc_number
-        
-        # Si se está editando o si hay un insumo preseleccionado, y no hay precio,
-        # intenta obtener el precio del insumo.
-        if self.instance and self.instance.insumo_principal and not self.initial.get('precio_unitario_compra'):
-            self.initial['precio_unitario_compra'] = self.instance.insumo_principal.precio_unitario
-        elif 'insumo_principal' in self.initial and self.initial['insumo_principal'] and not self.initial.get('precio_unitario_compra'):
-             insumo_obj = Insumo.objects.get(pk=self.initial['insumo_principal'].pk) # o self.initial['insumo_principal'] si es ID
-             self.initial['precio_unitario_compra'] = insumo_obj.precio_unitario
+
+        # Si hay un insumo y proveedor preseleccionados (ej. desde la vista de selección),
+        # intentar obtener el precio de la oferta.
+        insumo_inicial = self.initial.get('insumo_principal')
+        proveedor_inicial = self.initial.get('proveedor')
+
+        if insumo_inicial and proveedor_inicial and not self.initial.get('precio_unitario_compra'):
+            try:
+                # Asegurarse de que insumo_inicial y proveedor_inicial sean objetos o IDs
+                insumo_obj = insumo_inicial if isinstance(insumo_inicial, Insumo) else Insumo.objects.get(pk=insumo_inicial)
+                proveedor_obj = proveedor_inicial if isinstance(proveedor_inicial, Proveedor) else Proveedor.objects.get(pk=proveedor_inicial)
+                
+                oferta = OfertaProveedor.objects.filter(insumo=insumo_obj, proveedor=proveedor_obj).first()
+                if oferta:
+                    self.initial['precio_unitario_compra'] = oferta.precio_unitario_compra
+                    # También podrías pre-rellenar fecha_estimada_entrega si está en OfertaProveedor
+                    # self.initial['fecha_estimada_entrega'] = ...
+            except (Insumo.DoesNotExist, Proveedor.DoesNotExist, TypeError):
+                pass # No hacer nada si los objetos no se pueden obtener
 
 
     def clean_numero_orden(self):

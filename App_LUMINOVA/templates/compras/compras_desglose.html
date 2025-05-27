@@ -1,8 +1,9 @@
+{# App_LUMINOVA/templates/compras/compras_desglose.html #}
 {% extends 'padre.html' %}
 {% load static %}
 {% load django_bootstrap5 %}
 
-{% block title %}{{ titulo_seccion|default:"Desglose de Componentes" }}{% endblock %}
+{% block title %}{{ titulo_seccion|default:"Desglose y Compra" }}{% endblock %}
 
 {% block sidebar_content %}
     {% include 'compras/compras_sidebar.html' %}
@@ -13,37 +14,38 @@
     <h1 class="h2">{{ titulo_seccion }}</h1>
 </div>
 
+{% bootstrap_messages %}
 
-<h3 class="mt-4">Insumos con Stock Bajo (Menor a {{ umbral_stock_bajo }})</h3>
+<h3 class="mt-4">Insumos con Stock Bajo (Menor a {{ umbral_stock_bajo }}) a Gestionar</h3>
 {% if insumos_criticos_list %}
 <div class="table-responsive mt-3">
     <table class="table table-hover table-sm">
         <thead class="color-thead">
             <tr>
                 <th>ID</th>
-                <th>Insumo (Descripción)</th>
+                <th>Insumo</th>
                 <th>Categoría</th>
-                <th>Proveedor Principal</th>
+                <th>Prov. Principal</th>
                 <th class="text-center">Stock Actual</th>
                 <th class="text-center">Acción</th>
             </tr>
         </thead>
         <tbody>
-            {% for insumo in insumos_criticos_list %}
+            {% for insumo_item in insumos_criticos_list %} {# Cambiado a insumo_item para claridad #}
             <tr>
-                <td>{{ insumo.id }}</td>
+                <td>{{ insumo_item.id }}</td>
                 <td>
-                    {% if insumo.imagen %}
-                        <img src="{{ insumo.imagen.url }}" alt="{{ insumo.descripcion }}" style="width: 30px; height: 30px; object-fit: cover; border-radius: 3px; margin-right: 5px;">
+                    {% if insumo_item.imagen %}
+                        <img src="{{ insumo_item.imagen.url }}" alt="{{ insumo_item.descripcion }}" style="width: 30px; height: 30px; object-fit: cover; border-radius: 3px; margin-right: 5px;">
                     {% endif %}
-                    {{ insumo.descripcion|truncatechars:40 }}
+                    {{ insumo_item.descripcion|truncatechars:40 }}
                 </td>
-                <td>{{ insumo.categoria.nombre|default_if_none:"N/A" }}</td>
-                <td>{{ insumo.proveedor.nombre|default_if_none:"No asignado" }}</td>
-                <td class="text-center fw-bold text-danger">{{ insumo.stock }}</td>
+                <td>{{ insumo_item.categoria.nombre|default_if_none:"N/A" }}</td>
+                <td>{{ insumo_item.proveedor.nombre|default_if_none:"No asignado" }}</td>
+                <td class="text-center fw-bold text-danger">{{ insumo_item.stock }}</td>
                 <td class="text-center">
-                    <a href="{% url 'App_LUMINOVA:compras_crear_oc_desde_insumo' insumo.id %}" class="btn btn-sm btn-warning" title="Iniciar Orden de Compra para {{ insumo.descripcion }}">
-                        <i class="bi bi-cart-plus-fill"></i> Iniciar OC
+                    <a href="{% url 'App_LUMINOVA:compras_seleccionar_proveedor_para_insumo' insumo_item.id %}" class="btn btn-sm btn-primary" title="Seleccionar Proveedor para {{ insumo_item.descripcion }}">
+                        <i class="bi bi-people-fill"></i> Sel. Proveedor
                     </a>
                 </td>
             </tr>
@@ -53,49 +55,16 @@
 </div>
 {% else %}
 <div class="alert alert-success mt-3">
-    <i class="bi bi-check-circle-fill"></i> ¡Excelente! No hay insumos con stock por debajo del umbral de {{ umbral_stock_bajo }}.
+    <i class="bi bi-check-circle-fill"></i> No hay insumos críticos que requieran gestión de compra inmediata.
 </div>
 {% endif %}
-
-{# --- (Opcional) Aquí podrías mostrar la tabla de OCs "Pendientes a comprar" si la mantienes --- #}
-
-{% if ordenes_compra_pendientes_list %}
-<h3 class="mt-5">Órdenes de Compra Pendientes de Gestión</h3>
-<div class="table-responsive mt-3">
-    <table class="table table-hover">
-        <thead class="color-thead">
-             <tr>
-                <th>N° OC</th>
-                <th>Estado</th>
-                <th>Insumo Principal</th>
-                <th>Proveedor</th>
-                <th>...más columnas...</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for oc in ordenes_compra_pendientes_list %}
-            <tr>
-                <td>{{ oc.numero_orden }}</td>
-                <td><span class="badge bg-info text-dark">{{ oc.get_estado_display_custom }}</span></td>
-                <td>{{ oc.insumo_principal.descripcion|default:"N/A" }}</td>
-                <td>{{ oc.proveedor.nombre|default:"N/A" }}</td>
-                <td>...</td>
-                <td>
-                    <a href="#" class="btn btn-sm btn-primary">Gestionar OC</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% endif %}
-
 
 <div class="mt-4">
     <a href="{% url 'App_LUMINOVA:deposito_view' %}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left-circle"></i> Volver a Depósito
     </a>
+    <a href="{% url 'App_LUMINOVA:compras_lista_oc' %}" class="btn btn-outline-info ms-2">
+        <i class="bi bi-list-ul"></i> Ver Todas las Órdenes de Compra
+    </a>
 </div>
-
 {% endblock %}

@@ -6,8 +6,16 @@ from .models import (
     ComponenteProducto, Proveedor, Cliente,
     OrdenVenta, ItemOrdenVenta,
     EstadoOrden, SectorAsignado, OrdenProduccion, # Usando tus nombres actuales para EstadoOrden y SectorAsignado
-    Reportes, Factura, RolDescripcion, AuditoriaAcceso, Fabricante
+    Reportes, Factura, RolDescripcion, AuditoriaAcceso, Fabricante, OfertaProveedor, Orden
 )
+
+class OfertaProveedorInline(admin.TabularInline): # O admin.StackedInline
+    model = OfertaProveedor
+    extra = 1
+    fields = ('proveedor', 'precio_unitario_compra', 'tiempo_entrega_estimado_dias', 'fecha_actualizacion_precio')
+    autocomplete_fields = ['proveedor']
+    verbose_name = "Oferta de Proveedor"
+    verbose_name_plural = "Ofertas de Proveedores para este Insumo"
 
 class ComponenteProductoInline(admin.TabularInline):
     model = ComponenteProducto
@@ -26,10 +34,29 @@ class ProductoTerminadoAdmin(admin.ModelAdmin):
 
 @admin.register(Insumo)
 class InsumoAdmin(admin.ModelAdmin):
-    list_display = ('descripcion', 'categoria', 'proveedor', 'stock', 'precio_unitario')
-    list_filter = ('categoria', 'proveedor')
-    search_fields = ('descripcion', 'fabricante', 'categoria__nombre', 'proveedor__nombre')
-    autocomplete_fields = ['categoria', 'proveedor']
+    list_display = ('descripcion', 'categoria', 'stock', 'fabricante', 'mostrar_ofertas_resumen') # 'mostrar_ofertas_resumen' es el nombre del método
+    list_filter = ('categoria', 'fabricante')
+    search_fields = ('descripcion', 'fabricante', 'categoria__nombre')
+    autocomplete_fields = ['categoria']
+    inlines = [OfertaProveedorInline]
+
+    # No necesitas @admin.display aquí si el método está en la clase ModelAdmin
+    def mostrar_ofertas_resumen(self, obj):
+        # 'obj' aquí es una instancia del modelo Insumo
+        ofertas = obj.ofertas_de_proveedores.all() # Usando el related_name de OfertaProveedor.insumo
+        if not ofertas:
+            return "Ninguna"
+        
+        resumen = []
+        for o in ofertas[:3]: # Mostrar hasta 3 ofertas
+            resumen.append(f"{o.proveedor.nombre}: ${o.precio_unitario_compra} ({o.tiempo_entrega_estimado_dias}d)")
+        
+        if ofertas.count() > 3:
+            resumen.append("...")
+        
+        return ", ".join(resumen)
+    
+    mostrar_ofertas_resumen.short_description = 'Ofertas de Proveedores (Resumen)' # Esto sí es útil para el 
 
 class ItemOrdenVentaInline(admin.TabularInline):
     model = ItemOrdenVenta
@@ -102,4 +129,28 @@ admin.site.register(AuditoriaAcceso)
 
 admin.site.register(ComponenteProducto) # Descomentado, puede ser útil para verlos todos
 admin.site.register(Fabricante)
+# admin.site.register(Orden) # Descomenta y configura si quieres 'Orden' en el admin
 
+# Si quieres un admin más detallado para Orden (Órdenes de Compra)
+""" @admin.register(Orden)
+class OrdenAdmin(admin.ModelAdmin):
+    list_display = ('numero_orden', 'tipo', 'proveedor', 'insumo_principal', 'cantidad_principal', 'estado', 'fecha_creacion', 'total_orden_compra')
+    list_filter = ('tipo', 'estado', 'proveedor', 'fecha_creacion')
+    search_fields = ('numero_orden', 'proveedor__nombre', 'insumo_principal__descripcion', 'notas')
+    autocomplete_fields = ['proveedor', 'insumo_principal']
+    readonly_fields = ('fecha_creacion', 'total_orden_compra') # El total se calcula en el save del modelo
+    fieldsets = (
+        (None, {
+            'fields': ('numero_orden', 'tipo', 'estado')
+        }),
+        ('Detalles del Proveedor y Pedido', {
+            'fields': ('proveedor', 'insumo_principal', 'cantidad_principal', 'precio_unitario_compra')
+        }),
+        ('Seguimiento y Entrega', {
+            'fields': ('fecha_estimada_entrega', 'numero_tracking')
+        }),
+        ('Información Adicional', {
+            'fields': ('notas', 'total_orden_compra', 'fecha_creacion')
+        }),
+    )
+ """

@@ -56,16 +56,54 @@ class Fabricante(models.Model):
         return self.nombre
 
 class Insumo(models.Model):
-    descripcion = models.CharField(max_length=255) # Aumentado max_length
+    descripcion = models.CharField(max_length=255)
     categoria = models.ForeignKey(CategoriaInsumo, on_delete=models.PROTECT, related_name='insumos')
-    fabricante = models.CharField(max_length=100, blank=True) # Aumentado max_length
-    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    tiempo_entrega = models.IntegerField(default=0, verbose_name="Tiempo Entrega (días)")
+    fabricante = models.CharField(max_length=100, blank=True)
+    # ELIMINADOS: precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    # ELIMINADOS: tiempo_entrega = models.IntegerField(default=0, verbose_name="Tiempo Entrega (días)")
+    # ELIMINADOS: proveedor = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True, related_name="insumos_proveedor")
     imagen = models.ImageField(null=True, blank=True, upload_to='insumos/')
-    proveedor = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True, related_name="insumos_proveedor") # Cambio a FK
     stock = models.IntegerField(default=0)
+    # Puedes añadir un campo para un precio de referencia o último costo si lo deseas aquí,
+    # pero el precio de compra específico vendrá de OfertaProveedor.
+    # ultimo_costo_compra = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+
     def __str__(self):
         return self.descripcion
+
+# --- NUEVO MODELO INTERMEDIO ---
+class OfertaProveedor(models.Model):
+    insumo = models.ForeignKey(Insumo, on_delete=models.CASCADE, related_name="ofertas_de_proveedores")
+    proveedor = models.ForeignKey(Proveedor, on_delete=models.CASCADE, related_name="provee_insumos")
+    precio_unitario_compra = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        verbose_name="Precio de Compra Unitario"
+    )
+    tiempo_entrega_estimado_dias = models.IntegerField(
+        default=0, 
+        verbose_name="Tiempo de Entrega Estimado (días)"
+    )
+    fecha_actualizacion_precio = models.DateTimeField(
+        default=timezone.now, 
+        verbose_name="Última Actualización del Precio"
+    )
+    # Puedes añadir más campos aquí:
+    # - codigo_producto_proveedor = models.CharField(max_length=50, blank=True, null=True)
+    # - cantidad_minima_pedido = models.PositiveIntegerField(default=1)
+    # - moneda = models.CharField(max_length=3, default='USD')
+    # - notas_oferta = models.TextField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ('insumo', 'proveedor') # Un proveedor ofrece un insumo específico una sola vez (con un precio/plazo)
+        verbose_name = "Oferta de Proveedor por Insumo"
+        verbose_name_plural = "Ofertas de Proveedores por Insumos"
+        ordering = ['insumo__descripcion', 'proveedor__nombre']
+
+    def __str__(self):
+        return f"{self.insumo.descripcion} - {self.proveedor.nombre} (${self.precio_unitario_compra})"
+
 
 class ComponenteProducto(models.Model): # NUEVO: Bill Of Materials (BOM)
     producto_terminado = models.ForeignKey(ProductoTerminado, on_delete=models.CASCADE, related_name='componentes_requeridos')
@@ -230,8 +268,10 @@ class Orden(models.Model): # Este será para Órdenes de Compra
     # Por ahora, lo dejamos simple o asumimos un solo insumo por OC.
     # Si es un solo insumo:
     insumo_principal = models.ForeignKey(Insumo, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Insumo Principal")
+    # El campo 'proveedor' en Orden se refiere al proveedor AL QUE SE LE HACE LA ORDEN.
+    proveedor = models.ForeignKey(Proveedor, on_delete=models.PROTECT, related_name='ordenes_de_compra_a_proveedor')
     cantidad_principal = models.PositiveIntegerField(null=True, blank=True, verbose_name="Cantidad Insumo Principal")
-    precio_unitario_compra = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Precio Unit. Compra")
+    precio_unitario_compra = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Precio Unit. Compra (de la oferta)")
 
     total_orden_compra = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
 
