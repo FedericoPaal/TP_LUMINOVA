@@ -14,17 +14,17 @@
 </div>
 
 <div class="table-responsive">
-    <table class="table table-striped table-bordered" id="tablaRoles">
+    <table class="table table-striped" id="tablaRoles">
         <thead class="table-light">
             <tr>
-                <th>ID</th>
-                <th>Rol (Grupo)</th>
-                <th>Descripción</th>
-                <th>Permisos</th>
+                <th class="align-middle color-thead">ID</th>
+                <th class="align-middle color-thead">Rol(Grupo)</th>
+                <th class="align-middle color-thead">Descripción</th>
+                <th class="align-middle color-thead">Permisos</th>
                 {# Estas columnas eran más descriptivas que funcionales, puedes mantenerlas o quitarlas #}
                 {# <th>Módulos Asignados</th> #}
                 {# <th>Nivel de Acceso</th> #}
-                <th style="width: 150px;">Acciones</th>
+                <th class="align-middle color-thead" style="width: 150px;">Acciones</th>
             </tr>
         </thead>
         <tbody>
@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function () {
         this.querySelectorAll('input[name="permisos"]:checked').forEach(checkbox => {
             permisosSeleccionados.push(checkbox.value);
         });
-        
+
         const payload = {
             rol_id: formData.get('rol_id'),
             permisos_ids: permisosSeleccionados, // Enviar array de IDs
@@ -399,7 +399,7 @@ document.addEventListener('DOMContentLoaded', function () {
             row.querySelector('.btn-eliminar-rol').dataset.rolName = rol.nombre;
         }
     }
-    
+
     function rebindTableButtons() {
         document.querySelectorAll('.btn-editar-rol').forEach(button => {
             button.removeEventListener('click', handleEditRolClick); // Evitar duplicados
@@ -448,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }).catch(error => console.error('Error:', error));
         }
     }
-    
+
     function handleVerPermisosClick() {
         const rolId = this.dataset.rolId;
         const rolName = this.dataset.rolName;
@@ -498,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error('Error:', error);
         });
     }
-    
+
     // Llamada inicial para bindeo de botones existentes
     rebindTableButtons();
 

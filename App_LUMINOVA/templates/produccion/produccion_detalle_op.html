@@ -62,7 +62,7 @@
         {# Columna 2: Insumos Requeridos #}
         <div class="col-lg-4 d-flex"> {# d-flex #}
             <div class="card shadow-sm d-flex flex-column w-100"> {# d-flex flex-column w-100 #}
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-success text-white">
                     Insumos Requeridos
                 </div>
                 {# El card-body ahora puede crecer y el overflow se maneja dentro de él #}
@@ -100,7 +100,7 @@
                     {% endif %}
                 </div>
                 {% if op.producto_a_producir and insumos_necesarios_list %}
-                
+
                 <div class="card-footer text-center p-3">
                     <div class="d-grid">
                         {% if puede_solicitar_insumos %}

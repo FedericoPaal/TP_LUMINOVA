@@ -42,8 +42,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Crear Nueva Categoría de Producto Terminado</h2>
-    <hr>
+    <h2 class="color-thead" style="height: 45px;">Crear Nueva Categoría de Producto Terminado</h2>
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form.as_p }}

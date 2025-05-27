@@ -22,7 +22,7 @@
     <div class="row">
         <div class="col-lg-8">
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">
+                <div class="card-header bg-primary text-white">
                     Información de la Orden de Venta
                 </div>
                 <div class="card-body">
@@ -42,7 +42,7 @@
             </div>
 
             <div class="card shadow-sm mb-4">
-                <div class="card-header">Ítems de la Orden</div>
+                <div class="card-header bg-success text-white">Ítems de la Orden</div>
                 <div class="card-body p-0">
                     {% if items_ov %}
                     <ul class="list-group list-group-flush">
@@ -68,14 +68,14 @@
 
         <div class="col-lg-4">
             <div class="card shadow-sm">
-                <div class="card-header">Facturación</div>
+                <div class="card-header bg-primary text-white">Facturación</div>
                 <div class="card-body">
                     {% if ov.factura_asociada %}
                         <p><strong>Factura Generada:</strong></p>
                         <p>N° Factura: {{ ov.factura_asociada.numero_factura }}</p>
                         <p>Fecha Emisión: {{ ov.factura_asociada.fecha_emision|date:"d/m/Y H:i" }}</p>
                         <p>Total Facturado: ${{ ov.factura_asociada.total_facturado|floatformat:2 }}</p>
-                        <a href="#" class="btn btn-sm btn-outline-info"><i class="bi bi-printer"></i> Ver/Imprimir Factura</a> 
+                        <a href="#" class="btn btn-sm btn-outline-info"><i class="bi bi-printer"></i> Ver/Imprimir Factura</a>
                     {% elif factura_form %}
                         <p>Esta orden está lista para ser facturada.</p>
                         <form method="post" action="{% url 'App_LUMINOVA:ventas_generar_factura' ov.id %}">
@@ -98,7 +98,7 @@
 
             {% if ov.ops_generadas.all %}
             <div class="card shadow-sm mt-4">
-                <div class="card-header">Órdenes de Producción Asociadas</div>
+                <div class="card-header bg-secondary text-white">Órdenes de Producción Asociadas</div>
                 <ul class="list-group list-group-flush">
                     {% for op in ov.ops_generadas.all %}
                         <li class="list-group-item">

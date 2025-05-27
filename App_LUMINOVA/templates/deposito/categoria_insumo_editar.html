@@ -37,9 +37,8 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2>Editar Categoría de Insumo: "{{ categoria.nombre }}"</h2>
-    <hr>
-    <form method="post" enctype="multipart/form-data"> 
+    <h2 class="color-thead" style="height: 45px;">Editar Categoría de Insumo: "{{ categoria.nombre }}"</h2>
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
 
 
@@ -48,16 +47,16 @@
             {{ form.nombre }}
             {% if form.nombre.errors %}<div class="invalid-feedback d-block">{{ form.nombre.errors }}</div>{% endif %}
         </div>
-        
+
         <div class="mb-3">
-            
+
             {% if categoria.imagen %}
                 <div class="mb-2">
                     <p class="mb-1">Imagen actual:</p>
                     <img src="{{ categoria.imagen.url }}" alt="{{ categoria.nombre }}" style="max-height: 100px; border-radius: 5px; border: 1px solid #ddd;">
                 </div>
             {% endif %}
-            {{ form.imagen }} 
+            {{ form.imagen }}
             {% if form.imagen.errors %}<div class="invalid-feedback d-block">{{ form.imagen.errors }}</div>{% endif %}
             {% if form.imagen.help_text %}
                 <small class="form-text text-muted">{{ form.imagen.help_text }}</small>
