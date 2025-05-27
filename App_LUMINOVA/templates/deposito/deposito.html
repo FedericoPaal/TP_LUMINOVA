@@ -154,23 +154,46 @@
                     {% endfor %}
             </tbody>
             <thead>
-                <tr style="border-top: 3px solid white;">
-                    <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;">
-                        <h4>Stock en Falta</h4>
-                    </th>
-                </tr>
-            </thead>
-            <tbody class="bg-white text-dark">
-                <tr>
-                    <th class="text-white" style="background-color: #014BAC;">ID</th>
-                    <th class="text-white" style="background-color: #014BAC;">Descripción</th>
-                    <th class="text-white" style="background-color: #014BAC;">Cantidad</th>
-                </tr>
-                <tr>
-                    <td colspan="3" class="text-center" style="background-color: #A19898;">No hay productos en falta
-                        actualmente.</td>
-                </tr>
-            </tbody>
+                    <tr style="border-top: 3px solid white;">
+                        {# Colspan ajustado a 3 si no hay columna de "Acción" individual por fila #}
+                        <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;">
+                            <h4>Insumos con Stock Bajo (< {{ umbral_stock_bajo|default:15000 }})</h4>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white text-dark">
+                    <tr>
+                        <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">ID</th>
+                        <th class="text-white" style="background-color: #014BAC; width: 50%;">Insumo</th>
+                        <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Stock Actual</th>
+                    </tr>
+                    {% for insumo_bajo_stock_item in insumos_con_stock_bajo_list %} {# Nombre de variable de bucle #}
+                    <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
+                        <td class="text-white text-center">{{ insumo_bajo_stock_item.id }}</td>
+                        <td class="text-white">{{ insumo_bajo_stock_item.descripcion|truncatechars:25 }}</td>
+                        <td class="text-white text-center fw-bold text-danger">{{ insumo_bajo_stock_item.stock }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center" style="background-color: #A19898;">
+                            No hay insumos con stock bajo actualmente.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    
+                    {# Botón general debajo de la tabla si hay insumos en falta #}
+                    {% if insumos_con_stock_bajo_list %}
+                    <tr>
+                        <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 0px;">
+                            <a class="btn border-white text-primary text-white"
+                                style="background-color: #fd7e14; width: 350px; height: 40px; border-radius: 15px;"
+                                href="{% url 'App_LUMINOVA:compras_desglose' %}">
+                                Gestionar Compras de Insumos en Falta
+                            </a>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
         </table>
     </div>
 </div>

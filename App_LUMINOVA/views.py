@@ -32,7 +32,7 @@ from .models import (
 
 # Importa los formularios que realmente existen y necesitas:
 from .forms import (
-    FacturaForm, RolForm, PermisosRolForm, ClienteForm, ProveedorForm, # Asegúrate que ProveedorForm exista si lo usas
+    FacturaForm, OrdenCompraForm, RolForm, PermisosRolForm, ClienteForm, ProveedorForm, # Asegúrate que ProveedorForm exista si lo usas
     OrdenVentaForm, ItemOrdenVentaFormSet, OrdenProduccionUpdateForm,
 )
 # Create your views here.
@@ -69,19 +69,32 @@ def compras_lista_oc_view(request):
 
 @login_required
 def compras_desglose_view(request):
-    # Esta vista mostraría las OCs que están pendientes de generar pedidos a proveedores
-    # Basado en el estado 'PENDIENTE_COMPRAR' o similar que definimos para Orden.
-    # estado_pendiente = EstadoOrden.objects.filter(nombre__iexact='Pendiente a Comprar').first() # Necesitarías EstadoOrden para OC
-    # ordenes_pendientes_compra = []
-    # if estado_pendiente:
-    #     ordenes_pendientes_compra = Orden.objects.filter(tipo='compra', estado=estado_pendiente).order_by('-fecha_creacion')
+    logger.info("--- compras_desglose_view: INICIO ---")
+
+    # --- LÓGICA PARA INSUMOS CON STOCK BAJO ---
+    UMBRAL_STOCK_BAJO_INSUMOS = 15000  # Puedes hacer esto configurable o tomarlo de settings
+    insumos_criticos = Insumo.objects.filter(stock__lt=UMBRAL_STOCK_BAJO_INSUMOS).select_related('proveedor', 'categoria').order_by('categoria__nombre', 'stock', 'descripcion')
+    
+    logger.info(f"Compras_desglose_view: Insumos críticos (<{UMBRAL_STOCK_BAJO_INSUMOS}) encontrados: {insumos_criticos.count()}")
+    for ins_debug in insumos_criticos:
+        logger.info(f"  -> Insumo crítico: {ins_debug.descripcion}, Stock: {ins_debug.stock}, Proveedor: {ins_debug.proveedor.nombre if ins_debug.proveedor else 'N/A'}")
+    
+    # --- (Opcional) Lógica para OCs existentes "Pendientes a comprar" ---
+    # Si todavía quieres mostrar OCs ya creadas que están pendientes, puedes añadir esa consulta aquí.
+    # Por ejemplo:
+    # estado_pendiente_compra_oc = 'BORRADOR' # O el estado que uses
+    # ordenes_compra_pendientes = Orden.objects.filter(tipo='compra', estado=estado_pendiente_compra_oc)
+    # logger.info(f"Compras_desglose_view: OCs en estado '{estado_pendiente_compra_oc}' encontradas: {ordenes_compra_pendientes.count()}")
+
 
     context = {
-        # 'ordenes_pendientes_list': ordenes_pendientes_compra,
-        'ordenes_pendientes_list': [], # Placeholder por ahora
-        'titulo_seccion': 'Desglose de Componentes para Compra',
+        'insumos_criticos_list': insumos_criticos,
+        'umbral_stock_bajo': UMBRAL_STOCK_BAJO_INSUMOS,
+        # 'ordenes_compra_pendientes_list': ordenes_compra_pendientes, # Descomenta si incluyes OCs pendientes
+        'titulo_seccion': 'Gestión de Compra por Stock Bajo',
     }
     return render(request, 'compras/compras_desglose.html', context)
+
 
 @login_required
 def compras_seguimiento_view(request):
@@ -1542,43 +1555,57 @@ def reportes_produccion_view(request):
 # --- VISTAS PARA DEPÓSITO (Manejo de Insumos para OPs) ---
 
 @login_required
-def deposito_view(request): # Tu vista principal de depósito (ya la tienes, solo para contexto)
+def deposito_view(request):
     logger.info("--- deposito_view: INICIO ---")
     
-    # Inicializar todas las variables de contexto que la plantilla espera
-    categorias_I = CategoriaInsumo.objects.all() # Asumiendo que la plantilla las necesita
-    categorias_PT = CategoriaProductoTerminado.objects.all() # Asumiendo que la plantilla las necesita
+    categorias_I = CategoriaInsumo.objects.all()
+    categorias_PT = CategoriaProductoTerminado.objects.all()
+    
     ops_pendientes_deposito_list = OrdenProduccion.objects.none()
     ops_pendientes_deposito_count = 0
-
-    # Lógica para OPs pendientes (la mantendremos como estaba, pero con logs)
     try:
         estado_sol = EstadoOrden.objects.filter(nombre__iexact='Insumos Solicitados').first()
         if estado_sol:
-            logger.info(f"Deposito_view (OPs): Estado 'Insumos Solicitados' ID: {estado_sol.id}")
-            ops_pendientes_deposito_list = OrdenProduccion.objects.filter(estado_op=estado_sol).select_related('producto_a_producir').order_by('fecha_solicitud')
+            ops_pendientes_deposito_list = OrdenProduccion.objects.filter(
+                estado_op=estado_sol
+            ).select_related('producto_a_producir').order_by('fecha_solicitud')
             ops_pendientes_deposito_count = ops_pendientes_deposito_list.count()
-            logger.info(f"Deposito_view (OPs): Encontradas {ops_pendientes_deposito_count} OPs pendientes.")
+            logger.info(f"Deposito_view (OPs): Encontradas {ops_pendientes_deposito_count} OPs pendientes (estado: '{estado_sol.nombre}').")
         else:
+            # Este mensaje solo se muestra si el estado "Insumos Solicitados" NO EXISTE.
+            # Si existe pero no hay OPs en ese estado, ops_pendientes_deposito_count será 0, lo cual es correcto.
+            messages.warning(request, "Configuración: El estado 'Insumos Solicitados' para OP no se encontró en la base de datos. La lista de OPs pendientes no se poblará.")
             logger.warning("Deposito_view (OPs): Estado 'Insumos Solicitados' NO encontrado.")
-    except Exception as e_op:
+    except Exception as e_op: # Captura de excepción más genérica
+        messages.error(request, f"Error al cargar OPs pendientes para depósito: {e_op}")
         logger.error(f"Deposito_view (OPs): Excepción al cargar OPs: {e_op}")
 
-    # --- AISLAMOS LA LÓGICA DE PRODUCTOS TERMINADOS ---
-    productos_con_stock_test = ProductoTerminado.objects.filter(stock__gt=0).order_by('-stock')
-    logger.info(f"Deposito_view (PTs): Consulta 'stock__gt=0' devolvió {productos_con_stock_test.count()} productos.")
-    for pt_item in productos_con_stock_test:
-        logger.info(f"Deposito_view (PTs):   ID: {pt_item.id}, Desc: {pt_item.descripcion}, Stock: {pt_item.stock}")
+    productos_terminados_con_stock = ProductoTerminado.objects.filter(stock__gt=0).order_by('-stock', 'descripcion')
+    logger.info(f"Deposito_view (PTs): Productos terminados con stock > 0 encontrados: {productos_terminados_con_stock.count()}")
+
+    # --- LÓGICA PARA INSUMOS CON STOCK BAJO ---
+    UMBRAL_STOCK_BAJO_INSUMOS = 15000 
+    insumos_con_stock_bajo = Insumo.objects.filter(stock__lt=UMBRAL_STOCK_BAJO_INSUMOS).order_by('stock', 'descripcion')
     
+    logger.info(f"Deposito_view: Insumos con stock bajo (<{UMBRAL_STOCK_BAJO_INSUMOS}) encontrados: {insumos_con_stock_bajo.count()}")
+    if insumos_con_stock_bajo.exists():
+        for ins_debug in insumos_con_stock_bajo:
+            logger.info(f"  -> Insumo bajo stock: {ins_debug.descripcion}, Stock: {ins_debug.stock}, ID: {ins_debug.id}")
+    else:
+        logger.info("  -> No se encontraron insumos con stock por debajo del umbral.")
+    # --- FIN LÓGICA STOCK BAJO ---
+
     context = {
         'categorias_I': categorias_I,
         'categorias_PT': categorias_PT,
         'ops_pendientes_deposito_list': ops_pendientes_deposito_list,
         'ops_pendientes_deposito_count': ops_pendientes_deposito_count,
-        'productos_terminados_en_stock_list': productos_con_stock_test, # Usamos la variable de prueba
+        'productos_terminados_en_stock_list': productos_terminados_con_stock,
+        'insumos_con_stock_bajo_list': insumos_con_stock_bajo, # Esta es la lista clave
+        'umbral_stock_bajo': UMBRAL_STOCK_BAJO_INSUMOS, 
     }
     
-    logger.info(f"Deposito_view: Contexto final - ops_count={ops_pendientes_deposito_count}, pt_stock_count={productos_con_stock_test.count()}")
+    logger.info(f"Deposito_view: Contexto final - pt_stock_count={productos_terminados_con_stock.count()}, insumos_bajos_count={insumos_con_stock_bajo.count()}")
     return render(request, 'deposito/deposito.html', context)
 
 
@@ -1892,3 +1919,65 @@ def ventas_cancelar_ov_view(request, ov_id):
     messages.success(request, f"Orden de Venta {orden_venta.numero_ov} ha sido cancelada.")
 
     return redirect('App_LUMINOVA:ventas_lista_ov')
+
+@login_required
+@transaction.atomic 
+def compras_crear_oc_view(request, insumo_id_preseleccionado=None):
+    # if not es_admin_o_rol(request.user, ['compras', 'administrador']):
+    #     messages.error(request, "Acción no permitida.")
+    #     return redirect('App_LUMINOVA:compras_lista_oc')
+
+    insumo_preseleccionado_obj = None
+    if insumo_id_preseleccionado:
+        insumo_preseleccionado_obj = get_object_or_404(Insumo, id=insumo_id_preseleccionado)
+        logger.info(f"Creando OC desde insumo preseleccionado: {insumo_preseleccionado_obj.descripcion}")
+
+    if request.method == 'POST':
+        form = OrdenCompraForm(request.POST)
+        if form.is_valid():
+            try:
+                orden_compra = form.save(commit=False)
+                orden_compra.tipo = 'compra' 
+                orden_compra.estado = 'BORRADOR' 
+                orden_compra.save() 
+                messages.success(request, f"Orden de Compra '{orden_compra.numero_orden}' creada exitosamente en estado '{orden_compra.get_estado_display_custom()}'.")
+                return redirect('App_LUMINOVA:compras_lista_oc') 
+            except DjangoIntegrityError as e_int:
+                if 'UNIQUE constraint' in str(e_int) and 'numero_orden' in str(e_int): 
+                    messages.error(request, f"Error: El número de orden de compra '{form.cleaned_data.get('numero_orden')}' ya existe.")
+                else:
+                    messages.error(request, f"Error de base de datos al guardar la OC: {e_int}")
+            except Exception as e:
+                messages.error(request, f"Error inesperado al crear la Orden de Compra: {e}")
+                logger.exception("Error inesperado en compras_crear_oc_view POST:")
+        else:
+            logger.warning(f"Formulario OC inválido: {form.errors.as_json()}")
+    else: # GET request
+        initial_data = {}
+        if insumo_preseleccionado_obj:
+            initial_data['insumo_principal'] = insumo_preseleccionado_obj
+            if insumo_preseleccionado_obj.proveedor:
+                initial_data['proveedor'] = insumo_preseleccionado_obj.proveedor
+            if insumo_preseleccionado_obj.precio_unitario > 0: 
+                initial_data['precio_unitario_compra'] = insumo_preseleccionado_obj.precio_unitario
+        
+        form = OrdenCompraForm(initial=initial_data)
+
+    context = {
+        'form_oc': form,
+        'titulo_seccion': 'Crear Nueva Orden de Compra',
+        'insumo_preseleccionado': insumo_preseleccionado_obj
+    }
+    return render(request, 'compras/compras_crear_editar_oc.html', context)
+
+
+# --- ESTA ES LA FUNCIÓN QUE NECESITAS AÑADIR ---
+@login_required
+def compras_crear_oc_desde_insumo_view(request, insumo_id):
+    """
+    Esta vista actúa como un intermediario para preseleccionar un insumo
+    al crear una Orden de Compra. Llama a la vista principal de creación de OC.
+    """
+    logger.info(f"Iniciando creación de OC desde insumo ID: {insumo_id}")
+    # Llama a la vista principal de creación de OC, pasándole el ID del insumo
+    return compras_crear_oc_view(request, insumo_id_preseleccionado=insumo_id)
