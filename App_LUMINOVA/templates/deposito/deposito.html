@@ -88,8 +88,8 @@
             {# ... Tabla de Órdenes de Producción ... #}
             <thead>
                 <tr>
-                    <th colspan="3" class="bg-primary text-white text-center" style="padding-left: 0px;">
-                        <h4>Órdenes de Producción <br><small>(Insumos Solicitados)</small></h4>
+                    <th colspan="4" class="bg-primary text-white text-center" style="padding-left: 0px;">
+                        <h4>Órdenes de Producción</h4>
                     </th>
                 </tr>
             </thead>
@@ -98,6 +98,7 @@
                     <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">N° OP</th>
                     <th class="text-white" style="background-color: #014BAC; width: 50%;">Producto</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Cantidad</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 30%;"></th>
                 </tr>
                 {% for op_solicitud in ops_pendientes_deposito_list %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
@@ -107,12 +108,12 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="3" class="text-center" style="background-color: #A19898;">No hay OPs con insumos
+                    <td colspan="4" class="text-center text-white" style="background-color: #A19898;">No hay OPs con insumos
                         solicitados.</td>
                 </tr>
                 {% endfor %}
                 <tr>
-                    <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 0px;">
+                    <td colspan="4" class="bg-primary text-center pt-3" style="padding-left: 0px;">
                         <a class="btn border-white text-primary text-white"
                             style="background-color: #014BAC; width: 100%; max-width: 350px; height: 40px; border-radius: 15px;"
                             href="{% url 'App_LUMINOVA:deposito_solicitudes_insumos' %}">Ver Todas las Solicitudes</a>
@@ -122,8 +123,8 @@
 
             {# ... Tabla de Productos Terminados en Stock ... #}
             <thead>
-                <tr style="border-top: 3px solid white;">
-                    <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;">
+                <tr style="border-top: 3px solid white; margin-top: 3px;">
+                    <th colspan="4" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;">
                         <h4>Productos Terminados en Stock</h4>
                     </th>
                 </tr>
@@ -133,6 +134,7 @@
                     <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">ID</th>
                     <th class="text-white" style="background-color: #014BAC; width: 50%;">Descripción</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Stock</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 30%;"></th>
                 </tr>
                 {% for pt_stock in productos_terminados_en_stock_list %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
@@ -149,10 +151,11 @@
                         {% endif %}
                     </td>
                     <td class="text-white text-center">{{ pt_stock.stock }}</td>
+                    <td class="text-white text-center"></td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="3" class="text-white text-center" style="background-color: #A19898;">No hay productos
+                    <td colspan="4" class="text-white text-center" style="background-color: #A19898;">No hay productos
                         terminados con stock.</td>
                 </tr>
                 {% endfor %}
@@ -161,9 +164,8 @@
             {# Tabla de Insumos con Stock Bajo - SIN BOTÓN POR FILA, SÓLO BOTÓN GENERAL ABAJO #}
             <thead>
                 <tr style="border-top: 3px solid white;">
-                    <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;"> {#
-                        Colspan vuelve a 3 #}
-                        <h4>Insumos con Stock Bajo (< {{ umbral_stock_bajo|default:15000 }})</h4>
+                    <th colspan="4" class="bg-primary text-white text-center pt-3   " style="padding-left: 0px;">
+                        <h4>Insumos con Stock Bajo</h4>
                     </th>
                 </tr>
             </thead>
@@ -172,7 +174,7 @@
                     <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">ID</th>
                     <th class="text-white" style="background-color: #014BAC; width: 50%;">Insumo</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Stock Actual</th>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 15%;">En Pedido</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 15%;">Pedido</th>
                 </tr>
                 {% for insumo_bajo_stock_item in insumos_con_stock_bajo_list %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
