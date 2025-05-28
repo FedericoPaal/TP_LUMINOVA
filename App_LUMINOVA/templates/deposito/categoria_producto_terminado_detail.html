@@ -13,7 +13,7 @@
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:producto_terminado_create' %}?categoria={{ categoria_PT.id }}">
-                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Prod. Terminado</span>
+                        <i class="bi bi-plus-square me-2"></i> <span class="ms-2">Agregar Prod. Terminado</span>
                     </a>
                 </li>
                 <li class="nav-item mt-2">
@@ -103,8 +103,8 @@
                             <td class="text-center align-middle">{{ producto.material }}</td>
                             <td class="text-center align-middle">{{ producto.stock }}</td>
                             <td class="text-center align-middle">
-                                <a href="{% url 'App_LUMINOVA:producto_terminado_edit' producto.pk %}" class="btn btn-sm btn-light me-1" title="Editar Producto"><i class="bi bi-pencil" style="color: #0d6efd;"></i></a>
-                                <a href="{% url 'App_LUMINOVA:producto_terminado_delete' producto.pk %}" class="btn btn-sm btn-light" title="Eliminar Producto"><i class="bi bi-trash" style="color: #dc3545;"></i></a>
+                                <a href="{% url 'App_LUMINOVA:producto_terminado_edit' producto.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Editar Producto"><i class="bi bi-pencil-fill"></i></a>
+                                <a href="{% url 'App_LUMINOVA:producto_terminado_delete' producto.pk %}" class="btn btn-sm btn-outline-danger me-1" title="Eliminar Producto"><i class="bi bi-trash-fill"></i></a>
                             </td>
                         </tr>
                         {% endfor %}

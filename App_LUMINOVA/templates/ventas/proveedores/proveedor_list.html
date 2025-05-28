@@ -39,8 +39,8 @@
                 <td>{{ proveedor.contacto }}</td>
                 <td> {{proveedor.email}} </td>
                 <td class="text-center">
-                    <a href="{% url 'App_LUMINOVA:proveedor_edit' proveedor.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                    <a href="{% url 'App_LUMINOVA:proveedor_delete' proveedor.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                    <a href="{% url 'App_LUMINOVA:proveedor_edit' proveedor.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-fill"></i></a>
+                    <a href="{% url 'App_LUMINOVA:proveedor_delete' proveedor.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash-fill"></i></a>
                 </td>
             </tr>
             {% empty %}

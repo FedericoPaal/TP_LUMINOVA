@@ -3,19 +3,19 @@
 {% block title %}Usuarios Registrados | Luminova{% endblock %}
 
 {% block content %}
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom flex-column">
-        <h1 class="h2">Usuarios Registrados</h1>
-    </div>
-    <div class="d-flex justify-content-end mb-3">
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#crearUsuarioModal">
-            <i class="bi bi-person-plus-fill"></i> Crear Usuario
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+    <h1 class="h2">Usuarios Registrados</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#crearUsuarioModal">
+            <i class="bi bi-plus-circle-fill"></i> Crear Usuario
         </button>
     </div>
+</div>
     <div class="table-responsive">
         <table class="table table-striped">
             <thead class="table-light">
                 <tr>
-                    <th class="align-middle color-thead">Id</th>
+                    <th class="align-middle color-thead">ID</th>
                     <th class="align-middle color-thead">Nombre de Usuario</th>
                     <th class="align-middle color-thead">Email</th>
                     <th class="align-middle color-thead">Rol</th>
@@ -45,10 +45,10 @@
                         </td>
                         <td>
                             <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editarUsuarioModal{{ usuario.id }}">
-                                <i class="bi bi-pencil"></i> Editar
+                                <i class="bi bi-pencil-fill"></i>
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#eliminarUsuarioModal{{ usuario.id }}">
-                                <i class="bi bi-trash"></i> Eliminar
+                                <i class="bi bi-trash-fill"></i>
                             </button>
                         </td>
                     </tr>

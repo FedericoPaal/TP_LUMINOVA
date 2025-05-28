@@ -116,7 +116,7 @@
                         </td>
                     </tr>
                 </tbody>
-                
+
                 {# ... Tabla de Productos Terminados en Stock ... #}
                 <thead>
                     <tr style="border-top: 3px solid white;">
@@ -149,7 +149,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="3" class="text-center" style="background-color: #A19898;">No hay productos terminados con stock.</td>
+                        <td colspan="3" class="text-white text-center" style="background-color: #A19898;">No hay productos terminados con stock.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -181,13 +181,13 @@
                         </td>
                     </tr>
                     {% endfor %}
-                    
+
                     {# Botón general debajo de la tabla si hay insumos en falta #}
                     {% if insumos_con_stock_bajo_list %}
                     <tr>
                         <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 0px;">
                             <a class="btn border-white text-primary text-white"
-                                style="background-color: #fd7e14; width: 100%; max-width: 350px; height: 40px; border-radius: 15px;"
+                                style="background-color: #014BAC; width: 100%; max-width: 350px; height: 40px; border-radius: 15px;"
                                 href="{% url 'App_LUMINOVA:compras_desglose' %}">
                                 Gestionar Compras de Insumos en Falta
                             </a>

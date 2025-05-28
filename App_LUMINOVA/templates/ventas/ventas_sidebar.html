@@ -4,6 +4,7 @@
 {% url 'App_LUMINOVA:ventas_lista_ov' as url_ventas_lista_ov %}
 {% url 'App_LUMINOVA:ventas_crear_ov' as url_ventas_crear_ov %}
 {% url 'App_LUMINOVA:lista_clientes' as url_lista_clientes %}
+{% url 'App_LUMINOVA:proveedor_list' as url_proveedor_list %}
 {% url 'App_LUMINOVA:produccion_lista_op' as url_produccion_lista_op %} {# Enlace para ver las OPs generadas #}
 
 <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
@@ -20,7 +21,7 @@
             </li>
             <li class="nav-item mt-2">
                 <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_ventas_crear_ov %}active{% endif %}" href="{{ url_ventas_crear_ov }}">
-                    <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Nueva Orden Venta</span>
+                    <i class="bi bi-plus-square me-2"></i> <span class="ms-2">Nueva Orden Venta</span>
                 </a>
             </li>
              <li class="nav-item mt-2">
@@ -34,7 +35,7 @@
                 </a>
             </li>
             <li class="nav-item mt-2">
-                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_proveedor_list %}active{% endif %}" href="{% url 'App_LUMINOVA:proveedor_list' %}" style="border-radius: 25px;">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_proveedor_list %}active{% endif %}" href="{{ url_proveedor_list }}" style="border-radius: 25px;">
                     <i class="bi bi-person-lines-fill"></i> <span class="ms-2">Ver Proveedores</span>
                 </a>
             </li>

@@ -12,17 +12,17 @@
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:insumo_create' %}">
-                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Insumo</span>
+                        <i class="bi bi-plus-square me-2"></i> <span class="ms-2">Agregar Insumo</span>
+                    </a>
+                </li>
+                <li class="nav-item mt-2">
+                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:categoria_i_create' %}">
+                        <i class="bi bi-bookmark-plus me-2"></i> <span class="ms-2">Agregar Categoría Insumo</span>
                     </a>
                 </li>
                 <li class="nav-item mt-2">
                     <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center active"> {# Marcar como activo #}
                         <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Producto Terminado</span>
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:categoria_i_create' %}">
-                        <i class="bi bi-bookmark-plus-fill me-2"></i> <span class="ms-2">Agregar Categoría Insumo</span>
                     </a>
                 </li>
                 <li class="nav-item mt-2">
@@ -60,44 +60,44 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-6 mb-3">
                 <label for="{{ form.precio_unitario.id_for_label }}" class="form-label">{{ form.precio_unitario.label }}</label>
                 {{ form.precio_unitario }}
                 {% if form.precio_unitario.errors %}<div class="invalid-feedback d-block">{{ form.precio_unitario.errors }}</div>{% endif %}
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-6 mb-3">
                 <label for="{{ form.stock.id_for_label }}" class="form-label">{{ form.stock.label }}</label>
                 {{ form.stock }}
                 {% if form.stock.errors %}<div class="invalid-feedback d-block">{{ form.stock.errors }}</div>{% endif %}
             </div>
-            <div class="col-md-4 mb-3">
-                <label for="{{ form.modelo.id_for_label }}" class="form-label">{{ form.modelo.label }}</label>
-                {{ form.modelo }}
-                {% if form.modelo.errors %}<div class="invalid-feedback d-block">{{ form.modelo.errors }}</div>{% endif %}
-            </div>
         </div>
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-6 mb-3">
                 <label for="{{ form.potencia.id_for_label }}" class="form-label">{{ form.potencia.label }}</label>
                 {{ form.potencia }}
                 {% if form.potencia.errors %}<div class="invalid-feedback d-block">{{ form.potencia.errors }}</div>{% endif %}
             </div>
-            <div class="col-md-4 mb-3">
-                <label for="{{ form.acabado.id_for_label }}" class="form-label">{{ form.acabado.label }}</label>
-                {{ form.acabado }}
-                {% if form.acabado.errors %}<div class="invalid-feedback d-block">{{ form.acabado.errors }}</div>{% endif %}
-            </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-6 mb-3">
                 <label for="{{ form.color_luz.id_for_label }}" class="form-label">{{ form.color_luz.label }}</label>
                 {{ form.color_luz }}
                 {% if form.color_luz.errors %}<div class="invalid-feedback d-block">{{ form.color_luz.errors }}</div>{% endif %}
             </div>
         </div>
          <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-4 mb-3">
+                <label for="{{ form.modelo.id_for_label }}" class="form-label">{{ form.modelo.label }}</label>
+                {{ form.modelo }}
+                {% if form.modelo.errors %}<div class="invalid-feedback d-block">{{ form.modelo.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
                 <label for="{{ form.material.id_for_label }}" class="form-label">{{ form.material.label }}</label>
                 {{ form.material }}
                 {% if form.material.errors %}<div class="invalid-feedback d-block">{{ form.material.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+                <label for="{{ form.acabado.id_for_label }}" class="form-label">{{ form.acabado.label }}</label>
+                {{ form.acabado }}
+                {% if form.acabado.errors %}<div class="invalid-feedback d-block">{{ form.acabado.errors }}</div>{% endif %}
             </div>
             <div class="col-md-6 mb-3">
                 <label for="{{ form.imagen.id_for_label }}" class="form-label">{{ form.imagen.label }}</label>

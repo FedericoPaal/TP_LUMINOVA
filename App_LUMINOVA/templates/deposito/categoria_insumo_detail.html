@@ -13,7 +13,7 @@
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:insumo_create' %}?categoria={{ categoria_I.id }}">
-                        <i class="bi bi-plus-square-fill me-2"></i> <span class="ms-2">Agregar Insumo</span>
+                        <i class="bi bi-plus-square me-2"></i> <span class="ms-2">Agregar Insumo</span>
                     </a>
                 </li>
                 <li class="nav-item mt-2">
@@ -94,8 +94,8 @@
                             <td class="text-center align-middle">{{ insumo.proveedor|default:"N/A" }}</td>
                             <td class="text-center align-middle">{{ insumo.stock }}</td>
                             <td class="text-center align-middle">
-                                <a href="{% url 'App_LUMINOVA:insumo_edit' insumo.pk %}" class="btn btn-sm btn-light me-1" title="Editar Insumo"><i class="bi bi-pencil" style="color: #0d6efd;"></i></a>
-                                <a href="{% url 'App_LUMINOVA:insumo_delete' insumo.pk %}" class="btn btn-sm btn-light" title="Eliminar Insumo"><i class="bi bi-trash" style="color: #dc3545;"></i></a>
+                                <a href="{% url 'App_LUMINOVA:insumo_edit' insumo.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Editar Insumo"><i class="bi bi-pencil-fill"></i></a>
+                                <a href="{% url 'App_LUMINOVA:insumo_delete' insumo.pk %}" class="btn btn-sm btn-outline-danger" title="Eliminar Insumo"><i class="bi bi-trash-fill"></i></a>
                             </td>
                         </tr>
                         {% endfor %}
