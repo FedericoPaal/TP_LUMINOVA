@@ -5,7 +5,7 @@
 {% block title %}{{ titulo_seccion|default:"Órdenes de Compra" }}{% endblock %}
 
 {% block sidebar_content %}
-    {% include 'compras/compras_sidebar.html' %}
+{% include 'compras/compras_sidebar.html' %}
 {% endblock %}
 
 {% block content %}
@@ -18,44 +18,50 @@
     </div>
 </div>
 
-{% bootstrap_messages %}
+
 
 <div class="table-responsive mt-3">
     <table class="table table-hover">
-        <thead>
+        <thead style="background-color: #014BAC;"> {# O tu clase color-thead #}
             <tr>
-                <th class="align-middle color-thead">N° OC</th>
-                <th class="align-middle color-thead">Fecha Creación</th>
-                <th class="align-middle color-thead" >Proveedor</th>
-                <th class="align-middle color-thead" >Insumo Principal</th>
-                <th class="align-middle color-thead" >Cantidad</th>
-                <th class="align-middle color-thead" >Total</th>
-                <th class="align-middle color-thead" >Estado</th>
-                <th class="align-middle color-thead" >Tracking</th>
-                <th class="text-center align-middle color-thead" >Acciones</th>
+                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">N° OC</th>
+                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Fecha Creación</th>
+                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Proveedor</th>
+                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Insumo Principal</th>
+                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Cantidad</th>
+                <th class="text-end align-middle" style="color: rgb(25, 11, 216);">Total</th>
+                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Estado</th>
+                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Tracking</th>
+                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Acciones</th>
             </tr>
         </thead>
         <tbody>
             {% for oc in ordenes_list %}
-            <tr >
+            <tr>
                 <td><a href="#">{{ oc.numero_orden }}</a></td> {# Enlace a detalle de OC (futuro) #}
                 <td>{{ oc.fecha_creacion|date:"d/m/Y H:i" }}</td>
                 <td>{{ oc.proveedor.nombre|default_if_none:"N/A" }}</td>
                 <td>{{ oc.insumo_principal.descripcion|default_if_none:"Varios/No especificado"|truncatechars:30 }}</td>
                 <td class="text-center">{{ oc.cantidad_principal|default_if_none:"-" }}</td>
-                <td class="text-end">${{ oc.total_orden|floatformat:2 }}</td>
+                {# LÍNEA IMPORTANTE - VERIFICA EL NOMBRE DEL CAMPO AQUÍ #}
+                <td class="text-end">${{ oc.total_orden_compra|floatformat:2|default:"0.00" }}</td>
                 <td>
                     <span class="badge
-                        {% if oc.estado == 'PENDIENTE_COMPRAR' %}bg-warning text-dark
-                        {% elif oc.estado == 'SOLICITADA' %}bg-info
-                        {% elif oc.estado == 'RECIBIDA' %}bg-success
-                        {% else %}bg-secondary{% endif %}">
-                        {{ oc.get_estado_display_custom }} {# Usa el método del modelo #}
+                {% if oc.estado == 'BORRADOR' %}bg-secondary
+                {% elif oc.estado == 'PENDIENTE_APROBACION' %}bg-warning text-dark
+                {% elif oc.estado == 'APROBADA' %}bg-info
+                {% elif oc.estado == 'ENVIADA_PROVEEDOR' %}bg-primary
+                {% elif oc.estado == 'RECIBIDA_TOTAL' or oc.estado == 'COMPLETADA' %}bg-success
+                {% elif oc.estado == 'CANCELADA' %}bg-danger
+                {% else %}bg-dark{% endif %}">
+                        {{ oc.get_estado_display }} {# Usar el método estándar de Django #}
                     </span>
                 </td>
                 <td>{{ oc.numero_tracking|default_if_none:"N/A" }}</td>
                 <td class="text-center">
-                    <a href="#" class="btn btn-sm btn-outline-primary" title="Ver Detalles"><i class="bi bi-eye"></i></a>
+                    <a href="#" class="btn btn-sm btn-outline-primary" title="Ver Detalles"><i
+                            class="bi bi-eye"></i></a>
+                    {# Aquí podrías añadir botones para Editar, Aprobar, Cancelar OC según su estado #}
                 </td>
             </tr>
             {% empty %}
@@ -64,6 +70,8 @@
             </tr>
             {% endfor %}
         </tbody>
+
+
     </table>
 </div>
 

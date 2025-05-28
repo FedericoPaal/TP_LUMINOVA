@@ -157,9 +157,9 @@ class OrdenCompraForm(forms.ModelForm):
             'insumo_principal', # El insumo principal de la OC
             'cantidad_principal', 
             'precio_unitario_compra', # Precio ACORDADO para esta OC para este insumo con este proveedor
-            'fecha_estimada_entrega', 
+            'fecha_estimada_entrega',
             'numero_tracking', 
-            'notas'
+            'notas',
         ]
         # 'tipo' y 'estado' se manejarán en la vista o tendrán defaults en el modelo.
         # 'total_orden_compra' se calcula automáticamente en el save() del modelo si los campos necesarios están.

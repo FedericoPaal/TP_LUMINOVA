@@ -5,199 +5,220 @@
 {% block title %}Depósito - Luminova{% endblock %}
 
 {% block sidebar_content %}
-    {% include 'deposito/deposito_sidebar.html' %}
+{% include 'deposito/deposito_sidebar.html' %}
 {% endblock %}
 
 {% block content %}
-    <div class="row mx-auto border-start">
-        {# ... Pestañas Insumos / Prod. Terminados ... #}
-        <ul class="nav justify-content-start flex-wrap" style="background-color: white;">
-            <li class="nav-item">
-                <button id="insumos-tab" onclick="mostrarInsumos()"
-                    class="nav-link active bg-primary text-white text-center"
-                    style="width: 170px; border-top-left-radius: 20px; border-top-right-radius: 20px; font-weight: bold;"
-                    aria-current="page">Insumos</button>
-            </li>
-            <li class="nav-item">
-                <button id="productos-tab" onclick="mostrarProductos()" class="nav-link bg-primary text-white text-center"
-                    style="width: 170px; border-top-left-radius: 20px; border-top-right-radius: 20px; font-weight: bold;">Prod.
-                    Terminados</button>
-            </li>
-        </ul>
+<div class="row mx-auto border-start">
+    {# ... Pestañas Insumos / Prod. Terminados ... #}
+    <ul class="nav justify-content-start flex-wrap" style="background-color: white;">
+        <li class="nav-item">
+            <button id="insumos-tab" onclick="mostrarInsumos()"
+                class="nav-link active bg-primary text-white text-center"
+                style="width: 170px; border-top-left-radius: 20px; border-top-right-radius: 20px; font-weight: bold;"
+                aria-current="page">Insumos</button>
+        </li>
+        <li class="nav-item">
+            <button id="productos-tab" onclick="mostrarProductos()" class="nav-link bg-primary text-white text-center"
+                style="width: 170px; border-top-left-radius: 20px; border-top-right-radius: 20px; font-weight: bold;">Prod.
+                Terminados</button>
+        </li>
+    </ul>
 
-        <div class="col-md-8 bg-primary" style="padding-top: 20px; padding-bottom: 20px;">
-           {# ... Contenido de Categorías Insumos y Productos Terminados (sin cambios) ... #}
-           {# (Tu código para mostrar categorías de insumos y productos terminados va aquí) #}
-            <div id="insumos-content" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-                {% for categoria in categorias_I %}
-                    {% if categoria %}
-                        <div class="col">
-                            <div class="card shadow-sm h-100">
-                                <a href="{% url 'App_LUMINOVA:categoria_i_detail' categoria.id %}"
-                                    class="text-decoration-none text-dark d-flex flex-column h-100">
-                                    {% if categoria.imagen %}
-                                    <img src="{{categoria.imagen.url}}" class="card-img-top object-fit-contain"
-                                        alt="{{categoria.nombre}}" style="height: 150px;">
-                                    {% else %}
-                                    <img src="{% static 'img/placeholder.png' %}" class="card-img-top object-fit-contain"
-                                        alt="Imagen no disponible" style="height: 150px;">
-                                    {% endif %}
-                                    <div class="card-body d-flex flex-column">
-                                        <h5 class="card-title">{{categoria.nombre}}</h5>
-                                    </div>
-                                </a>
-                            </div>
+    <div class="col-md-8 bg-primary" style="padding-top: 20px; padding-bottom: 20px;">
+        {# ... Contenido de Categorías Insumos y Productos Terminados (sin cambios) ... #}
+        {# (Tu código para mostrar categorías de insumos y productos terminados va aquí) #}
+        <div id="insumos-content" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
+            {% for categoria in categorias_I %}
+            {% if categoria %}
+            <div class="col">
+                <div class="card shadow-sm h-100">
+                    <a href="{% url 'App_LUMINOVA:categoria_i_detail' categoria.id %}"
+                        class="text-decoration-none text-dark d-flex flex-column h-100">
+                        {% if categoria.imagen %}
+                        <img src="{{categoria.imagen.url}}" class="card-img-top object-fit-contain"
+                            alt="{{categoria.nombre}}" style="height: 150px;">
+                        {% else %}
+                        <img src="{% static 'img/placeholder.png' %}" class="card-img-top object-fit-contain"
+                            alt="Imagen no disponible" style="height: 150px;">
+                        {% endif %}
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">{{categoria.nombre}}</h5>
                         </div>
-                    {% endif %}
-                {% empty %}
-                    <p class="text-white">No hay categorías de insumos disponibles.</p>
-                {% endfor %}
+                    </a>
+                </div>
             </div>
-
-            <div id="productos-content" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4"
-                style="display: none;">
-                {% for categoria_pt in categorias_PT %}
-                    {% if categoria_pt %}
-                        <div class="col">
-                            <div class="card shadow-sm h-100">
-                                <a href="{% url 'App_LUMINOVA:categoria_pt_detail' categoria_pt.id %}"
-                                    class="text-decoration-none text-dark d-flex flex-column h-100">
-                                    {% if categoria_pt.imagen %}
-                                    <img src="{{categoria_pt.imagen.url}}" class="card-img-top object-fit-contain"
-                                        alt="{{categoria_pt.nombre}}" style="height: 150px;">
-                                    {% else %}
-                                    <img src="{% static 'img/placeholder.png' %}" class="card-img-top object-fit-contain"
-                                        alt="Imagen no disponible" style="height: 150px;">
-                                    {% endif %}
-                                    <div class="card-body d-flex flex-column">
-                                        <h5 class="card-title">{{categoria_pt.nombre}}</h5>
-                                    </div>
-                                </a>
-                            </div>
-                        </div>
-                    {% endif %}
-                {% empty %}
-                    <p class="text-white">No hay categorías de productos terminados disponibles.</p>
-                {% endfor %}
-            </div>
+            {% endif %}
+            {% empty %}
+            <p class="text-white">No hay categorías de insumos disponibles.</p>
+            {% endfor %}
         </div>
 
-        <div class="col-md-4 bg-primary border-start border-5 border-white"
-            style="margin-left: 0px; padding: 20px; border-radius: 25px;">
-            <table class="table table-borderless text-white">
-                {# ... Tabla de Órdenes de Producción ... #}
-                <thead>
-                    <tr>
-                        <th colspan="3" class="bg-primary text-white text-center" style="padding-left: 0px;"> <h4>Órdenes de Producción <br><small>(Insumos Solicitados)</small></h4></th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white text-dark">
-                    <tr>
-                        <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">N° OP</th>
-                        <th class="text-white" style="background-color: #014BAC; width: 50%;">Producto</th>
-                        <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Cantidad</th>
-                    </tr>
-                    {% for op_solicitud in ops_pendientes_deposito_list %}
-                    <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
-                        <td class="text-white text-center">{{ op_solicitud.numero_op }}</td>
-                        <td class="text-white">{{ op_solicitud.producto_a_producir.descripcion|truncatechars:20 }}</td>
-                        <td class="text-white text-center">{{ op_solicitud.cantidad_a_producir }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center" style="background-color: #A19898;">No hay OPs con insumos solicitados.</td>
-                    </tr>
-                    {% endfor %}
-                    <tr>
-                        <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 0px;">
-                            <a class="btn border-white text-primary text-white"
-                                style="background-color: #014BAC; width: 100%; max-width: 350px; height: 40px; border-radius: 15px;"
-                                href="{% url 'App_LUMINOVA:deposito_solicitudes_insumos' %}">Ver Todas las Solicitudes</a>
-                        </td>
-                    </tr>
-                </tbody>
-
-                {# ... Tabla de Productos Terminados en Stock ... #}
-                <thead>
-                    <tr style="border-top: 3px solid white;">
-                        <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;">
-                            <h4>Productos Terminados en Stock</h4>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white text-dark">
-                    <tr>
-                        <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">ID</th>
-                        <th class="text-white" style="background-color: #014BAC; width: 50%;">Descripción</th>
-                        <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Stock</th>
-                    </tr>
-                    {% for pt_stock in productos_terminados_en_stock_list %}
-                    <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
-                        <td class="text-white text-center">{{ pt_stock.id }}</td>
-                        <td class="text-white">
-                            {% if pt_stock.categoria %}
-                            <a href="{% url 'App_LUMINOVA:categoria_pt_detail' pt_stock.categoria.id %}"
-                                class="text-white text-decoration-none"
-                                title="Ver en categoría: {{ pt_stock.categoria.nombre }}">
-                                {{ pt_stock.descripcion|truncatechars:20 }}
-                            </a>
-                            {% else %}
-                            {{ pt_stock.descripcion|truncatechars:20 }}
-                            {% endif %}
-                        </td>
-                        <td class="text-white text-center">{{ pt_stock.stock }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-white text-center" style="background-color: #A19898;">No hay productos terminados con stock.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-
-                {# Tabla de Insumos con Stock Bajo - SIN BOTÓN POR FILA, SÓLO BOTÓN GENERAL ABAJO #}
-                <thead>
-                    <tr style="border-top: 3px solid white;">
-                        <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;"> {# Colspan vuelve a 3 #}
-                            <h4>Insumos con Stock Bajo (< {{ umbral_stock_bajo|default:15000 }})</h4>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white text-dark">
-                    <tr>
-                        <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">ID</th>
-                        <th class="text-white" style="background-color: #014BAC; width: 50%;">Insumo</th>
-                        <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Stock Actual</th>
-                    </tr>
-                    {% for insumo_bajo_stock_item in insumos_con_stock_bajo_list %}
-                    <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
-                        <td class="text-white text-center">{{ insumo_bajo_stock_item.id }}</td>
-                        <td class="text-white">{{ insumo_bajo_stock_item.descripcion|truncatechars:25 }}</td>
-                        <td class="text-white text-center fw-bold text-danger">{{ insumo_bajo_stock_item.stock }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="3" class="text-center" style="background-color: #A19898;">
-                            No hay insumos con stock bajo actualmente.
-                        </td>
-                    </tr>
-                    {% endfor %}
-
-                    {# Botón general debajo de la tabla si hay insumos en falta #}
-                    {% if insumos_con_stock_bajo_list %}
-                    <tr>
-                        <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 0px;">
-                            <a class="btn border-white text-primary text-white"
-                                style="background-color: #014BAC; width: 100%; max-width: 350px; height: 40px; border-radius: 15px;"
-                                href="{% url 'App_LUMINOVA:compras_desglose' %}">
-                                Gestionar Compras de Insumos en Falta
-                            </a>
-                        </td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
+        <div id="productos-content" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4"
+            style="display: none;">
+            {% for categoria_pt in categorias_PT %}
+            {% if categoria_pt %}
+            <div class="col">
+                <div class="card shadow-sm h-100">
+                    <a href="{% url 'App_LUMINOVA:categoria_pt_detail' categoria_pt.id %}"
+                        class="text-decoration-none text-dark d-flex flex-column h-100">
+                        {% if categoria_pt.imagen %}
+                        <img src="{{categoria_pt.imagen.url}}" class="card-img-top object-fit-contain"
+                            alt="{{categoria_pt.nombre}}" style="height: 150px;">
+                        {% else %}
+                        <img src="{% static 'img/placeholder.png' %}" class="card-img-top object-fit-contain"
+                            alt="Imagen no disponible" style="height: 150px;">
+                        {% endif %}
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">{{categoria_pt.nombre}}</h5>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            {% empty %}
+            <p class="text-white">No hay categorías de productos terminados disponibles.</p>
+            {% endfor %}
         </div>
     </div>
+
+    <div class="col-md-4 bg-primary border-start border-5 border-white"
+        style="margin-left: 0px; padding: 20px; border-radius: 25px;">
+        <table class="table table-borderless text-white">
+            {# ... Tabla de Órdenes de Producción ... #}
+            <thead>
+                <tr>
+                    <th colspan="3" class="bg-primary text-white text-center" style="padding-left: 0px;">
+                        <h4>Órdenes de Producción <br><small>(Insumos Solicitados)</small></h4>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white text-dark">
+                <tr>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">N° OP</th>
+                    <th class="text-white" style="background-color: #014BAC; width: 50%;">Producto</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Cantidad</th>
+                </tr>
+                {% for op_solicitud in ops_pendientes_deposito_list %}
+                <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
+                    <td class="text-white text-center">{{ op_solicitud.numero_op }}</td>
+                    <td class="text-white">{{ op_solicitud.producto_a_producir.descripcion|truncatechars:20 }}</td>
+                    <td class="text-white text-center">{{ op_solicitud.cantidad_a_producir }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center" style="background-color: #A19898;">No hay OPs con insumos
+                        solicitados.</td>
+                </tr>
+                {% endfor %}
+                <tr>
+                    <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 0px;">
+                        <a class="btn border-white text-primary text-white"
+                            style="background-color: #014BAC; width: 100%; max-width: 350px; height: 40px; border-radius: 15px;"
+                            href="{% url 'App_LUMINOVA:deposito_solicitudes_insumos' %}">Ver Todas las Solicitudes</a>
+                    </td>
+                </tr>
+            </tbody>
+
+            {# ... Tabla de Productos Terminados en Stock ... #}
+            <thead>
+                <tr style="border-top: 3px solid white;">
+                    <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;">
+                        <h4>Productos Terminados en Stock</h4>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white text-dark">
+                <tr>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">ID</th>
+                    <th class="text-white" style="background-color: #014BAC; width: 50%;">Descripción</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Stock</th>
+                </tr>
+                {% for pt_stock in productos_terminados_en_stock_list %}
+                <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
+                    <td class="text-white text-center">{{ pt_stock.id }}</td>
+                    <td class="text-white">
+                        {% if pt_stock.categoria %}
+                        <a href="{% url 'App_LUMINOVA:categoria_pt_detail' pt_stock.categoria.id %}"
+                            class="text-white text-decoration-none"
+                            title="Ver en categoría: {{ pt_stock.categoria.nombre }}">
+                            {{ pt_stock.descripcion|truncatechars:20 }}
+                        </a>
+                        {% else %}
+                        {{ pt_stock.descripcion|truncatechars:20 }}
+                        {% endif %}
+                    </td>
+                    <td class="text-white text-center">{{ pt_stock.stock }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-white text-center" style="background-color: #A19898;">No hay productos
+                        terminados con stock.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+            {# Tabla de Insumos con Stock Bajo - SIN BOTÓN POR FILA, SÓLO BOTÓN GENERAL ABAJO #}
+            <thead>
+                <tr style="border-top: 3px solid white;">
+                    <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;"> {#
+                        Colspan vuelve a 3 #}
+                        <h4>Insumos con Stock Bajo (< {{ umbral_stock_bajo|default:15000 }})</h4>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white text-dark">
+                <tr>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">ID</th>
+                    <th class="text-white" style="background-color: #014BAC; width: 50%;">Insumo</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Stock Actual</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 15%;">En Pedido</th>
+                </tr>
+                {% for insumo_bajo_stock_item in insumos_con_stock_bajo_list %}
+                <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
+                    <td class="text-white text-center">{{ insumo_bajo_stock_item.id }}</td>
+                    <td class="text-white">{{ insumo_bajo_stock_item.descripcion|truncatechars:25 }}</td>
+                    <td class="text-white text-center fw-bold text-danger">{{ insumo_bajo_stock_item.stock }}</td>
+                    <td class="text-white text-center">
+                        {% if insumo_bajo_stock_item.cantidad_en_pedido > 0 %}
+                        <button class="btn btn-sm btn-secondary" disabled
+                            title="Ya existe una OC o cantidad en pedido para este insumo. Revise Compras.">
+                            <i class="bi bi-hourglass-split"></i>
+                        </button>
+                        {% else %}
+                        <a href="{% url 'App_LUMINOVA:compras_seleccionar_proveedor_para_insumo' insumo_bajo_stock_item.id %}"
+                            class="btn btn-sm btn-warning"
+                            title="Gestionar Compra para {{ insumo_bajo_stock_item.descripcion }}">
+                            <i class="bi bi-cart-plus-fill"></i> Gestionar Compra
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center" style="background-color: #A19898;">
+                        No hay insumos con stock bajo actualmente.
+                    </td>
+                </tr>
+                {% endfor %}
+
+                {# Botón general debajo de la tabla si hay insumos en falta #}
+                {% if insumos_con_stock_bajo_list %}
+                <tr>
+                    <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 0px;">
+                        <a class="btn border-white text-primary text-white"
+                            style="background-color: #014BAC; width: 100%; max-width: 350px; height: 40px; border-radius: 15px;"
+                            href="{% url 'App_LUMINOVA:compras_desglose' %}">
+                            Gestionar Compras de Insumos en Falta
+                        </a>
+                    </td>
+                </tr>
+                {% endif %}
+
+            </tbody>
+        </table>
+    </div>
+</div>
 
 <script>
     function mostrarInsumos() {

@@ -64,6 +64,7 @@ class Insumo(models.Model):
     # ELIMINADOS: proveedor = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True, related_name="insumos_proveedor")
     imagen = models.ImageField(null=True, blank=True, upload_to='insumos/')
     stock = models.IntegerField(default=0)
+    cantidad_en_pedido = models.PositiveIntegerField(default=0, verbose_name="Cantidad en Pedido")
     # Puedes añadir un campo para un precio de referencia o último costo si lo deseas aquí,
     # pero el precio de compra específico vendrá de OfertaProveedor.
     # ultimo_costo_compra = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -282,6 +283,11 @@ class Orden(models.Model): # Este será para Órdenes de Compra
     def __str__(self):
         return f"OC: {self.numero_orden} - Proveedor: {self.proveedor.nombre}"
 
+    def get_estado_display_custom(self):
+        # Esto es idéntico a get_estado_display(), pero puedes personalizarlo si es necesario.
+        # Por ejemplo, podrías añadir lógica extra aquí.
+        return dict(self.ESTADO_ORDEN_COMPRA_CHOICES).get(self.estado, self.estado)
+    
     def save(self, *args, **kwargs):
         if self.insumo_principal and self.cantidad_principal and self.precio_unitario_compra is not None:
             self.total_orden_compra = self.cantidad_principal * self.precio_unitario_compra

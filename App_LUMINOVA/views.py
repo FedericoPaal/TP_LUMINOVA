@@ -1,5 +1,6 @@
 # TP_LUMINOVA-main/App_LUMINOVA/views.py
 
+from datetime import timedelta
 import logging
 from venv import logger
 from django.http import JsonResponse # Necesario para vistas AJAX
@@ -1926,69 +1927,65 @@ def compras_seleccionar_proveedor_para_insumo_view(request, insumo_id):
         oferta_id_seleccionada = request.POST.get('oferta_proveedor_id')
         proveedor_fallback_id_seleccionado = request.POST.get('proveedor_fallback_id')
         
-        proveedor_id_final = None
+        proveedor_id_final_para_oc = None # Renombrado para claridad
         
         if oferta_id_seleccionada:
             try:
-                oferta = OfertaProveedor.objects.get(id=oferta_id_seleccionada, insumo=insumo_objetivo)
-                proveedor_id_final = oferta.proveedor.id
-                logger.info(f"Oferta ID {oferta_id_seleccionada} seleccionada. Proveedor ID: {proveedor_id_final}")
+                oferta = OfertaProveedor.objects.get(id=oferta_id_seleccionada, insumo_id=insumo_id) # Asegurar que la oferta sea para este insumo
+                proveedor_id_final_para_oc = oferta.proveedor.id
+                logger.info(f"Oferta ID {oferta_id_seleccionada} seleccionada. Proveedor ID: {proveedor_id_final_para_oc}")
             except OfertaProveedor.DoesNotExist:
                 messages.error(request, "La oferta seleccionada no es válida o no corresponde al insumo.")
                 return redirect('App_LUMINOVA:compras_seleccionar_proveedor_para_insumo', insumo_id=insumo_id)
         elif proveedor_fallback_id_seleccionado:
-            proveedor_id_final = proveedor_fallback_id_seleccionado
+            proveedor_id_final_para_oc = proveedor_fallback_id_seleccionado
             logger.info(f"Proveedor fallback ID {proveedor_fallback_id_seleccionado} seleccionado.")
         else:
             messages.error(request, "Debe seleccionar un proveedor u oferta.")
             return redirect('App_LUMINOVA:compras_seleccionar_proveedor_para_insumo', insumo_id=insumo_id)
 
-        # Redirigir a la vista de creación de OC con ambos IDs
-        # Asegúrate que el nombre de la URL y los parámetros en la URL pattern coincidan
-        # con los que espera compras_crear_oc_view
+        # Redirigir a la vista de creación de OC con los nombres de parámetros que espera la URL pattern
+        logger.info(f"Redirigiendo a crear OC con insumo_id={insumo_id} y proveedor_id={proveedor_id_final_para_oc}")
         return redirect('App_LUMINOVA:compras_crear_oc_desde_insumo_y_proveedor', 
-                        insumo_id_preseleccionado=insumo_id, 
-                        proveedor_id_preseleccionado=proveedor_id_final)
-
-    # Lógica GET (la que ya teníamos para mostrar las ofertas)
-    ofertas = OfertaProveedor.objects.filter(insumo=insumo_objetivo).select_related('proveedor').order_by('precio_unitario_compra', 'tiempo_entrega_estimado_dias')
-    logger.info(f"GET: Encontradas {ofertas.count()} ofertas para el insumo '{insumo_objetivo.descripcion}'.")
+                        insumo_id=insumo_id,  # <--- USA 'insumo_id'
+                        proveedor_id=proveedor_id_final_para_oc) # <--- USA 'proveedor_id'
+    # ... (resto de la lógica GET) ...
+    # ... (código de la lógica GET de la vista) ...
+    ofertas = OfertaProveedor.objects.filter(insumo_id=insumo_id).select_related('proveedor').order_by('precio_unitario_compra', 'tiempo_entrega_estimado_dias')
+    insumo_objetivo = get_object_or_404(Insumo, id=insumo_id) # Necesario para el contexto GET
 
     proveedores_fallback = []
     if not ofertas.exists():
-        logger.warning(f"GET: No hay ofertas específicas para '{insumo_objetivo.descripcion}'. Listando proveedores generales.")
         proveedores_fallback = Proveedor.objects.all().order_by('nombre')[:5]
 
-    UMBRAL_STOCK_BAJO_INSUMOS = 15000 # Para el texto del insumo en la plantilla
+    UMBRAL_STOCK_BAJO_INSUMOS = 15000
     context = {
         'insumo_objetivo': insumo_objetivo,
         'ofertas_proveedores': ofertas,
         'proveedores_fallback': proveedores_fallback,
         'titulo_seccion': f"Seleccionar Oferta para: {insumo_objetivo.descripcion}",
-        'umbral_stock_bajo': UMBRAL_STOCK_BAJO_INSUMOS, # Para el badge de stock en la plantilla
+        'umbral_stock_bajo': UMBRAL_STOCK_BAJO_INSUMOS,
     }
     return render(request, 'compras/compras_seleccionar_proveedor.html', context)
 
 
-@login_required
-@transaction.atomic
-def compras_crear_oc_view(request, insumo_id_preseleccionado=None, proveedor_id_preseleccionado=None):
+def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None): # Nombres de parámetros ajustados
     insumo_preseleccionado_obj = None
     proveedor_preseleccionado_obj = None
     oferta_seleccionada = None
     initial_data = {}
+    logger.info(f"Entrando a compras_crear_oc_view con insumo_id={insumo_id}, proveedor_id={proveedor_id}")
 
-    if insumo_id_preseleccionado:
-        insumo_preseleccionado_obj = get_object_or_404(Insumo, id=insumo_id_preseleccionado)
+    if insumo_id:
+        insumo_preseleccionado_obj = get_object_or_404(Insumo, id=insumo_id)
         initial_data['insumo_principal'] = insumo_preseleccionado_obj
-        logger.info(f"Creando OC para insumo: {insumo_preseleccionado_obj.descripcion}")
+        logger.info(f"Insumo preseleccionado: {insumo_preseleccionado_obj.descripcion}")
 
-        if proveedor_id_preseleccionado:
-            proveedor_preseleccionado_obj = get_object_or_404(Proveedor, id=proveedor_id_preseleccionado)
+        if proveedor_id:
+            proveedor_preseleccionado_obj = get_object_or_404(Proveedor, id=proveedor_id)
             initial_data['proveedor'] = proveedor_preseleccionado_obj
             logger.info(f"Proveedor preseleccionado: {proveedor_preseleccionado_obj.nombre}")
 
-            # Buscar la oferta específica para pre-rellenar precio y tiempo de entrega
             oferta_seleccionada = OfertaProveedor.objects.filter(
                 insumo=insumo_preseleccionado_obj, 
                 proveedor=proveedor_preseleccionado_obj
@@ -1996,126 +1993,94 @@ def compras_crear_oc_view(request, insumo_id_preseleccionado=None, proveedor_id_
             
             if oferta_seleccionada:
                 initial_data['precio_unitario_compra'] = oferta_seleccionada.precio_unitario_compra
-                # Convertir fecha a string si es necesario para el widget DateInput
-                # initial_data['fecha_estimada_entrega'] = ... (si calculas basado en tiempo_entrega_estimado_dias)
-                logger.info(f"Oferta encontrada: Precio {oferta_seleccionada.precio_unitario_compra}, Entrega {oferta_seleccionada.tiempo_entrega_estimado_dias} días")
+                if oferta_seleccionada.tiempo_entrega_estimado_dias is not None:
+                    try:
+                        dias_entrega = int(oferta_seleccionada.tiempo_entrega_estimado_dias)
+                        fecha_actual = timezone.now().date()
+                        fecha_estimada = fecha_actual + timedelta(days=dias_entrega)
+                        initial_data['fecha_estimada_entrega'] = fecha_estimada.strftime('%Y-%m-%d')
+                        logger.info(f"Oferta: Precio {oferta_seleccionada.precio_unitario_compra}, Entrega {dias_entrega} días. Fecha est: {initial_data['fecha_estimada_entrega']}")
+                    except ValueError:
+                        logger.warning(f"Tiempo de entrega '{oferta_seleccionada.tiempo_entrega_estimado_dias}' no es válido.")
+                else:
+                    logger.info("Oferta encontrada, sin tiempo de entrega estimado.")
             else:
-                logger.warning(f"No se encontró oferta específica para insumo {insumo_preseleccionado_obj.id} y proveedor {proveedor_preseleccionado_obj.id}. El usuario deberá ingresar el precio.")
+                logger.warning(f"No se encontró oferta para insumo {insumo_preseleccionado_obj.id} y proveedor {proveedor_preseleccionado_obj.id}.")
         
-        # Sugerir cantidad (ejemplo)
+        elif insumo_preseleccionado_obj.ofertas_de_proveedores.exists(): # Si no se pasa proveedor, pero el insumo tiene ofertas
+            primera_oferta = insumo_preseleccionado_obj.ofertas_de_proveedores.order_by('precio_unitario_compra').first()
+            if primera_oferta:
+                initial_data['proveedor'] = primera_oferta.proveedor
+                initial_data['precio_unitario_compra'] = primera_oferta.precio_unitario_compra
+                proveedor_preseleccionado_obj = primera_oferta.proveedor # Para el contexto
+                # Podrías calcular fecha estimada de entrega aquí también si la primera_oferta tiene tiempo_entrega
+        
         UMBRAL_STOCK_BAJO_INSUMOS = 15000 
         cantidad_necesaria = UMBRAL_STOCK_BAJO_INSUMOS - insumo_preseleccionado_obj.stock
-        initial_data['cantidad_principal'] = max(10, cantidad_necesaria) # Comprar al menos 10 o lo necesario
+        initial_data['cantidad_principal'] = max(10, cantidad_necesaria) # Sugerir comprar al menos 10 o lo necesario
 
     if request.method == 'POST':
-        form = OrdenCompraForm(request.POST, insumo_para_ofertas=insumo_preseleccionado_obj) # Pasar insumo para filtrar proveedores si es necesario
+        form = OrdenCompraForm(request.POST, insumo_para_ofertas=insumo_preseleccionado_obj)
         if form.is_valid():
             try:
                 orden_compra = form.save(commit=False)
                 orden_compra.tipo = 'compra' 
                 orden_compra.estado = 'BORRADOR' 
-                # Si el precio no vino del form pero había una oferta, usar el de la oferta
-                if not form.cleaned_data.get('precio_unitario_compra') and oferta_seleccionada:
+                
+                # Si el precio no vino del form pero había una oferta seleccionada (y se pasó el proveedor_id), usar el de la oferta
+                # Esta lógica es más para cuando el campo precio es opcional en el form
+                if not form.cleaned_data.get('precio_unitario_compra') and oferta_seleccionada: # oferta_seleccionada se define en el GET si hay proveedor_id
                     orden_compra.precio_unitario_compra = oferta_seleccionada.precio_unitario_compra
                 
-                # Calcular total si es posible
-                if orden_compra.cantidad_principal and orden_compra.precio_unitario_compra:
-                    orden_compra.total_orden_compra = orden_compra.cantidad_principal * orden_compra.precio_unitario_compra
-                else:
-                    orden_compra.total_orden_compra = 0
+                # Si la fecha de entrega no vino del form pero se calculó una en el GET (si había oferta), usarla
+                # Esto también es por si el campo es opcional en el form y el usuario no lo llena
+                if not form.cleaned_data.get('fecha_estimada_entrega') and initial_data.get('fecha_estimada_entrega'):
+                     orden_compra.fecha_estimada_entrega = initial_data.get('fecha_estimada_entrega')
+
+                # El cálculo del total se hace en el save() del modelo Orden si los campos están
+                orden_compra.save() # Guardar la OC para que tenga un ID y se pueda referenciar
+
+                # --- ACTUALIZAR CANTIDAD EN PEDIDO DEL INSUMO ---
+                if orden_compra.insumo_principal and orden_compra.cantidad_principal and orden_compra.cantidad_principal > 0:
+                    insumo_obj_actualizar = orden_compra.insumo_principal # Obtener el objeto Insumo
+                    # Actualización atómica
+                    Insumo.objects.filter(id=insumo_obj_actualizar.id).update(
+                        cantidad_en_pedido=F('cantidad_en_pedido') + orden_compra.cantidad_principal
+                    )
+                    logger.info(f"Incrementada cantidad_en_pedido para '{insumo_obj_actualizar.descripcion}' en {orden_compra.cantidad_principal} unidades.")
+                # --- FIN ACTUALIZACIÓN CANTIDAD EN PEDIDO ---
                 
-                orden_compra.save() 
-                messages.success(request, f"Orden de Compra '{orden_compra.numero_orden}' creada exitosamente en estado '{orden_compra.get_estado_display_custom()}'.")
+                # Asegúrate de que get_estado_display() exista o usa get_estado_display_custom() si lo definiste.
+                # Asumiré que el modelo Orden tiene el campo 'estado' con choices, por lo que get_estado_display() está disponible.
+                messages.success(request, f"Orden de Compra '{orden_compra.numero_orden}' creada exitosamente en estado '{orden_compra.get_estado_display()}'. Total: ${orden_compra.total_orden_compra or 0:.2f}")
                 return redirect('App_LUMINOVA:compras_lista_oc') 
-            # ... (manejo de errores como antes) ...
             except DjangoIntegrityError as e_int:
-                # ...
-                messages.error(request, f"Error de BD: {e_int}")
-            except Exception as e:
-                # ...
-                messages.error(request, f"Error: {e}")
-        else:
-            logger.warning(f"Formulario OC inválido: {form.errors.as_json()}")
-    else: # GET
-        # Pasamos insumo_para_ofertas al inicializar el form para que pueda filtrar proveedores en su __init__
-        form = OrdenCompraForm(initial=initial_data, insumo_para_ofertas=insumo_preseleccionado_obj)
-
-
-    context = {
-        'form_oc': form,
-        'titulo_seccion': 'Crear Nueva Orden de Compra',
-        'insumo_preseleccionado': insumo_preseleccionado_obj,
-        'proveedor_preseleccionado': proveedor_preseleccionado_obj,
-        'oferta_seleccionada': oferta_seleccionada
-    }
-    return render(request, 'compras/compras_crear_editar_oc.html', context)
-
-
-
-@login_required
-@transaction.atomic
-def compras_crear_oc_view(request, insumo_id_preseleccionado=None, proveedor_id_preseleccionado=None): # Añadido proveedor_id
-    insumo_preseleccionado_obj = None
-    proveedor_preseleccionado_obj = None
-    initial_data = {}
-
-    if insumo_id_preseleccionado:
-        insumo_preseleccionado_obj = get_object_or_404(Insumo, id=insumo_id_preseleccionado)
-        initial_data['insumo_principal'] = insumo_preseleccionado_obj
-        # Si también se pasa un proveedor, lo usamos
-        if proveedor_id_preseleccionado:
-            proveedor_preseleccionado_obj = get_object_or_404(Proveedor, id=proveedor_id_preseleccionado)
-            initial_data['proveedor'] = proveedor_preseleccionado_obj
-            # Aquí podrías buscar un precio específico de este proveedor para este insumo si tuvieras el modelo OfertaProveedor
-            # Por ahora, tomamos el precio base del insumo.
-            if insumo_preseleccionado_obj.precio_unitario > 0:
-                initial_data['precio_unitario_compra'] = insumo_preseleccionado_obj.precio_unitario
-        elif insumo_preseleccionado_obj.proveedor: # Si no se pasa proveedor, pero el insumo tiene uno principal
-            initial_data['proveedor'] = insumo_preseleccionado_obj.proveedor
-            if insumo_preseleccionado_obj.precio_unitario > 0:
-                initial_data['precio_unitario_compra'] = insumo_preseleccionado_obj.precio_unitario
-        
-        # Sugerir cantidad para alcanzar el umbral de stock bajo (ejemplo simple)
-        UMBRAL_STOCK_BAJO_INSUMOS = 15000 # Debe ser consistente
-        cantidad_necesaria = UMBRAL_STOCK_BAJO_INSUMOS - insumo_preseleccionado_obj.stock
-        initial_data['cantidad_principal'] = max(1, cantidad_necesaria) # Comprar al menos 1
-
-    if request.method == 'POST':
-        form = OrdenCompraForm(request.POST)
-        if form.is_valid():
-            try:
-                orden_compra = form.save(commit=False)
-                orden_compra.tipo = 'compra' 
-                orden_compra.estado = 'BORRADOR' 
-                orden_compra.save() 
-                messages.success(request, f"Orden de Compra '{orden_compra.numero_orden}' creada exitosamente.")
-                return redirect('App_LUMINOVA:compras_lista_oc') 
-            # ... (manejo de errores existente) ...
-            except DjangoIntegrityError as e_int:
-                if 'UNIQUE constraint' in str(e_int) and 'numero_orden' in str(e_int): 
+                if 'UNIQUE constraint' in str(e_int) and ('numero_orden' in str(e_int) or 'numero_orden' in str(e_int).lower()): 
                     messages.error(request, f"Error: El número de orden de compra '{form.cleaned_data.get('numero_orden')}' ya existe.")
                 else:
                     messages.error(request, f"Error de base de datos al guardar la OC: {e_int}")
             except Exception as e:
                 messages.error(request, f"Error inesperado al crear la Orden de Compra: {e}")
                 logger.exception("Error inesperado en compras_crear_oc_view POST:")
-        else:
+        else: # Formulario no es válido
             logger.warning(f"Formulario OC inválido: {form.errors.as_json()}")
+            # Los errores del formulario se mostrarán automáticamente por django-bootstrap5
+            # Pero necesitamos repopular el contexto con los objetos preseleccionados para el renderizado
+            if insumo_id: # Si veníamos con un insumo preseleccionado
+                initial_data['insumo_principal'] = insumo_preseleccionado_obj
+            if proveedor_id: # Si veníamos con un proveedor preseleccionado
+                initial_data['proveedor'] = proveedor_preseleccionado_obj
+            # No es necesario pasar initial_data al form aquí porque el form ya se creó con request.POST
+            # y los errores se asociarán a esa instancia.
+
     else: # GET request
-        form = OrdenCompraForm(initial=initial_data)
+        form = OrdenCompraForm(initial=initial_data, insumo_para_ofertas=insumo_preseleccionado_obj)
 
     context = {
-        'form_oc': form,
+        'form_oc': form, # Pasa el formulario (ya sea nuevo o con errores POST)
         'titulo_seccion': 'Crear Nueva Orden de Compra',
         'insumo_preseleccionado': insumo_preseleccionado_obj,
-        'proveedor_preseleccionado': proveedor_preseleccionado_obj
+        'proveedor_preseleccionado': proveedor_preseleccionado_obj,
+        'oferta_seleccionada': oferta_seleccionada # Podría ser None si no se encontró oferta
     }
     return render(request, 'compras/compras_crear_editar_oc.html', context)
-
-# Elimina o comenta la vista anterior compras_crear_oc_desde_insumo_view si ya no la usas directamente.
-# O modifícala para que redirija a la nueva página de selección de proveedor.
-# Por ahora, la comentaremos para evitar confusión, ya que el botón en deposito.html
-# ahora debería apuntar a 'compras_seleccionar_proveedor_para_insumo'
-# @login_required
-# def compras_crear_oc_desde_insumo_view(request, insumo_id):
-#     return compras_crear_oc_view(request, insumo_id_preseleccionado=insumo_id)
