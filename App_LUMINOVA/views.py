@@ -899,36 +899,36 @@ def compras_desglose_view(request):
     logger.info("--- compras_desglose_view: INICIO ---")
 
     UMBRAL_STOCK_BAJO_INSUMOS = 15000
+    # Consulta original de insumos críticos
     insumos_criticos_query = Insumo.objects.filter(
         stock__lt=UMBRAL_STOCK_BAJO_INSUMOS
-    ).select_related('categoria').order_by(
+    ).select_related('categoria').order_by( # Quitamos 'proveedor' del select_related aquí
         'categoria__nombre', 'stock', 'descripcion'
     )
     
     insumos_criticos_list_con_estado_oc = []
-    for insumo in insumos_criticos_query:
-        # Verificar si existe una OC no finalizada/cancelada para este insumo
+    for insumo_item in insumos_criticos_query: # Cambiado 'insumo' a 'insumo_item' para evitar conflicto de nombres si 'insumo' se usa más tarde
         oc_pendiente_existe = Orden.objects.filter(
-            insumo_principal=insumo,
+            insumo_principal=insumo_item, # Usar insumo_item
             tipo='compra'
         ).exclude(
             Q(estado='COMPLETADA') | Q(estado='RECIBIDA_TOTAL') | Q(estado='CANCELADA')
         ).exists()
         
         insumos_criticos_list_con_estado_oc.append({
-            'insumo': insumo,
+            'insumo': insumo_item, # Pasar el objeto insumo completo
             'tiene_oc_pendiente': oc_pendiente_existe
         })
         
         if oc_pendiente_existe:
-            logger.info(f"Insumo crítico '{insumo.descripcion}' (ID: {insumo.id}) YA TIENE una OC pendiente.")
+            logger.info(f"Insumo crítico '{insumo_item.descripcion}' (ID: {insumo_item.id}) YA TIENE una OC pendiente.")
         else:
-            logger.info(f"Insumo crítico '{insumo.descripcion}' (ID: {insumo.id}) NO tiene OC pendiente.")
+            logger.info(f"Insumo crítico '{insumo_item.descripcion}' (ID: {insumo_item.id}) NO tiene OC pendiente.")
 
-    logger.info(f"Compras_desglose_view: Total insumos críticos encontrados: {len(insumos_criticos_list_con_estado_oc)}")
+    logger.info(f"Compras_desglose_view: Total insumos críticos para mostrar: {len(insumos_criticos_list_con_estado_oc)}")
     
     context = {
-        'insumos_criticos_list_con_estado': insumos_criticos_list_con_estado_oc, # Nueva lista con el flag
+        'insumos_criticos_list_con_estado': insumos_criticos_list_con_estado_oc,
         'umbral_stock_bajo': UMBRAL_STOCK_BAJO_INSUMOS,
         'titulo_seccion': 'Gestionar Compra por Stock Bajo',
     }
