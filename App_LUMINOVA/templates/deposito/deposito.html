@@ -105,6 +105,7 @@
                     <td class="text-white text-center">{{ op_solicitud.numero_op }}</td>
                     <td class="text-white">{{ op_solicitud.producto_a_producir.descripcion|truncatechars:20 }}</td>
                     <td class="text-white text-center">{{ op_solicitud.cantidad_a_producir }}</td>
+                    <td class="text-white text-center"></td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -207,7 +208,7 @@
                 {# Botón general debajo de la tabla si hay insumos en falta #}
                 {% if insumos_con_stock_bajo_list %}
                 <tr>
-                    <td colspan="3" class="bg-primary text-center pt-3" style="padding-left: 0px;">
+                    <td colspan="4" class="bg-primary text-center pt-3" style="padding-left: 0px;">
                         <a class="btn border-white text-primary text-white"
                             style="background-color: #014BAC; width: 100%; max-width: 350px; height: 40px; border-radius: 15px;"
                             href="{% url 'App_LUMINOVA:compras_desglose' %}">
