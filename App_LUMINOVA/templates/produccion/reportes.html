@@ -1,85 +1,85 @@
 {% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titulo_seccion|default:"Reportes de Producción" }}{% endblock %}
 
 {% block sidebar_content %}
-
-    <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
-        <div class="position-sticky pt-4">
-            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
-                <span>Produccion</span>
-            </h6>
-            <hr class="text-white">
-            <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link  {% if '/ordenes/' in request.path %}active{% endif %}  text-white fw-bold custom-active-button d-flex align-items-center" aria-current="page" href="{% url 'App_LUMINOVA:produccion_principal' %}" style="border-radius: 25px;">
-                         <span class="ms-2">Ordenes</span>
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link  {% if '/planificacion/' in request.path %}active{% endif %}  text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:planificacion_produccion' %}" style="border-radius: 25px; padding-top: 0.75rem; padding-bottom: 0.75rem;">
-                         <span class="ms-2">Planificacion</span>
-                    </a>
-                </li>
-                <li class="nav-item mt-2">
-                    <a class="nav-link  {% if '/reportes/' in request.path %}active{% endif %}  text-white fw-bold custom-active-button d-flex align-items-center" href="{% url 'App_LUMINOVA:reportes_produccion' %}" style="border-radius: 25px;">
-                         <span class="ms-2">Reportes</span>
-                    </a>
-                </li>
-
-            </ul>
-        </div>
-    </nav>
-
-
+    {% include 'produccion/produccion_sidebar.html' %}
 {% endblock %}
+
 {% block content %}
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">{{ titulo_seccion }}</h1>
+        {# Botón para crear reporte general (no asociado a una OP específica), si es necesario #}
+        {# <a href="#" class="btn btn-sm btn-outline-danger"><i class="bi bi-plus-circle-fill"></i> Nuevo Reporte General</a> #}
     </div>
 
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th class="align-middle color-thead">N° Orden</th>
-                <th class="align-middle color-thead">Sector</th>
-                <th class="align-middle color-thead">Fecha</th>
-                <th class="align-middle color-thead">Tipo de problema</th>
-                <th class="align-middle color-thead">Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
 
-            {% for reporte in reportes %}
+    {% if reportes_list %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="color-thead"> {# Usando tu clase color-thead #}
                 <tr>
-
-                    <td>{{ reporte.numero_orden }}</td>
-                    <td>{{ reporte.sector }}</td>
-                    <td>{{ reporte.fecha }}</td>
-                    <td>{{ reporte.tipo_problema }}</td>
-                    <td>
-                        <a href="#" class="text-primary text-decoration-none" data-bs-toggle="modal" data-bs-target="#modalReporte{{ reporte.id }}">
-                            Ver
-                        </a>
-                        <div class="modal" tabindex="-1" id="modalReporte{{ reporte.id }}">
-                            <div class="modal-dialog">
-                                <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title">Informe del Reporte</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <p>{{ reporte.descripcion }}</p>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                </div>
+                    <th class="align-middle">N° Reporte</th>
+                    <th class="align-middle">Fecha</th>
+                    <th class="align-middle">OP Asociada</th>
+                    <th class="align-middle">Tipo de Problema</th>
+                    <th class="align-middle">Sector Reporta</th>
+                    <th class="align-middle">Reportado Por</th>
+                    <th class="align-middle text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reporte_item in reportes_list %} {# Cambiado a reporte_item #}
+                    <tr>
+                        <td>{{ reporte_item.n_reporte }}</td>
+                        <td>{{ reporte_item.fecha|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            {% if reporte_item.orden_produccion_asociada %}
+                                <a href="{% url 'App_LUMINOVA:produccion_detalle_op' reporte_item.orden_produccion_asociada.id %}">
+                                    {{ reporte_item.orden_produccion_asociada.numero_op }}
+                                </a>
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>{{ reporte_item.tipo_problema }}</td>
+                        <td>{{ reporte_item.sector_reporta.nombre|default_if_none:"N/A" }}</td>
+                        <td>{{ reporte_item.reportado_por.username|default_if_none:"Sistema" }}</td>
+                        <td class="text-center">
+                            <a href="#" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalReporte{{ reporte_item.id }}" title="Ver descripción del problema">
+                                <i class="bi bi-eye-fill"></i> Ver
+                            </a>
+                            {# Modal para ver la descripción completa #}
+                            <div class="modal fade" tabindex="-1" id="modalReporte{{ reporte_item.id }}" aria-labelledby="modalReporteLabel{{ reporte_item.id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="modalReporteLabel{{ reporte_item.id }}">Informe del Reporte: {{ reporte_item.n_reporte }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p><strong>Tipo de Problema:</strong> {{ reporte_item.tipo_problema }}</p>
+                                        <p><strong>OP Asociada:</strong> {{ reporte_item.orden_produccion_asociada.numero_op|default:"N/A" }}</p>
+                                        <p><strong>Fecha:</strong> {{ reporte_item.fecha|date:"d/m/Y H:i" }}</p>
+                                        <hr>
+                                        <p><strong>Descripción:</strong></p>
+                                        <p>{{ reporte_item.descripcion_problema|linebreaksbr|default:"No hay descripción." }}</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                    </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-
-
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info mt-3">No hay reportes de producción registrados.</div>
+    {% endif %}
 {% endblock %}

@@ -14,6 +14,7 @@ from .views import (
     ventas_lista_ov_view, ventas_crear_ov_view,
     lista_clientes_view, crear_cliente_view, editar_cliente_view, eliminar_cliente_view,
     proveedor_create_view,
+    ventas_ver_factura_pdf_view,
 
     # Compras (Renombrar vistas si es necesario en views.py)
     compras_lista_oc_view, # Vista para el listado principal de Órdenes de Compra
@@ -28,14 +29,14 @@ from .views import (
     produccion_detalle_op_view,
     planificacion_produccion_view,
     reportes_produccion_view,
-
+    crear_reporte_produccion_view,
     # Depósito
     deposito_view, # Vista principal de depósito (categorías)
     deposito_solicitudes_insumos_view,
     deposito_detalle_solicitud_op_view,
     deposito_enviar_insumos_op_view,
 
-     depo_seleccion,# (Eliminar si ya no se usan directamente por el nuevo flujo)
+    depo_seleccion,# (Eliminar si ya no se usan directamente por el nuevo flujo)
 
     # CRUDs para Categorías, Insumos, Productos Terminados (Class-Based Views)
     Categoria_IDetailView, Categoria_ICreateView, Categoria_IUpdateView, Categoria_IDeleteView,
@@ -52,6 +53,7 @@ from .views import (
     crear_rol_ajax, get_rol_data_ajax, editar_rol_ajax, eliminar_rol_ajax,
     get_permisos_rol_ajax, actualizar_permisos_rol_ajax,
 )
+
 
 app_name = 'App_LUMINOVA'
 
@@ -82,6 +84,7 @@ urlpatterns = [
     path('ventas/orden/<int:ov_id>/generar-factura/', ventas_generar_factura_view, name='ventas_generar_factura'),
     path('ventas/orden/<int:ov_id>/editar/', ventas_editar_ov_view, name='ventas_editar_ov'),   # NUEVA
     path('ventas/orden/<int:ov_id>/cancelar/', ventas_cancelar_ov_view, name='ventas_cancelar_ov'), # NUEVA
+    path('ventas/factura/<int:factura_id>/pdf/', ventas_ver_factura_pdf_view, name='ventas_ver_factura_pdf'),
 
     # --- Rutas de Compras ---
     path('compras/', compras_lista_oc_view, name='compras_lista_oc'), # Vista principal de compras
@@ -102,6 +105,7 @@ urlpatterns = [
     path('produccion/planificacion/', planificacion_produccion_view, name='planificacion_produccion'),
     path('produccion/orden/<int:op_id>/solicitar-insumos/', solicitar_insumos_op_view, name='produccion_solicitar_insumos_op'),
     path('produccion/reportes/', reportes_produccion_view, name='reportes_produccion'),
+    path('produccion/orden/<int:op_id>/crear-reporte/', crear_reporte_produccion_view, name='crear_reporte_produccion'),
 
     # --- Rutas de Depósito ---
     path('deposito/', deposito_view, name='deposito_view'),

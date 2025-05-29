@@ -2,7 +2,7 @@
 {% load static %}
 {% load django_bootstrap5 %}
 
-{% block title %}{{ titulo_seccion|default:"Detalle Orden de Venta" }}{% endblock %}
+{% block title %}{{ titulo_seccion|default:"Detalle Orden de Venta" }} - {{ ov.numero_ov }}{% endblock %}
 
 {% block sidebar_content %}
     {% include 'ventas/ventas_sidebar.html' %}
@@ -11,98 +11,167 @@
 {% block content %}
 <div class="container mt-4">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2">{{ titulo_seccion }}</h1>
-        <a href="{% url 'App_LUMINOVA:ventas_lista_ov' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left-circle"></i> Volver al Listado de OVs
-        </a>
+        <h1 class="h2">{{ titulo_seccion|default:"Detalle Orden de Venta:" }} <span class="text-primary">{{ ov.numero_ov }}</span></h1>
+        <div>
+            {% if ov.estado == 'PENDIENTE' or ov.estado == 'CONFIRMADA' %} {# Solo permitir editar en estos estados #}
+                 <a href="{% url 'App_LUMINOVA:ventas_editar_ov' ov.id %}" class="btn btn-outline-primary btn-sm me-2">
+                     <i class="bi bi-pencil-square"></i> Editar OV
+                 </a>
+            {% endif %}
+            <a href="{% url 'App_LUMINOVA:ventas_lista_ov' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left-circle"></i> Volver al Listado
+            </a>
+        </div>
     </div>
 
     {% bootstrap_messages %}
 
-    <div class="row">
+    <div class="row g-4"> {# g-4 para añadir espacio entre columnas #}
         <div class="col-lg-8">
+            {# Card de Información de la Orden de Venta #}
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
-                    Información de la Orden de Venta
+                    <i class="bi bi-file-earmark-text-fill me-2"></i>Información de la Orden de Venta
                 </div>
                 <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-3">N° OV:</dt><dd class="col-sm-9">{{ ov.numero_ov }}</dd>
-                        <dt class="col-sm-3">Cliente:</dt><dd class="col-sm-9">{{ ov.cliente.nombre }}</dd>
-                        <dt class="col-sm-3">Fecha Creación:</dt><dd class="col-sm-9">{{ ov.fecha_creacion|date:"d/m/Y H:i" }}</dd>
-                        <dt class="col-sm-3">Estado OV:</dt>
-                        <dd class="col-sm-9">
-                            <span class="badge {% if ov.estado == 'PENDIENTE' %}bg-warning text-dark{% elif ov.estado == 'CONFIRMADA' %}bg-info{% elif ov.estado == 'EN_PRODUCCION' %}bg-primary{% elif ov.estado == 'LISTA_ENTREGA' %}bg-secondary{% elif ov.estado == 'COMPLETADA' %}bg-success{% elif ov.estado == 'CANCELADA' %}bg-danger{% else %}bg-light text-dark{% endif %}">
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-4 col-md-3">N° Orden Venta:</dt>
+                        <dd class="col-sm-8 col-md-9">{{ ov.numero_ov }}</dd>
+
+                        <dt class="col-sm-4 col-md-3">Cliente:</dt>
+                        <dd class="col-sm-8 col-md-9">{{ ov.cliente.nombre }}</dd>
+
+                        <dt class="col-sm-4 col-md-3">Fecha Creación:</dt>
+                        <dd class="col-sm-8 col-md-9">{{ ov.fecha_creacion|date:"d/m/Y H:i" }} hs</dd>
+
+                        <dt class="col-sm-4 col-md-3">Estado Actual OV:</dt>
+                        <dd class="col-sm-8 col-md-9">
+                            <span class="badge fs-6
+                                {% if ov.estado == 'PENDIENTE' %}bg-warning text-dark
+                                {% elif ov.estado == 'CONFIRMADA' %}bg-secondary
+                                {% elif ov.estado == 'INSUMOS_SOLICITADOS' %}bg-info-subtle text-info-emphasis border border-info-subtle
+                                {% elif ov.estado == 'PRODUCCION_INICIADA' %}bg-primary 
+                                {% elif ov.estado == 'PRODUCCION_CON_PROBLEMAS' %}bg-danger-subtle text-danger-emphasis border border-danger-subtle
+                                {% elif ov.estado == 'LISTA_ENTREGA' %}bg-success-subtle text-success-emphasis border border-success-subtle
+                                {% elif ov.estado == 'COMPLETADA' %}bg-success
+                                {% elif ov.estado == 'CANCELADA' %}bg-dark 
+                                {% else %}bg-light text-dark{% endif %}">
                                 {{ ov.get_estado_display }}
                             </span>
                         </dd>
-                        <dt class="col-sm-3">Notas:</dt><dd class="col-sm-9">{{ ov.notas|default_if_none:"-"|linebreaksbr }}</dd>
+
+                        <dt class="col-sm-4 col-md-3">Notas de la Orden:</dt>
+                        <dd class="col-sm-8 col-md-9">{{ ov.notas|default_if_none:"Sin notas."|linebreaksbr }}</dd>
                     </dl>
                 </div>
             </div>
 
+            {# Card de Ítems de la Orden #}
             <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">Ítems de la Orden</div>
+                <div class="card-header bg-success text-white">
+                     <i class="bi bi-list-ul me-2"></i>Ítems de la Orden
+                </div>
                 <div class="card-body p-0">
                     {% if items_ov %}
                     <ul class="list-group list-group-flush">
                         {% for item in items_ov %}
-                        <li class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">{{ item.producto_terminado.descripcion }}</h6>
-                                <small class="text-muted">Subtotal: ${{ item.subtotal|floatformat:2 }}</small>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="my-0">{{ item.producto_terminado.descripcion }}</h6>
+                                <small class="text-muted">Cantidad: {{ item.cantidad }} Unid. × ${{ item.precio_unitario_venta|floatformat:2 }} c/u</small>
                             </div>
-                            <small class="text-muted">Cantidad: {{ item.cantidad }} Unidades -  ${{ item.precio_unitario_venta|floatformat:2 }} c/u</small>
+                            <span class="text-muted fs-6">${{ item.subtotal|floatformat:2 }}</span>
                         </li>
                         {% endfor %}
                     </ul>
                     {% else %}
-                    <p class="p-3 text-muted">Esta orden no tiene ítems.</p>
+                    <div class="p-3">
+                        <p class="text-muted mb-0">Esta orden de venta no tiene ítems registrados.</p>
+                    </div>
                     {% endif %}
                 </div>
-                <div class="card-footer fw-bold fs-5 text-end">
-                    Total Orden: ${{ ov.total_ov|floatformat:2 }}
+                {% if items_ov %}
+                <div class="card-footer text-end bg-light">
+                    <h5 class="mb-0">Total Orden: <span class="fw-bold text-success">${{ ov.total_ov|floatformat:2 }}</span></h5>
                 </div>
+                {% endif %}
             </div>
         </div>
 
+        {# Columna Derecha: Facturación y OPs Asociadas #}
         <div class="col-lg-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">Facturación</div>
+            {# Card de Facturación #}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white"> {# Cambiado a bg-info para diferenciar #}
+                    <i class="bi bi-receipt me-2"></i>Facturación
+                </div>
                 <div class="card-body">
                     {% if ov.factura_asociada %}
-                        <p><strong>Factura Generada:</strong></p>
-                        <p>N° Factura: {{ ov.factura_asociada.numero_factura }}</p>
-                        <p>Fecha Emisión: {{ ov.factura_asociada.fecha_emision|date:"d/m/Y H:i" }}</p>
-                        <p>Total Facturado: ${{ ov.factura_asociada.total_facturado|floatformat:2 }}</p>
-                        <a href="#" class="btn btn-sm btn-outline-info"><i class="bi bi-printer"></i> Ver/Imprimir Factura</a>
-                    {% elif factura_form %}
-                        <p>Esta orden está lista para ser facturada.</p>
-                        <form method="post" action="{% url 'App_LUMINOVA:ventas_generar_factura' ov.id %}">
+                        <h6>Factura Generada</h6>
+                        <dl class="row mb-2 small">
+                            <dt class="col-sm-5">N° Factura:</dt>
+                            <dd class="col-sm-7">{{ ov.factura_asociada.numero_factura }}</dd>
+                            <dt class="col-sm-5">Fecha Emisión:</dt>
+                            <dd class="col-sm-7">{{ ov.factura_asociada.fecha_emision|date:"d/m/Y H:i" }}</dd>
+                            <dt class="col-sm-5">Total Facturado:</dt>
+                            <dd class="col-sm-7 fw-bold">${{ ov.factura_asociada.total_facturado|floatformat:2 }}</dd>
+                        </dl>
+                        <a href="{% url 'App_LUMINOVA:ventas_ver_factura_pdf' factura_id=ov.factura_asociada.id %}" 
+                           class="btn btn-sm btn-outline-primary w-100 mt-2" 
+                           target="_blank">
+                            <i class="bi bi-printer-fill"></i> Ver/Imprimir Factura
+                        </a>
+                    {% elif factura_form and puede_facturar %}
+                        <h6>Generar Nueva Factura</h6>
+                        {% if detalle_cancelacion_factura %}
+                            <div class="alert alert-warning small p-2 mt-2" role="alert">
+                                <i class="bi bi-exclamation-triangle-fill"></i> {{ detalle_cancelacion_factura }}
+                            </div>
+                        {% endif %}
+                        <form method="post" action="{% url 'App_LUMINOVA:ventas_generar_factura' ov.id %}" class="mt-2">
                             {% csrf_token %}
                             {% bootstrap_form factura_form layout='vertical' %}
                             <div class="d-grid mt-3">
                                 <button type="submit" class="btn btn-success">
-                                    <i class="bi bi-receipt-cutoff"></i> Generar Factura
+                                    <i class="bi bi-receipt-cutoff"></i> Generar Factura Ahora
                                 </button>
                             </div>
                         </form>
                     {% else %}
-                        <p class="text-muted">La orden no está en un estado que permita la facturación o ya ha sido facturada.</p>
-                        {% if ov.estado == 'PENDIENTE' or ov.estado == 'EN_PRODUCCION' %}
-                        <small>(Estado actual: {{ ov.get_estado_display }})</small>
-                        {% endif %}
+                        <p class="text-muted small mb-0">
+                            {% if ov.factura_asociada %} {# Esto no debería alcanzarse si ya se manejó arriba, pero por si acaso #}
+                                La factura ya ha sido generada.
+                            {% else %}
+                                La orden no está en un estado que permita la facturación en este momento.
+                                <br><small>(Estado actual: {{ ov.get_estado_display }})</small>
+                            {% endif %}
+                        </p>
                     {% endif %}
                 </div>
             </div>
 
+            {# Card de Órdenes de Producción Asociadas #}
             {% if ov.ops_generadas.all %}
-            <div class="card shadow-sm mt-4">
-                <div class="card-header bg-secondary text-white">Órdenes de Producción Asociadas</div>
-                <ul class="list-group list-group-flush">
-                    {% for op in ov.ops_generadas.all %}
-                        <li class="list-group-item">
-                            <a href="{% url 'App_LUMINOVA:produccion_detalle_op' op.id %}">{{ op.numero_op }}</a> - {{ op.producto_a_producir.descripcion|truncatechars:20 }} ({{ op.get_estado_op_display }})
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <i class="bi bi-gear-fill me-2"></i>Órdenes de Producción Asociadas
+                </div>
+                <ul class="list-group list-group-flush small">
+                    {% for op_asociada in ov.ops_generadas.all %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a href="{% url 'App_LUMINOVA:produccion_detalle_op' op_asociada.id %}">{{ op_asociada.numero_op }}</a>
+                            <span class="badge 
+                                {% if op_asociada.estado_op.nombre.lower == 'pendiente' %}bg-warning text-dark
+                                {% elif op_asociada.estado_op.nombre.lower == 'insumos solicitados' %}bg-info text-dark
+                                {% elif op_asociada.estado_op.nombre.lower == 'insumos recibidos' %}bg-primary-subtle text-primary-emphasis
+                                {% elif op_asociada.estado_op.nombre.lower == 'producción iniciada' %}bg-primary
+                                {% elif op_asociada.estado_op.nombre.lower == 'en proceso' %}bg-primary
+                                {% elif op_asociada.estado_op.nombre.lower == 'completada' %}bg-success
+                                {% elif op_asociada.estado_op.nombre.lower == 'cancelada' %}bg-danger
+                                {% elif op_asociada.estado_op.nombre.lower == 'pausada' %}bg-secondary
+                                {% else %}bg-light text-dark{% endif %} rounded-pill">
+                                {{ op_asociada.get_estado_op_display }}
+                            </span>
                         </li>
                     {% endfor %}
                 </ul>

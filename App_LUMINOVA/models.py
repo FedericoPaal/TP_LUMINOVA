@@ -214,15 +214,32 @@ class OrdenProduccion(models.Model):
     def __str__(self):
         return f"OP: {self.numero_op} - {self.cantidad_a_producir} x {self.producto_a_producir.descripcion}"
 
-class Reportes(models.Model): # Lo dejamos como estaba, pero considera vincularlo a OrdenProduccion
+class Reportes(models.Model):
     orden_produccion_asociada = models.ForeignKey(OrdenProduccion, on_delete=models.SET_NULL, null=True, blank=True, related_name="reportes_incidencia")
-    n_reporte = models.CharField(max_length=20, unique=True) # Cambiado a CharField
-    fecha = models.DateTimeField(default=timezone.now) # Cambiado a DateTimeField
-    tipo_problema = models.CharField(max_length=100) # Aumentado max_length
-    informe_reporte = models.TextField(blank=True, null=True) # Cambiado a TextField
-    def __str__(self):
-        return f"Reporte {self.n_reporte}"
+    n_reporte = models.CharField(max_length=20, unique=True)
+    fecha = models.DateTimeField(default=timezone.now)
+    tipo_problema = models.CharField(max_length=100)
+    informe_reporte = models.TextField(blank=True, null=True) # O descripcion_problema si lo renombraste aquí
+    
+    # ESTOS SON LOS CAMPOS EN CUESTIÓN:
+    reportado_por = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, # Decide qué hacer si el usuario se elimina
+        null=True, 
+        blank=True, 
+        related_name="reportes_creados"
+    )
+    sector_reporta = models.ForeignKey(
+        SectorAsignado, 
+        on_delete=models.SET_NULL, # Decide qué hacer si el sector se elimina
+        null=True, 
+        blank=True, 
+        related_name="reportes_originados_aqui"
+    )
 
+    def __str__(self):
+        op_num = self.orden_produccion_asociada.numero_op if self.orden_produccion_asociada else 'N/A'
+        return f"Reporte {self.n_reporte} (OP: {op_num})"
 class Factura(models.Model):
     numero_factura = models.CharField(max_length=50, unique=True) # Aumentado max_length
     orden_venta = models.OneToOneField(OrdenVenta, on_delete=models.PROTECT, related_name='factura_asociada')

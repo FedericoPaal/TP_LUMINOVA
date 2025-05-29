@@ -1,4 +1,5 @@
-from django import forms
+import logging
+from django import apps, forms
 from django.contrib.auth.models import  Group, Permission
 from .models import (
     Cliente,
@@ -7,9 +8,11 @@ from .models import (
     Orden, 
     Proveedor, # Asegúrate de importar el modelo Proveedor
     OrdenVenta, ItemOrdenVenta, ProductoTerminado,
-    OrdenProduccion, EstadoOrden, SectorAsignado, CategoriaInsumo, Insumo, CategoriaProductoTerminado
+    OrdenProduccion, EstadoOrden, SectorAsignado, CategoriaInsumo, Insumo, CategoriaProductoTerminado,SectorAsignado, Reportes
 )
+from django.db.models import Q
 
+logger = logging.getLogger(__name__)
 
 class RolForm(forms.Form):
     nombre = forms.CharField(label="Nombre del Rol", max_length=150, required=True,
@@ -111,15 +114,101 @@ class OrdenProduccionUpdateForm(forms.ModelForm):
             'fecha_fin_planificada': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
+        labels = {
+            'estado_op': 'Cambiar Estado de OP',
+            'sector_asignado_op': 'Asignar Sector de Producción',
+            # ... (otras etiquetas)
+        }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['estado_op'].queryset = EstadoOrden.objects.all().order_by('nombre')
-        self.fields['estado_op'].empty_label = "Seleccionar Estado..."
+        
         self.fields['sector_asignado_op'].queryset = SectorAsignado.objects.all().order_by('nombre')
         self.fields['sector_asignado_op'].empty_label = "Seleccionar Sector..."
+        
+        instance = getattr(self, 'instance', None)
+        
+        # Definición de nombres de estado (minúsculas para comparación)
+        ESTADO_PENDIENTE = "pendiente"
+        ESTADO_INSUMOS_SOLICITADOS = "insumos solicitados"
+        ESTADO_INSUMOS_RECIBIDOS = "insumos recibidos"
+        ESTADO_PRODUCCION_INICIADA = "producción iniciada"
+        ESTADO_EN_PROCESO = "en proceso"
+        ESTADO_PRODUCCION_PARCIAL = "producción parcial"
+        ESTADO_PAUSADA = "pausada"
+        ESTADO_COMPLETADA = "completada"
+        ESTADO_CANCELADA = "cancelada"
+
+        nombres_estados_permitidos_dropdown = [] # Estados que aparecerán en el dropdown
+        campos_a_deshabilitar = []
+        
+        if instance and instance.pk and instance.estado_op:
+            estado_actual_nombre_lower = instance.estado_op.nombre.lower()
+            estado_actual_nombre_original = instance.estado_op.nombre
+
+            if estado_actual_nombre_lower == ESTADO_PENDIENTE:
+                nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'Pausada', 'Cancelada']
+                # Deshabilitar otros campos de planificación
+                campos_a_deshabilitar = ['sector_asignado_op', 'fecha_inicio_planificada', 'fecha_fin_planificada', 'notas']
+            
+            elif estado_actual_nombre_lower == ESTADO_INSUMOS_SOLICITADOS:
+                nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'Pausada', 'Cancelada']
+                campos_a_deshabilitar = ['sector_asignado_op', 'fecha_inicio_planificada', 'fecha_fin_planificada', 'notas']
+
+            elif estado_actual_nombre_lower == ESTADO_INSUMOS_RECIBIDOS:
+                # ¡AHORA SE HABILITAN LOS CAMPOS!
+                nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'Producción Iniciada', 'Pausada', 'Cancelada']
+                # No hay campos a deshabilitar, o solo notas si prefieres
+            
+            elif estado_actual_nombre_lower == ESTADO_PRODUCCION_INICIADA:
+                 nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'En Proceso', 'Producción Parcial', 'Pausada', 'Completada', 'Cancelada']
+            
+            elif estado_actual_nombre_lower == ESTADO_PRODUCCION_PARCIAL:
+                 nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'En Proceso', 'Pausada', 'Completada', 'Cancelada']
+
+            elif estado_actual_nombre_lower == ESTADO_EN_PROCESO:
+                 nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'Producción Parcial', 'Pausada', 'Completada', 'Cancelada']
+            
+            elif estado_actual_nombre_lower == ESTADO_PAUSADA:
+                nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'Pendiente', 'Cancelada']
+                # Al volver a Pendiente, los campos de planificación deberían volver a deshabilitarse
+                # hasta que pase a Insumos Recibidos de nuevo.
+                # Si reanuda a un estado productivo, se habilitan.
+                # Por ahora, si vuelve a pendiente, se deshabilitarán en la próxima carga del form.
+                # Podrías añadir lógica aquí para deshabilitar si el estado seleccionado es Pendiente.
+            
+            elif estado_actual_nombre_lower in [ESTADO_COMPLETADA, ESTADO_CANCELADA]:
+                nombres_estados_permitidos_dropdown = [estado_actual_nombre_original]
+                campos_a_deshabilitar = ['sector_asignado_op', 'fecha_inicio_planificada', 'fecha_fin_planificada', 'notas'] # Todo deshabilitado
+
+            else: 
+                logger.warning(f"Estado OP '{instance.estado_op.nombre}' no tiene transiciones/habilitaciones definidas en Form. Mostrando todos.")
+                self.fields['estado_op'].queryset = EstadoOrden.objects.all().order_by('nombre')
+
+            if nombres_estados_permitidos_dropdown:
+                q_objects = Q()
+                for nombre_estado in nombres_estados_permitidos_dropdown:
+                    q_objects |= Q(nombre__iexact=nombre_estado)
+                self.fields['estado_op'].queryset = EstadoOrden.objects.filter(q_objects).order_by('nombre')
+            elif not self.fields['estado_op'].queryset and instance and instance.estado_op:
+                 self.fields['estado_op'].queryset = EstadoOrden.objects.filter(id=instance.estado_op.id)
+        else:
+            self.fields['estado_op'].queryset = EstadoOrden.objects.all().order_by('nombre')
+            
+        self.fields['estado_op'].empty_label = None 
+
+        # Deshabilitar campos según la lógica
+        for field_name in campos_a_deshabilitar:
+            if field_name in self.fields:
+                self.fields[field_name].disabled = True
+                # Opcionalmente, añadir un placeholder o cambiar el widget si está deshabilitado
+                # self.fields[field_name].widget.attrs['placeholder'] = "No editable en este estado"
+                # self.fields[field_name].widget.attrs['readonly'] = True # Alternativa a disabled
+
+        # Campos opcionales (su 'required' es False si blank=True en el modelo)
         self.fields['fecha_inicio_planificada'].required = False
         self.fields['fecha_fin_planificada'].required = False
-        self.fields['sector_asignado_op'].required = False
+        self.fields['sector_asignado_op'].required = False 
         self.fields['notas'].required = False
 
 class ProveedorForm(forms.ModelForm):
@@ -261,3 +350,45 @@ class OrdenCompraForm(forms.ModelForm):
         #     if not precio:
         #         self.add_error('precio_unitario_compra', 'El precio unitario es requerido si se selecciona un insumo.')
         return cleaned_data
+    
+class ReporteProduccionForm(forms.ModelForm):
+    TIPO_PROBLEMA_CHOICES = [
+        ('', 'Seleccionar tipo...'),
+        ('Falta de Insumos', 'Falta de Insumos'),
+        ('Falla de Maquinaria', 'Falla de Maquinaria'),
+        ('Error de Calidad', 'Error de Calidad Detectado'),
+        ('Problema de Personal', 'Problema de Personal'),
+        ('Otro', 'Otro (especificar)'),
+    ]
+    tipo_problema = forms.ChoiceField(
+        choices=TIPO_PROBLEMA_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select mb-3'}) # Añadido mb-3 para espaciado
+    )
+    sector_reporta = forms.ModelChoiceField(
+        queryset=SectorAsignado.objects.all().order_by('nombre'), # Añadido order_by
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select mb-3'}),
+        label="Sector que Reporta (Opcional)"
+    )
+
+    class Meta:
+        model = Reportes
+        # USA EL NOMBRE CORRECTO DEL CAMPO DEL MODELO AQUÍ:
+        fields = ['tipo_problema', 'informe_reporte', 'sector_reporta'] # Cambiado 'descripcion_problema' a 'informe_reporte'
+        widgets = {
+            # Y AQUÍ TAMBIÉN:
+            'informe_reporte': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Describa detalladamente el problema...'}),
+        }
+        labels = {
+            'tipo_problema': 'Tipo de Problema Reportado',
+            # Y AQUÍ:
+            'informe_reporte': 'Descripción Detallada del Problema',
+            # 'sector_reporta' ya está definido arriba
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.orden_produccion = kwargs.pop('orden_produccion', None)
+        super().__init__(*args, **kwargs)
+        
+        if self.orden_produccion and self.orden_produccion.sector_asignado_op:
+            self.fields['sector_reporta'].initial = self.orden_produccion.sector_asignado_op

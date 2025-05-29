@@ -1,0 +1,41 @@
+{% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titulo_seccion|default:"Crear Reporte de Producción" }}{% endblock %}
+
+{% block sidebar_content %}
+    {% include 'produccion/produccion_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">{{ titulo_seccion }}</h1>
+        <a href="{% url 'App_LUMINOVA:produccion_detalle_op' op_id=orden_produccion.id %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left-circle"></i> Volver al Detalle de OP
+        </a>
+    </div>
+
+    {% bootstrap_messages %}
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-danger text-white">
+            <i class="bi bi-exclamation-triangle-fill"></i> Registrar Incidencia para OP: {{ orden_produccion.numero_op }}
+        </div>
+        <div class="card-body">
+            <p class="small text-muted">Producto: {{ orden_produccion.producto_a_producir.descripcion }} | Cantidad: {{ orden_produccion.cantidad_a_producir }}</p>
+            <form method="post">
+                {% csrf_token %}
+                {% bootstrap_form form_reporte layout='vertical' %}
+                <div class="mt-4 d-flex justify-content-end">
+                    <a href="{% url 'App_LUMINOVA:produccion_detalle_op' op_id=orden_produccion.id %}" class="btn btn-secondary me-2">Cancelar</a>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-save-fill"></i> Guardar Reporte
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
