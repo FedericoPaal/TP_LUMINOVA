@@ -3,7 +3,7 @@
 {% load static %}
 {% load django_bootstrap5 %}
 
-{% block title %}{{ titulo_seccion|default:"Desglose de Componentes" }}{% endblock %}
+{% block title %}{{ titulo_seccion|default:"Gestionar Compra por Stock Bajo" }}{% endblock %}
 
 {% block sidebar_content %}
     {% include 'compras/compras_sidebar.html' %}
@@ -12,49 +12,48 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">{{ titulo_seccion }}</h1>
-    {# Aquí podría ir un botón para crear una nueva OC manualmente si es necesario #}
 </div>
 
-{% bootstrap_messages %}
 
-{% if ordenes_pendientes_list %}
+
+<h3 class="mt-4">Insumos con Stock Bajo (Menor a {{ umbral_stock_bajo }}) a Gestionar</h3>
+{% if insumos_criticos_list_con_estado %}
 <div class="table-responsive mt-3">
-    <table class="table table-hover">
-        <thead class="color-thead"> {# Usando tu clase CSS para el encabezado #}
+    <table class="table table-hover table-sm">
+        <thead class="color-thead">
             <tr>
-                <th class="text-center align-middle">N° OC</th>
-                <th class="text-center align-middle">Estado de OC</th>
-                <th class="text-center align-middle">Categoría Insumo</th> {# Asumiendo que es del insumo principal #}
-                <th class="text-center align-middle">Fecha Creación</th>
-                <th class="text-center align-middle">Insumo Principal</th>
-                <th class="text-center align-middle">Cantidad</th>
-                <th class="text-center align-middle">Monto Total (US$)</th>
-                <th class="text-center align-middle">Fecha Estimada Entrega</th>
-                <th class="text-center align-middle">N° Tracking</th>
-                <th class="text-center align-middle">Acciones</th>
+                <th>ID</th>
+                <th>Insumo</th>
+                <th>Categoría</th>
+                {# Ya no mostramos Proveedor Principal aquí, se elige en el siguiente paso #}
+                <th class="text-center">Stock Actual</th>
+                <th class="text-center">Acción</th>
             </tr>
         </thead>
         <tbody>
-            {% for oc in ordenes_pendientes_list %}
+            {% for item_data in insumos_criticos_list_con_estado %} {# Iteramos sobre la nueva lista de diccionarios #}
             <tr>
-                {# El enlace aquí podría llevar a una vista de detalle de OC o a tu desglose3.html #}
-                <td class="text-center align-middle">
-                    <a href="#">{{ oc.numero_orden }}</a> {# Ajusta este enlace según tu flujo #}
+                <td>{{ item_data.insumo.id }}</td>
+                <td>
+                    {% if item_data.insumo.imagen %}
+                        <img src="{{ item_data.insumo.imagen.url }}" alt="{{ item_data.insumo.descripcion }}" style="width: 30px; height: 30px; object-fit: cover; border-radius: 3px; margin-right: 5px;">
+                    {% endif %}
+                    {{ item_data.insumo.descripcion|truncatechars:40 }}
                 </td>
-                <td class="text-center align-middle">
-                    <span class="badge bg-warning text-dark">{{ oc.get_estado_display_custom }}</span>
-                </td>
-                <td class="text-center align-middle">{{ oc.insumo_principal.categoria.nombre|default_if_none:"N/A" }}</td>
-                <td class="text-center align-middle">{{ oc.fecha_creacion|date:"d/m/Y" }}</td>
-                <td class="align-middle">{{ oc.insumo_principal.descripcion|default_if_none:"N/A"|truncatechars:30 }}</td>
-                <td class="text-center align-middle">{{ oc.cantidad_principal|default_if_none:"-" }}</td>
-                <td class="text-center align-middle">${{ oc.total_orden_compra|floatformat:2 }}</td>
-                <td class="text-center align-middle">{{ oc.fecha_estimada_entrega|date:"d/m/Y"|default_if_none:"-" }}</td>
-                <td class="text-center align-middle">{{ oc.numero_tracking|default_if_none:"-" }}</td>
-                <td class="text-center align-middle">
-                    {# Aquí irían los botones para seleccionar proveedor, generar OC final, etc. #}
-                    {# Este botón podría llevar a una vista similar a tu desglose3.html para esta OC específica #}
-                    <a href="#" class="btn btn-sm btn-primary">Desglosar/Gestionar</a>
+                <td>{{ item_data.insumo.categoria.nombre|default_if_none:"N/A" }}</td>
+                <td class="text-center fw-bold text-danger">{{ item_data.insumo.stock }}</td>
+                <td class="text-center">
+                    {% if item_data.tiene_oc_pendiente %}
+                        <button class="btn btn-sm btn-secondary" disabled title="Ya existe una OC en proceso para este insumo. Revise el Listado de OC.">
+                            <i class="bi bi-hourglass-split"></i> OC Iniciada
+                        </button>
+                    {% else %}
+                        <a href="{% url 'App_LUMINOVA:compras_seleccionar_proveedor_para_insumo' item_data.insumo.id %}" 
+                           class="btn btn-sm btn-primary" 
+                           title="Seleccionar Proveedor para {{ item_data.insumo.descripcion }}">
+                            <i class="bi bi-people-fill"></i> Sel. Proveedor
+                        </a>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
@@ -62,9 +61,17 @@
     </table>
 </div>
 {% else %}
-<div class="alert alert-info mt-3">
-    No hay Órdenes de Compra pendientes de desglose o en el estado seleccionado.
+<div class="alert alert-success mt-3">
+    <i class="bi bi-check-circle-fill"></i> ¡Excelente! No hay insumos con stock por debajo del umbral de {{ umbral_stock_bajo }} que requieran gestión.
 </div>
 {% endif %}
 
+<div class="mt-4">
+    <a href="{% url 'App_LUMINOVA:deposito_view' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left-circle"></i> Volver a Depósito
+    </a>
+    <a href="{% url 'App_LUMINOVA:compras_lista_oc' %}" class="btn btn-outline-info ms-2">
+        <i class="bi bi-list-ul"></i> Ver Todas las Órdenes de Compra
+    </a>
+</div>
 {% endblock %}

@@ -74,20 +74,36 @@ def compras_desglose_view(request):
     logger.info("--- compras_desglose_view: INICIO ---")
 
     UMBRAL_STOCK_BAJO_INSUMOS = 15000
-    # Simplificamos la consulta: ya no intentamos cargar 'proveedor' directamente desde Insumo
-    insumos_criticos = Insumo.objects.filter(
+    insumos_criticos_query = Insumo.objects.filter(
         stock__lt=UMBRAL_STOCK_BAJO_INSUMOS
-    ).select_related('categoria').order_by( # Solo 'categoria' es una ForeignKey directa
+    ).select_related('categoria').order_by(
         'categoria__nombre', 'stock', 'descripcion'
     )
     
-    logger.info(f"Compras_desglose_view: Insumos críticos (<{UMBRAL_STOCK_BAJO_INSUMOS}) encontrados: {insumos_criticos.count()}")
-    for ins_debug in insumos_criticos:
-        # Ya no podemos acceder a ins_debug.proveedor.nombre directamente aquí
-        logger.info(f"  -> Insumo crítico: {ins_debug.descripcion}, Stock: {ins_debug.stock}, Categoría: {ins_debug.categoria.nombre}")
+    insumos_criticos_list_con_estado_oc = []
+    for insumo in insumos_criticos_query:
+        # Verificar si existe una OC no finalizada/cancelada para este insumo
+        oc_pendiente_existe = Orden.objects.filter(
+            insumo_principal=insumo,
+            tipo='compra'
+        ).exclude(
+            Q(estado='COMPLETADA') | Q(estado='RECIBIDA_TOTAL') | Q(estado='CANCELADA')
+        ).exists()
+        
+        insumos_criticos_list_con_estado_oc.append({
+            'insumo': insumo,
+            'tiene_oc_pendiente': oc_pendiente_existe
+        })
+        
+        if oc_pendiente_existe:
+            logger.info(f"Insumo crítico '{insumo.descripcion}' (ID: {insumo.id}) YA TIENE una OC pendiente.")
+        else:
+            logger.info(f"Insumo crítico '{insumo.descripcion}' (ID: {insumo.id}) NO tiene OC pendiente.")
+
+    logger.info(f"Compras_desglose_view: Total insumos críticos encontrados: {len(insumos_criticos_list_con_estado_oc)}")
     
     context = {
-        'insumos_criticos_list': insumos_criticos,
+        'insumos_criticos_list_con_estado': insumos_criticos_list_con_estado_oc, # Nueva lista con el flag
         'umbral_stock_bajo': UMBRAL_STOCK_BAJO_INSUMOS,
         'titulo_seccion': 'Gestionar Compra por Stock Bajo',
     }
@@ -681,10 +697,27 @@ class InsumoCreateView(CreateView):
 
 class InsumoUpdateView(UpdateView):
     model = Insumo
-    template_name = 'deposito/insumo_editar.html'
-    fields = '__all__'
-    context_object_name = 'insumo'
-    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+    template_name = 'deposito/insumo_editar.html' # Asegúrate que sea el nombre correcto de tu plantilla
+    fields = ['descripcion', 'categoria', 'fabricante', 'stock', 'imagen'] # Lista los campos que quieres que sean editables
+    # O usa un formulario personalizado:
+    # form_class = InsumoForm 
+    context_object_name = 'insumo' # Nombre del objeto en la plantilla (puedes usar 'object' también)
+
+    def get_success_url(self):
+        # Redirigir al detalle de la categoría del insumo editado, o a donde prefieras
+        messages.success(self.request, f"Insumo '{self.object.descripcion}' actualizado exitosamente.")
+        if hasattr(self.object, 'categoria') and self.object.categoria:
+            return reverse_lazy('App_LUMINOVA:categoria_i_detail', kwargs={'pk': self.object.categoria.pk})
+        return reverse_lazy('App_LUMINOVA:deposito_view') # Fallback
+
+    def form_valid(self, form):
+        logger.info(f"InsumoUpdateView: Formulario válido para insumo ID {self.object.id}. Guardando cambios.")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        logger.warning(f"InsumoUpdateView: Formulario inválido para insumo ID {self.object.id if self.object else 'Nuevo'}. Errores: {form.errors.as_json()}")
+        messages.error(self.request, "Hubo errores al intentar guardar el insumo. Por favor, revise los campos.")
+        return super().form_invalid(form)
 
 class InsumoDeleteView(DeleteView):
     model = Insumo
@@ -1198,155 +1231,186 @@ def solicitar_insumos_op_view(request, op_id):
 
 
 @login_required
-@transaction.atomic
+@transaction.atomic # Buena práctica para asegurar la consistencia de los datos
 def produccion_detalle_op_view(request, op_id):
     op = get_object_or_404(
         OrdenProduccion.objects.select_related(
-            'producto_a_producir',
+            'producto_a_producir__categoria', # Categoria del Producto Terminado
             'orden_venta_origen__cliente',
             'estado_op',
             'sector_asignado_op'
-        ).prefetch_related('orden_venta_origen__ops_generadas__estado_op'),
+        ).prefetch_related(
+            'orden_venta_origen__ops_generadas__estado_op' # Para la lógica de OV
+        ),
         id=op_id
     )
     
-    # ... (lógica de insumos existente, sin cambios) ...
+    # --- Lógica para calcular insumos necesarios y su disponibilidad ---
     insumos_necesarios_data = []
-    todos_los_insumos_disponibles = True
+    todos_los_insumos_disponibles = True # Asumir que sí hasta que se demuestre lo contrario
+    
     if op.producto_a_producir:
         componentes_requeridos = ComponenteProducto.objects.filter(
             producto_terminado=op.producto_a_producir
-        ).select_related('insumo')
+        ).select_related('insumo') # select_related para optimizar
+
         if not componentes_requeridos.exists():
-            todos_los_insumos_disponibles = False 
+            todos_los_insumos_disponibles = False
+            # messages.warning(request, f"Advertencia: El producto '{op.producto_a_producir.descripcion}' no tiene un BOM (lista de componentes) definido.")
+        
         for comp in componentes_requeridos:
             cantidad_total_requerida_para_op = comp.cantidad_necesaria * op.cantidad_a_producir
             suficiente = comp.insumo.stock >= cantidad_total_requerida_para_op
             if not suficiente:
                 todos_los_insumos_disponibles = False
+            
             insumos_necesarios_data.append({
                 'insumo_descripcion': comp.insumo.descripcion,
                 'cantidad_por_unidad_pt': comp.cantidad_necesaria,
                 'cantidad_total_requerida_op': cantidad_total_requerida_para_op,
                 'stock_actual_insumo': comp.insumo.stock,
                 'suficiente_stock': suficiente,
-                'insumo_id': comp.insumo.id
+                'insumo_id': comp.insumo.id # Útil para enlaces o identificadores
             })
     else:
         todos_los_insumos_disponibles = False
+        # messages.error(request, "Error crítico: Esta Orden de Producción no tiene un producto principal asociado.")
 
+    # --- Determinar si el botón "Solicitar Insumos" debe estar activo ---
     puede_solicitar_insumos = False
     if op.estado_op:
-        puede_solicitar_insumos = op.estado_op.nombre.lower() in ['pendiente', 'planificada']
-
+        estados_permitidos_para_solicitar_insumos = ['pendiente', 'planificada'] # Ajusta según tus estados
+        puede_solicitar_insumos = op.estado_op.nombre.lower() in estados_permitidos_para_solicitar_insumos
 
     if request.method == 'POST':
         form_update = OrdenProduccionUpdateForm(request.POST, instance=op)
         if form_update.is_valid():
-            op_actualizada = form_update.save(commit=False) # No guardar todavía
+            # Obtener el estado anterior ANTES de que el form.save(commit=False) lo modifique en memoria
+            # Es más seguro obtenerlo directamente de la BD para asegurar el estado real antes de esta transacción.
+            estado_op_anterior_obj = OrdenProduccion.objects.get(pk=op.pk).estado_op
             
-            estado_op_anterior = op.estado_op # Guardar el estado anterior para comparar
-            nuevo_estado_op_obj = form_update.cleaned_data.get('estado_op')
-            op_actualizada.estado_op = nuevo_estado_op_obj
+            op_actualizada = form_update.save(commit=False) # No guardar en DB todavía
             
+            nuevo_estado_op_obj = op_actualizada.estado_op # Este es el nuevo estado seleccionado en el formulario
+
             # --- LÓGICA DE ACTUALIZACIÓN DE STOCK DE PRODUCTO TERMINADO ---
-            ESTADO_OP_COMPLETADA_NOMBRE_EXACTO = "Completada" # Usa el nombre exacto de tu estado
-            
-            # Verificar si el estado está cambiando A "Completada" y antes NO lo era
-            if nuevo_estado_op_obj and nuevo_estado_op_obj.nombre == ESTADO_OP_COMPLETADA_NOMBRE_EXACTO and \
-               (not estado_op_anterior or estado_op_anterior.nombre != ESTADO_OP_COMPLETADA_NOMBRE_EXACTO):
-                
+            NOMBRE_ESTADO_OP_COMPLETADA_EXACTO = "Completada" # ¡ASEGÚRATE QUE ESTE NOMBRE SEA EXACTO AL DE TU DB!
+
+            se_esta_completando_op_ahora = False
+            if nuevo_estado_op_obj and \
+               nuevo_estado_op_obj.nombre.lower() == NOMBRE_ESTADO_OP_COMPLETADA_EXACTO.lower():
+                if not estado_op_anterior_obj or estado_op_anterior_obj.nombre.lower() != NOMBRE_ESTADO_OP_COMPLETADA_EXACTO.lower():
+                    se_esta_completando_op_ahora = True
+
+            if se_esta_completando_op_ahora:
                 producto_terminado_obj = op_actualizada.producto_a_producir
                 cantidad_producida = op_actualizada.cantidad_a_producir
                 
                 if producto_terminado_obj and cantidad_producida > 0:
                     # Actualización atómica del stock
                     ProductoTerminado.objects.filter(id=producto_terminado_obj.id).update(stock=F('stock') + cantidad_producida)
-                    producto_terminado_obj.refresh_from_db() # Recargar el objeto para tener el stock actualizado
-                    messages.success(request, f"Stock del producto '{producto_terminado_obj.descripcion}' incrementado en {cantidad_producida}. Nuevo stock: {producto_terminado_obj.stock}.")
-                    logger.info(f"OP {op_actualizada.numero_op} completada. Stock de '{producto_terminado_obj.descripcion}' (ID:{producto_terminado_obj.id}) incrementado en {cantidad_producida}. Nuevo stock: {producto_terminado_obj.stock}")
+                    # No es necesario refresh_from_db() aquí si solo vas a mostrar mensajes y no usar el stock actualizado de la instancia
                     
-                    # Marcar fecha de fin real
-                    op_actualizada.fecha_fin_real = timezone.now()
-
-            op_actualizada.save() # Ahora guarda la OP con todos los cambios
-            form_update.save_m2m() # Por si el form tiene campos m2m (no es el caso aquí)
-
-            messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.estado_op.nombre if op_actualizada.estado_op else 'N/A'}'.")
+                    # Para el mensaje, obtén el stock actualizado después del update
+                    stock_actualizado_pt = ProductoTerminado.objects.get(id=producto_terminado_obj.id).stock
+                    messages.success(request, f"Stock del producto '{producto_terminado_obj.descripcion}' incrementado en {cantidad_producida}. Nuevo stock: {stock_actualizado_pt}.")
+                    logger.info(f"OP {op_actualizada.numero_op} completada. Stock de PT ID {producto_terminado_obj.id} incrementado. Nuevo stock: {stock_actualizado_pt}")
+                    
+                    if not op_actualizada.fecha_fin_real: # Solo setear si no estaba ya seteada (evita sobrescribir si se edita una OP ya completada)
+                        op_actualizada.fecha_fin_real = timezone.now()
+                else:
+                    logger.error(f"No se pudo actualizar stock para OP {op_actualizada.numero_op}: producto no asignado o cantidad producida es cero.")
+                    messages.error(request, "No se pudo actualizar el stock del producto: no hay producto asignado o la cantidad producida es cero.")
             
-            # --- Lógica de actualización de estado de OV (sin cambios respecto a la versión anterior) ---
-            if op_actualizada.orden_venta_origen and op_actualizada.estado_op:
-                # (Tu lógica existente para actualizar el estado de la OV va aquí...)
-                # ...
+            op_actualizada.save() # Guardar todos los cambios en la OP (estado, fechas, notas del form, etc.)
+            # form_update.save_m2m() # Solo si OrdenProduccionUpdateForm tuviera campos ManyToMany
+
+            messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.get_estado_op_display()}'.")
+            
+            # --- LÓGICA DE ACTUALIZACIÓN DE ESTADO DE ORDEN DE VENTA ---
+            if op_actualizada.orden_venta_origen:
                 orden_venta_asociada = op_actualizada.orden_venta_origen
                 
-                ESTADO_OP_PENDIENTE_NOMBRE = "pendiente"
-                ESTADO_OP_INSUMOS_SOLICITADOS_NOMBRE = "insumos solicitados"
-                ESTADO_OP_PRODUCCION_INICIADA_NOMBRE = "producción iniciada" 
-                ESTADO_OP_EN_PROCESO_NOMBRE = "en proceso"
-                ESTADO_OP_PAUSADA_NOMBRE = "pausada"
-                # ESTADO_OP_COMPLETADA_NOMBRE ya está definido arriba
-                ESTADO_OP_CANCELADA_NOMBRE = "cancelada"
+                # Nombres de estados OP (usa .lower() para comparaciones insensibles a mayúsculas)
+                ESTADO_OP_PENDIENTE_LOWER = "pendiente"
+                ESTADO_OP_INSUMOS_SOLICITADOS_LOWER = "insumos solicitados"
+                ESTADOS_OP_EN_FABRICACION_LOWER = ["producción iniciada", "en proceso"] # Ajusta si "En Proceso" es tu estado
+                ESTADO_OP_PAUSADA_LOWER = "pausada"
+                ESTADO_OP_COMPLETADA_LOWER = NOMBRE_ESTADO_OP_COMPLETADA_EXACTO.lower()
+                ESTADO_OP_CANCELADA_LOWER = "cancelada"
 
+                # Nombres de estados OV
                 OV_ESTADO_CONFIRMADA = 'CONFIRMADA'
                 OV_ESTADO_INSUMOS_SOLICITADOS = 'INSUMOS_SOLICITADOS'
                 OV_ESTADO_PRODUCCION_INICIADA = 'PRODUCCION_INICIADA'
                 OV_ESTADO_PRODUCCION_CON_PROBLEMAS = 'PRODUCCION_CON_PROBLEMAS'
                 OV_ESTADO_LISTA_ENTREGA = 'LISTA_ENTREGA'
-                OV_ESTADO_COMPLETADA = 'COMPLETADA'
-                OV_ESTADO_CANCELADA = 'CANCELADA'
+                # ... (otros estados OV)
 
-                nuevo_estado_ov = orden_venta_asociada.estado 
-                ops_hermanas = orden_venta_asociada.ops_generadas.all()
+                nuevo_estado_ov_sugerido = orden_venta_asociada.estado 
                 
-                if not ops_hermanas.exists():
-                    pass 
-                elif all(op_h.estado_op and op_h.estado_op.nombre.lower() == ESTADO_OP_COMPLETADA_NOMBRE_EXACTO.lower() for op_h in ops_hermanas):
-                    nuevo_estado_ov = OV_ESTADO_LISTA_ENTREGA
-                elif any(op_h.estado_op and op_h.estado_op.nombre.lower() in [ESTADO_OP_CANCELADA_NOMBRE, ESTADO_OP_PAUSADA_NOMBRE] for op_h in ops_hermanas):
-                    nuevo_estado_ov = OV_ESTADO_PRODUCCION_CON_PROBLEMAS
-                elif any(op_h.estado_op and op_h.estado_op.nombre.lower() in [ESTADO_OP_PRODUCCION_INICIADA_NOMBRE, ESTADO_OP_EN_PROCESO_NOMBRE] for op_h in ops_hermanas):
-                    nuevo_estado_ov = OV_ESTADO_PRODUCCION_INICIADA
-                elif any(op_h.estado_op and op_h.estado_op.nombre.lower() == ESTADO_OP_INSUMOS_SOLICITADOS_NOMBRE for op_h in ops_hermanas):
-                    if not any(op_h.estado_op and op_h.estado_op.nombre.lower() in [ESTADO_OP_PRODUCCION_INICIADA_NOMBRE, ESTADO_OP_EN_PROCESO_NOMBRE] for op_h in ops_hermanas):
-                        nuevo_estado_ov = OV_ESTADO_INSUMOS_SOLICITADOS
-                    else:
-                        nuevo_estado_ov = OV_ESTADO_PRODUCCION_INICIADA
-                elif all(op_h.estado_op and op_h.estado_op.nombre.lower() == ESTADO_OP_PENDIENTE_NOMBRE for op_h in ops_hermanas):
-                    nuevo_estado_ov = OV_ESTADO_CONFIRMADA
-                else: 
-                    if orden_venta_asociada.estado not in [OV_ESTADO_PRODUCCION_INICIADA, OV_ESTADO_PRODUCCION_CON_PROBLEMAS, OV_ESTADO_LISTA_ENTREGA, OV_ESTADO_COMPLETADA, OV_ESTADO_CANCELADA]:
-                         if any(op_h.estado_op and op_h.estado_op.nombre.lower() == ESTADO_OP_INSUMOS_SOLICITADOS_NOMBRE for op_h in ops_hermanas):
-                            nuevo_estado_ov = OV_ESTADO_INSUMOS_SOLICITADOS
+                # Re-consulta las OPs de la OV para tener los datos más frescos, incluyendo la actual
+                ops_de_la_ov = OrdenProduccion.objects.filter(orden_venta_origen=orden_venta_asociada).select_related('estado_op')
+
+                if not ops_de_la_ov.exists(): # Poco probable si esta OP pertenece a la OV
+                    pass
+                elif all(op_h.estado_op and op_h.estado_op.nombre.lower() == ESTADO_OP_COMPLETADA_LOWER for op_h in ops_de_la_ov):
+                    nuevo_estado_ov_sugerido = OV_ESTADO_LISTA_ENTREGA
+                elif any(op_h.estado_op and op_h.estado_op.nombre.lower() in [ESTADO_OP_CANCELADA_LOWER, ESTADO_OP_PAUSADA_LOWER] for op_h in ops_de_la_ov):
+                    nuevo_estado_ov_sugerido = OV_ESTADO_PRODUCCION_CON_PROBLEMAS
+                elif any(op_h.estado_op and op_h.estado_op.nombre.lower() in ESTADOS_OP_EN_FABRICACION_LOWER for op_h in ops_de_la_ov):
+                    nuevo_estado_ov_sugerido = OV_ESTADO_PRODUCCION_INICIADA
+                elif any(op_h.estado_op and op_h.estado_op.nombre.lower() == ESTADO_OP_INSUMOS_SOLICITADOS_LOWER for op_h in ops_de_la_ov):
+                    # Solo si ninguna está ya en fabricación más avanzada
+                    if not any(op_h.estado_op and op_h.estado_op.nombre.lower() in ESTADOS_OP_EN_FABRICACION_LOWER for op_h in ops_de_la_ov):
+                        nuevo_estado_ov_sugerido = OV_ESTADO_INSUMOS_SOLICITADOS
+                    else: 
+                        nuevo_estado_ov_sugerido = OV_ESTADO_PRODUCCION_INICIADA
+                elif all(op_h.estado_op and op_h.estado_op.nombre.lower() == ESTADO_OP_PENDIENTE_LOWER for op_h in ops_de_la_ov):
+                    nuevo_estado_ov_sugerido = OV_ESTADO_CONFIRMADA
+                # Considera un estado de fallback o mantener el actual si ninguna condición se cumple y no quieres retroceder
+                else:
+                    if orden_venta_asociada.estado not in ['PRODUCCION_INICIADA', 'PRODUCCION_CON_PROBLEMAS', 'LISTA_ENTREGA', 'COMPLETADA', 'CANCELADA']:
+                         if any(op_h.estado_op and op_h.estado_op.nombre.lower() == ESTADO_OP_INSUMOS_SOLICITADOS_LOWER for op_h in ops_de_la_ov):
+                            nuevo_estado_ov_sugerido = OV_ESTADO_INSUMOS_SOLICITADOS
                          else: 
-                            nuevo_estado_ov = OV_ESTADO_CONFIRMADA
-                
-                estados_ov_ordenados = ['PENDIENTE', OV_ESTADO_CONFIRMADA, OV_ESTADO_INSUMOS_SOLICITADOS, OV_ESTADO_PRODUCCION_INICIADA, OV_ESTADO_LISTA_ENTREGA, OV_ESTADO_COMPLETADA]
-                estados_excepcion = [OV_ESTADO_PRODUCCION_CON_PROBLEMAS, OV_ESTADO_CANCELADA]
+                            nuevo_estado_ov_sugerido = OV_ESTADO_CONFIRMADA
 
-                if nuevo_estado_ov not in estados_excepcion and orden_venta_asociada.estado not in estados_excepcion:
+
+                # Lógica para prevenir retroceso de estado de OV (a menos que sea a un estado de problema/cancelación)
+                estados_ov_ordenados_flujo_normal = ['PENDIENTE', 'CONFIRMADA', 'INSUMOS_SOLICITADOS', 'PRODUCCION_INICIADA', 'LISTA_ENTREGA', 'COMPLETADA']
+                estados_ov_excepcion = ['PRODUCCION_CON_PROBLEMAS', 'CANCELADA']
+
+                if nuevo_estado_ov_sugerido not in estados_ov_excepcion and orden_venta_asociada.estado not in estados_ov_excepcion:
                     try:
-                        indice_actual_ov = estados_ov_ordenados.index(orden_venta_asociada.estado)
-                        indice_nuevo_ov = estados_ov_ordenados.index(nuevo_estado_ov)
+                        indice_actual_ov = estados_ov_ordenados_flujo_normal.index(orden_venta_asociada.estado)
+                        indice_nuevo_ov = estados_ov_ordenados_flujo_normal.index(nuevo_estado_ov_sugerido)
                         if indice_nuevo_ov < indice_actual_ov:
-                            nuevo_estado_ov = orden_venta_asociada.estado 
+                            nuevo_estado_ov_sugerido = orden_venta_asociada.estado # Mantener estado actual si el sugerido es anterior
+                            logger.info(f"OV {orden_venta_asociada.numero_ov}: Se evitó retroceso de estado. Mantenido en '{orden_venta_asociada.estado}'.")
                     except ValueError:
+                         # Uno de los estados (actual o nuevo) no está en el flujo normal, no aplicar lógica de retroceso
                         pass 
 
-                if orden_venta_asociada.estado != nuevo_estado_ov:
-                    valid_ov_states = [choice[0] for choice in OrdenVenta.ESTADO_CHOICES]
-                    if nuevo_estado_ov in valid_ov_states:
-                        orden_venta_asociada.estado = nuevo_estado_ov
+
+                if orden_venta_asociada.estado != nuevo_estado_ov_sugerido:
+                    valid_ov_states_keys = [choice[0] for choice in OrdenVenta.ESTADO_CHOICES]
+                    if nuevo_estado_ov_sugerido in valid_ov_states_keys:
+                        orden_venta_asociada.estado = nuevo_estado_ov_sugerido
                         orden_venta_asociada.save(update_fields=['estado'])
                         messages.info(request, f"Estado de OV {orden_venta_asociada.numero_ov} actualizado a '{orden_venta_asociada.get_estado_display()}'.")
+                        logger.info(f"OV {orden_venta_asociada.numero_ov} actualizada a estado '{orden_venta_asociada.estado}'")
                     else:
-                        messages.error(request, f"Intento de actualizar OV a un estado inválido: {nuevo_estado_ov}")
-
+                        messages.error(request, f"Intento de actualizar OV {orden_venta_asociada.numero_ov} a un estado inválido: '{nuevo_estado_ov_sugerido}'")
+                        logger.error(f"Intento de actualizar OV {orden_venta_asociada.numero_ov} a estado inválido: '{nuevo_estado_ov_sugerido}'")
+            
             return redirect('App_LUMINOVA:produccion_detalle_op', op_id=op_actualizada.id)
-        else:
-            messages.error(request, "Error al actualizar la OP. Revise los datos del formulario.")
+        else: # form_update no es válido
+            messages.error(request, "Error al actualizar la OP. Por favor, revise los errores en el formulario.")
+            logger.warning(f"Formulario OrdenProduccionUpdateForm inválido para OP {op.id}: {form_update.errors.as_json()}")
     
-    form_update = OrdenProduccionUpdateForm(instance=op)
+    # Para solicitudes GET o si el formulario POST no fue válido
+    form_update = OrdenProduccionUpdateForm(instance=op) 
 
     context = {
         'op': op,
@@ -1356,17 +1420,21 @@ def produccion_detalle_op_view(request, op_id):
         'puede_solicitar_insumos': puede_solicitar_insumos,
         'titulo_seccion': f'Detalle OP: {op.numero_op}',
     }
-    return render(request, 'produccion/produccion_detalle_op.html', context) # O la plantilla de acordeón si la estás usando
+    return render(request, 'produccion/produccion_detalle_op.html', context)
 
 
 @login_required
 @transaction.atomic
 def deposito_enviar_insumos_op_view(request, op_id):
-    op = get_object_or_404(OrdenProduccion.objects.select_related('orden_venta_origen'), id=op_id)
+    # ... (lógica para obtener op y componentes) ...
+    op = get_object_or_404(OrdenProduccion.objects.select_related('orden_venta_origen', 'producto_a_producir'), id=op_id)
+    logger.info(f"Procesando envío de insumos para OP: {op.numero_op}")
 
     if request.method == 'POST':
-        insumos_descontados_correctamente = True
-        componentes_requeridos = ComponenteProducto.objects.filter(producto_terminado=op.producto_a_producir)
+        # ... (lógica de descuento de stock) ...
+        insumos_descontados_correctamente = True # Asumir éxito hasta que falle
+        errores_stock = []
+        componentes_requeridos = ComponenteProducto.objects.filter(producto_terminado=op.producto_a_producir).select_related('insumo')
 
         if not componentes_requeridos.exists():
             messages.error(request, f"No se puede procesar: No hay BOM definido para '{op.producto_a_producir.descripcion}'.")
@@ -1374,42 +1442,53 @@ def deposito_enviar_insumos_op_view(request, op_id):
 
         for comp in componentes_requeridos:
             cantidad_a_descontar = comp.cantidad_necesaria * op.cantidad_a_producir
-            insumo_a_actualizar = Insumo.objects.get(id=comp.insumo.id)
-            if insumo_a_actualizar.stock >= cantidad_a_descontar:
-                insumo_a_actualizar.stock -= cantidad_a_descontar
-                insumo_a_actualizar.save(update_fields=['stock'])
-            else:
-                messages.error(request, f"Stock insuficiente para '{comp.insumo.descripcion}'. Requeridos: {cantidad_a_descontar}, Disponible: {insumo_a_actualizar.stock}")
+            try:
+                insumo_a_actualizar = Insumo.objects.select_for_update().get(id=comp.insumo.id)
+                if insumo_a_actualizar.stock >= cantidad_a_descontar:
+                    insumo_a_actualizar.stock -= cantidad_a_descontar
+                    insumo_a_actualizar.save(update_fields=['stock'])
+                else:
+                    errores_stock.append(f"Stock insuficiente para '{insumo_a_actualizar.descripcion}'. Req: {cantidad_a_descontar}, Disp: {insumo_a_actualizar.stock}")
+                    insumos_descontados_correctamente = False
+            except Insumo.DoesNotExist:
+                errores_stock.append(f"Insumo '{comp.insumo.descripcion}' (ID: {comp.insumo.id}) no encontrado durante el descuento.")
                 insumos_descontados_correctamente = False
-                break
+                break # Error crítico, no continuar
 
+        if errores_stock:
+            for error_msg in errores_stock:
+                messages.error(request, error_msg)
+            # No es necesario reasignar insumos_descontados_correctamente = False aquí, ya se hizo.
+        
         if insumos_descontados_correctamente:
             try:
-                # Cambiar estado de la OP
-                estado_siguiente_op_nombre = "En Proceso" # O el nombre exacto de tu estado
-                estado_siguiente_op_obj = EstadoOrden.objects.get(nombre__iexact=estado_siguiente_op_nombre)
+                # CAMBIA "En Proceso" POR EL NOMBRE EXACTO DE TU ESTADO, EJ. "Producción Iniciada"
+                nombre_estado_siguiente_op = "Producción Iniciada" 
+                estado_siguiente_op_obj = EstadoOrden.objects.get(nombre__iexact=nombre_estado_siguiente_op)
+                
                 op.estado_op = estado_siguiente_op_obj
-                if not op.fecha_inicio_real: # Marcar inicio real si no está seteado
+                if not op.fecha_inicio_real: 
                     op.fecha_inicio_real = timezone.now()
                 op.save(update_fields=['estado_op', 'fecha_inicio_real'])
-                messages.success(request, f"Insumos para OP {op.numero_op} descontados. OP ahora '{estado_siguiente_op_obj.nombre}'.")
+                messages.success(request, f"Insumos para OP {op.numero_op} descontados. OP ahora en estado '{estado_siguiente_op_obj.nombre}'.")
+                logger.info(f"OP {op.numero_op} actualizada a estado '{estado_siguiente_op_obj.nombre}'.")
 
                 # Actualizar estado de la OV asociada
                 orden_venta_asociada = op.orden_venta_origen
                 if orden_venta_asociada:
-                    # Si la OV está en 'Confirmada' o 'Insumos Solicitados', pasarla a 'Producción Iniciada'
                     if orden_venta_asociada.estado in ['CONFIRMADA', 'INSUMOS_SOLICITADOS']:
-                        orden_venta_asociada.estado = 'PRODUCCION_INICIADA'
+                        orden_venta_asociada.estado = 'PRODUCCION_INICIADA' # Este estado de OV parece correcto
                         orden_venta_asociada.save(update_fields=['estado'])
                         messages.info(request, f"Estado de OV {orden_venta_asociada.numero_ov} actualizado a 'Producción Iniciada'.")
             
             except EstadoOrden.DoesNotExist:
-                 messages.warning(request, f"Estado de OP '{estado_siguiente_op_nombre}' no encontrado. Insumos descontados, pero el estado de la OP y OV no se actualizó completamente.")
+                 messages.warning(request, f"Estado de OP para '{nombre_estado_siguiente_op}' no encontrado. Insumos descontados, pero el estado de la OP no se actualizó a '{nombre_estado_siguiente_op}'. Por favor, cree este estado en el panel de administración.")
+                 logger.error(f"CRÍTICO: Estado OP '{nombre_estado_siguiente_op}' no encontrado. OP {op.numero_op} podría quedar en estado incorrecto.")
             return redirect('App_LUMINOVA:deposito_solicitudes_insumos')
         else:
             return redirect('App_LUMINOVA:deposito_detalle_solicitud_op', op_id=op.id)
 
-    messages.info(request, "Para enviar insumos, confirme la acción desde la página de detalle de la solicitud de OP.")
+    messages.info(request, "Esta acción debe realizarse mediante POST desde la página de detalle de la solicitud de OP.")
     return redirect('App_LUMINOVA:deposito_detalle_solicitud_op', op_id=op.id)
 
 @login_required
@@ -1680,67 +1759,6 @@ def deposito_detalle_solicitud_op_view(request, op_id):
     return render(request, 'deposito/deposito_detalle_solicitud_op.html', context)
 
 
-@login_required
-@transaction.atomic
-def deposito_enviar_insumos_op_view(request, op_id):
-    """
-    Procesa el envío/descuento de insumos para una OP.
-    Esta vista es llamada por un POST, usualmente desde deposito_detalle_solicitud_op.html.
-    """
-    # if not es_admin_o_rol(request.user, ['deposito', 'administrador']): # Control de permisos
-    #     messages.error(request, "Acción no permitida.")
-    #     return redirect('App_LUMINOVA:deposito_solicitudes_insumos')
-
-    op = get_object_or_404(OrdenProduccion, id=op_id)
-
-    if request.method == 'POST':
-        insumos_descontados_correctamente = True
-        componentes_requeridos = ComponenteProducto.objects.filter(producto_terminado=op.producto_a_producir)
-
-        if not componentes_requeridos.exists():
-            messages.error(request, f"No se puede procesar: No hay BOM definido para '{op.producto_a_producir.descripcion}'.")
-            return redirect('App_LUMINOVA:deposito_detalle_solicitud_op', op_id=op.id)
-
-        for comp in componentes_requeridos:
-            cantidad_a_descontar = comp.cantidad_necesaria * op.cantidad_a_producir
-
-            # Re-chequear stock antes de descontar (importante por concurrencia, aunque F() es mejor)
-            insumo_a_actualizar = Insumo.objects.get(id=comp.insumo.id) # Obtener la instancia más reciente
-            if insumo_a_actualizar.stock >= cantidad_a_descontar:
-                insumo_a_actualizar.stock -= cantidad_a_descontar
-                insumo_a_actualizar.save(update_fields=['stock'])
-                # Mejor para concurrencia (pero requiere que 'cantidad_a_descontar' sea positivo):
-                # Insumo.objects.filter(id=comp.insumo.id, stock__gte=cantidad_a_descontar).update(stock=F('stock') - cantidad_a_descontar)
-                # updated_rows = Insumo.objects.filter(id=comp.insumo.id, stock__gte=cantidad_a_descontar).update(stock=F('stock') - cantidad_a_descontar)
-                # if updated_rows == 0: # No se pudo actualizar, probablemente stock insuficiente
-                #    insumos_descontados_correctamente = False
-                #    messages.error(request, f"Stock insuficiente o error al actualizar '{comp.insumo.descripcion}'.")
-                #    break
-            else:
-                messages.error(request, f"Stock insuficiente para '{comp.insumo.descripcion}'. Requeridos: {cantidad_a_descontar}, Disponible: {insumo_a_actualizar.stock}")
-                insumos_descontados_correctamente = False
-                break
-
-        if insumos_descontados_correctamente:
-            try:
-                # Actualizar estado de la OP, ej. a "En Proceso" (si antes era "Insumos Solicitados")
-                # o a "Insumos Entregados a Producción" si tienes ese estado.
-                # Aquí es crucial que tengas un estado "En Proceso" o el siguiente lógico.
-                estado_siguiente = EstadoOrden.objects.get(nombre__iexact='En Proceso')
-                op.estado_op = estado_siguiente
-                op.fecha_inicio_real = timezone.now() # Opcional: marcar cuándo se entregaron los insumos como inicio real
-                op.save(update_fields=['estado_op', 'fecha_inicio_real'])
-                messages.success(request, f"Insumos para OP {op.numero_op} descontados. OP ahora '{estado_siguiente.nombre}'.")
-            except EstadoOrden.DoesNotExist:
-                 messages.warning(request, "Estado de OP para 'En Proceso' no encontrado. Insumos descontados, pero el estado de la OP no se actualizó.")
-            return redirect('App_LUMINOVA:deposito_solicitudes_insumos')
-        else:
-            # Si no se descontaron todos, se queda en la página de detalle para ver el error.
-            return redirect('App_LUMINOVA:deposito_detalle_solicitud_op', op_id=op.id)
-
-    # Si es GET, no debería hacer nada más que redirigir.
-    messages.info(request, "Para enviar insumos, confirme la acción desde la página de detalle de la solicitud de OP.")
-    return redirect('App_LUMINOVA:deposito_detalle_solicitud_op', op_id=op.id)
 
 # --- VISTAS PARA ÓRDENES DE VENTA ---
 @login_required

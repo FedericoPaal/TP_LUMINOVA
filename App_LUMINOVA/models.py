@@ -188,6 +188,7 @@ class OrdenProduccion(models.Model):
 
     producto_a_producir = models.ForeignKey(ProductoTerminado, on_delete=models.PROTECT, related_name="ordenes_produccion") # Cambiado related_name
     cantidad_a_producir = models.PositiveIntegerField() # Cambiado de cantidad_prod
+    estado_op = models.ForeignKey(EstadoOrden, on_delete=models.SET_NULL, null=True, blank=True, related_name='ops_estado')
 
     # El campo 'cliente' en OrdenProduccion es redundante si ya está en OrdenVenta.
     # Se puede acceder a través de orden_venta_origen.cliente. Lo quitamos para normalizar.
@@ -205,6 +206,11 @@ class OrdenProduccion(models.Model):
     # Eliminado 'insumos_req' como ForeignKey a un solo Insumo. Se usará ComponenteProducto.
     # Eliminado 'nombre_categoria' y 'nombre_prod' ya que se accede vía producto_a_producir.
 
+    def get_estado_op_display(self): # Nombre del método que estás intentando llamar
+        if self.estado_op:
+            return self.estado_op.nombre
+        return "Sin Estado Asignado"
+    
     def __str__(self):
         return f"OP: {self.numero_op} - {self.cantidad_a_producir} x {self.producto_a_producir.descripcion}"
 
