@@ -1,0 +1,32 @@
+<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end"
+    style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
+    <div class="position-sticky pt-4 h-100">
+        <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-3 mt-4 mb-1 text-white fw-bold">
+            <span>Control de Calidad</span>
+        </h6>
+        <hr class="text-white">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center active"
+                    href="{% url 'App_LUMINOVA:control_calidad_view' %}">
+                    <i class="bi bi-clipboard2-check-fill me-2"></i> <span class="ms-2">Panel Principal CC</span>
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#">
+                    <i class="bi bi-card-checklist me-2"></i> <span class="ms-2">Inspecciones</span>
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#">
+                    <i class="bi bi-file-earmark-text-fill me-2"></i> <span class="ms-2">Reportes de Calidad</span>
+                </a>
+            </li>
+            <li class="nav-item mt-2">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center" href="#">
+                    <i class="bi bi-archive-fill me-2"></i> <span class="ms-2">Historial</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>

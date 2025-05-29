@@ -47,7 +47,7 @@ from .views import (
     FabricanteCreateView, FabricanteDetailView, FabricanteListView, FabricanteUpdateView, FabricanteDeleteView,
 
     # Control de Calidad (Placeholder)
-
+    control_calidad_view,
 
     # Vistas AJAX para Roles
     crear_rol_ajax, get_rol_data_ajax, editar_rol_ajax, eliminar_rol_ajax,
@@ -151,7 +151,7 @@ urlpatterns = [
 
 
     # --- Ruta de Control de Calidad (Placeholder) ---
-    #path('control_calidad/', control_calidad_view, name='control_calidad_view'),
+    path('control_calidad/', control_calidad_view, name='control_calidad_view'),
 
     # --- URLs AJAX para Roles y Permisos ---
     path('ajax/crear-rol/', crear_rol_ajax, name='crear_rol_ajax'),

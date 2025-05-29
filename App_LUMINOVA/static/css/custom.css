@@ -1,3 +1,76 @@
+/* Estilos adicionales para asegurar que el body y html ocupen toda la altura */
+        html,
+        body {
+            height: 100%;
+            /* Asegura que html y body puedan expandirse */
+            margin: 0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            /* Asegura que el body al menos ocupe toda la altura de la ventana */
+        }
+
+        header.site-header {
+            /* Asigna una clase a tu header si no la tiene */
+            flex-shrink: 0;
+            /* Evita que el header se encoja */
+        }
+
+        /* Contenedor que envuelve sidebar y main content */
+        .content-area {
+            flex-grow: 1;
+            /* Ocupa el espacio vertical restante */
+            display: flex;
+            /* Habilita flexbox para sus hijos (la fila) */
+            overflow: hidden;
+            /* Evita que el scroll del contenido afecte al layout general */
+        }
+
+        /* La fila de Bootstrap ya es flex */
+        .content-area>.row {
+            flex-grow: 1;
+            /* La fila debe ocupar la altura del .content-area */
+            /* Bootstrap 5 .row ya tiene display: flex; y flex-wrap: wrap; */
+        }
+
+        #sidebarMenu {
+            /* Quita vh-100 si la estás usando en el HTML del sidebar */
+            /* Bootstrap ya lo hace position: sticky y top: 0 (por d-md-block bg-primary sidebar collapse) */
+            /* Necesitamos que se estire con su contenedor flex padre */
+            /* No necesita flex-grow, debe tomar su ancho definido por col-md-3 col-lg-2 */
+            align-self: stretch;
+            /* Hace que el sidebar se estire a la altura de la fila flex */
+            overflow-y: auto;
+            /* Scroll para el sidebar si su contenido es largo */
+            display: flex;
+            /* Para que .position-sticky funcione bien con la altura */
+            flex-direction: column;
+        }
+
+        #sidebarMenu .position-sticky {
+            flex-grow: 1;
+            /* Hace que el contenido interno del sidebar se expanda */
+        }
+
+        main.main-column {
+            flex-grow: 1;
+            /* Ocupa el espacio horizontal restante */
+            overflow-y: auto;
+            /* Scroll independiente para el contenido principal */
+            height: 100%;
+            /* Para que el overflow-y funcione bien con el padre flex */
+        }
+
+        footer.site-footer {
+            /* Asigna una clase a tu footer si no la tiene */
+            flex-shrink: 0;
+            /* Evita que el footer se encoja */
+        }
+
+
 /* Estilo para el sidebar*/
 nav.sidebar .nav-link.custom-active-button.active {
     border: 2px solid #D9D9D9 !important;
