@@ -132,7 +132,7 @@ admin.site.register(Fabricante)
 # admin.site.register(Orden) # Descomenta y configura si quieres 'Orden' en el admin
 
 # Si quieres un admin más detallado para Orden (Órdenes de Compra)
-""" @admin.register(Orden)
+@admin.register(Orden)
 class OrdenAdmin(admin.ModelAdmin):
     list_display = ('numero_orden', 'tipo', 'proveedor', 'insumo_principal', 'cantidad_principal', 'estado', 'fecha_creacion', 'total_orden_compra')
     list_filter = ('tipo', 'estado', 'proveedor', 'fecha_creacion')
@@ -153,4 +153,3 @@ class OrdenAdmin(admin.ModelAdmin):
             'fields': ('notas', 'total_orden_compra', 'fecha_creacion')
         }),
     )
- """
