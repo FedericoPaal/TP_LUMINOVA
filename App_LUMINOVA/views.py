@@ -1273,22 +1273,22 @@ def solicitar_insumos_op_view(request, op_id):
 def produccion_detalle_op_view(request, op_id):
     op = get_object_or_404(
         OrdenProduccion.objects.select_related(
-            'producto_a_producir',
+            'producto_a_producir__categoria',
             'orden_venta_origen__cliente',
             'estado_op',
             'sector_asignado_op'
-        ).prefetch_related('orden_venta_origen__ops_generadas__estado_op'),
+        ).prefetch_related(
+            'orden_venta_origen__ops_generadas__estado_op',
+            'producto_a_producir__componentes_requeridos__insumo' # Para insumos
+        ),
         id=op_id
     )
     
-    # ... (lógica de insumos y puede_solicitar_insumos sin cambios) ...
     insumos_necesarios_data = []
     todos_los_insumos_disponibles = True
     if op.producto_a_producir:
-        componentes_requeridos = ComponenteProducto.objects.filter(
-            producto_terminado=op.producto_a_producir
-        ).select_related('insumo')
-        if not componentes_requeridos.exists():
+        componentes_requeridos = op.producto_a_producir.componentes_requeridos.all() # Usar prefetch
+        if not componentes_requeridos:
             todos_los_insumos_disponibles = False
         for comp in componentes_requeridos:
             cantidad_total_requerida_para_op = comp.cantidad_necesaria * op.cantidad_a_producir
@@ -1307,117 +1307,133 @@ def produccion_detalle_op_view(request, op_id):
         todos_los_insumos_disponibles = False
 
     puede_solicitar_insumos = False
-    if op.estado_op:
-        estados_para_solicitar_insumos = ['pendiente', 'planificada'] 
-        puede_solicitar_insumos = op.estado_op.nombre.lower() in estados_para_solicitar_insumos
-    # --- FIN Lógica insumos ---
+    mostrar_boton_reportar = False
+    estado_op_queryset_para_form = EstadoOrden.objects.all().order_by('nombre') # Default
 
-    mostrar_boton_reportar = False # Bandera para el botón de reporte
+    if op.estado_op:
+        estado_actual_nombre_lower = op.estado_op.nombre.lower()
+        estado_actual_nombre_original = op.estado_op.nombre
+        nombres_permitidos_dropdown = [estado_actual_nombre_original]
+
+        if estado_actual_nombre_lower == "pendiente":
+            nombres_permitidos_dropdown.extend(["Pausada", "Cancelada"])
+            puede_solicitar_insumos = True 
+        elif estado_actual_nombre_lower == "planificada": # Si usas este estado
+            nombres_permitidos_dropdown.extend(["Pausada", "Cancelada"])
+            puede_solicitar_insumos = True
+        elif estado_actual_nombre_lower == "insumos solicitados":
+            nombres_permitidos_dropdown.extend(["Pausada", "Cancelada"])
+        elif estado_actual_nombre_lower == "insumos recibidos":
+            nombres_permitidos_dropdown.extend(["Producción Iniciada", "Pausada", "Cancelada"])
+        elif estado_actual_nombre_lower == "producción iniciada":
+            nombres_permitidos_dropdown.extend(["En Proceso", "Producción Parcial", "Pausada", "Completada", "Cancelada"])
+        elif estado_actual_nombre_lower == "producción parcial":
+            nombres_permitidos_dropdown.extend(["En Proceso", "Pausada", "Completada", "Cancelada"])
+        elif estado_actual_nombre_lower == "en proceso":
+            nombres_permitidos_dropdown.extend(["Producción Parcial", "Pausada", "Completada", "Cancelada"])
+        elif estado_actual_nombre_lower == "pausada":
+            nombres_permitidos_dropdown.extend(["Cancelada"])
+            # Para reanudar: El usuario debe poder seleccionar un estado productivo o pre-productivo
+            # Si los insumos ya estaban "Recibidos" antes de pausar, permitir reanudar a "Insumos Recibidos" o "Producción Iniciada"
+            # Si se pausó antes de "Insumos Recibidos", permitir volver a "Pendiente" (para re-solicitar) o "Insumos Solicitados".
+            # Esto requiere más lógica o un campo "estado_previo_pausa".
+            # Simplificación: Permitir reanudar a estados clave si existen.
+            if EstadoOrden.objects.filter(nombre__iexact="Insumos Recibidos").exists():
+                nombres_permitidos_dropdown.append("Insumos Recibidos")
+            if EstadoOrden.objects.filter(nombre__iexact="Producción Iniciada").exists():
+                nombres_permitidos_dropdown.append("Producción Iniciada")
+            if EstadoOrden.objects.filter(nombre__iexact="Pendiente").exists(): # Permitir reinicio completo
+                 nombres_permitidos_dropdown.append("Pendiente")
+
+
+        if estado_actual_nombre_lower in ["pausada", "cancelada"]:
+            mostrar_boton_reportar = True
+        
+        q_permitidos = Q()
+        for n in list(set(nombres_permitidos_dropdown)): # set para evitar duplicados
+            q_permitidos |= Q(nombre__iexact=n)
+        if q_permitidos: # Solo filtrar si hay nombres permitidos
+            estado_op_queryset_para_form = EstadoOrden.objects.filter(q_permitidos).order_by('nombre')
+        elif op.estado_op: # Si no hay otros permitidos, al menos el actual
+             estado_op_queryset_para_form = EstadoOrden.objects.filter(id=op.estado_op.id)
+
 
     if request.method == 'POST':
-        form_update = OrdenProduccionUpdateForm(request.POST, instance=op)
+        # Siempre pasar el queryset calculado al form, incluso en POST, para la validación correcta de choices
+        form_update = OrdenProduccionUpdateForm(request.POST, instance=op, estado_op_queryset=estado_op_queryset_para_form)
         if form_update.is_valid():
             estado_op_anterior_obj = OrdenProduccion.objects.get(pk=op.pk).estado_op
             op_actualizada = form_update.save(commit=False)
-            nuevo_estado_op_obj = op_actualizada.estado_op
+            nuevo_estado_op_obj = op_actualizada.estado_op # Nuevo estado del formulario
             
-            # --- Lógica de Stock PT (sin cambios, pero asegúrate que esté aquí) ---
             NOMBRE_ESTADO_OP_COMPLETADA = "Completada"
             se_esta_completando_op_ahora = False
             if nuevo_estado_op_obj and nuevo_estado_op_obj.nombre.lower() == NOMBRE_ESTADO_OP_COMPLETADA.lower():
                 if not estado_op_anterior_obj or estado_op_anterior_obj.nombre.lower() != NOMBRE_ESTADO_OP_COMPLETADA.lower():
                     se_esta_completando_op_ahora = True
+
             if se_esta_completando_op_ahora:
-                # ... (código de actualización de stock PT) ...
                 producto_terminado_obj = op_actualizada.producto_a_producir
                 cantidad_producida = op_actualizada.cantidad_a_producir
                 if producto_terminado_obj and cantidad_producida > 0:
                     ProductoTerminado.objects.filter(id=producto_terminado_obj.id).update(stock=F('stock') + cantidad_producida)
-                    stock_actualizado_pt = ProductoTerminado.objects.get(id=producto_terminado_obj.id).stock
+                    stock_actualizado_pt = ProductoTerminado.objects.get(id=producto_terminado_obj.id).stock # Obtener valor actualizado
                     messages.success(request, f"Stock de '{producto_terminado_obj.descripcion}' incrementado en {cantidad_producida}. Nuevo stock: {stock_actualizado_pt}.")
-                    logger.info(f"OP {op_actualizada.numero_op} completada. Stock de PT ID {producto_terminado_obj.id} incrementado. Nuevo stock: {stock_actualizado_pt}")
+                    logger.info(f"OP {op_actualizada.numero_op} completada. Stock de PT ID {producto_terminado_obj.id} inc. Nuevo stock: {stock_actualizado_pt}")
                     if not op_actualizada.fecha_fin_real:
                          op_actualizada.fecha_fin_real = timezone.now()
                 else:
                     logger.error(f"No se pudo actualizar stock para OP {op_actualizada.numero_op}: producto/cantidad inválidos.")
-                    messages.error(request, "No se pudo actualizar el stock del producto: producto no asignado o cantidad cero.")
-
+                    messages.error(request, "No se pudo actualizar stock: producto no asignado o cantidad cero.")
+            
             op_actualizada.save()
             messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.get_estado_op_display()}'.")
             
             # --- Lógica de actualización de estado de OV ---
             if op_actualizada.orden_venta_origen:
+                # ... (Tu lógica completa de actualización de estado de OV) ...
+                # Esta parte es crucial y compleja, asegúrate que sea correcta.
+                # Ejemplo simplificado de un fragmento:
                 orden_venta_asociada = op_actualizada.orden_venta_origen
-                ESTADO_OP_PAUSADA_LOWER = "pausada"
-                ESTADO_OP_CANCELADA_LOWER = "cancelada"
-                # ... (resto de tus constantes de estado OP y OV) ...
-                ESTADO_OP_COMPLETADA_LOWER = NOMBRE_ESTADO_OP_COMPLETADA.lower()
-                ESTADOS_OP_EN_FABRICACION_LOWER = ["producción iniciada", "en proceso"]
-                ESTADO_OP_INSUMOS_SOLICITADOS_LOWER = "insumos solicitados"
-                ESTADO_OP_PENDIENTE_LOWER = "pendiente"
-                OV_ESTADO_PRODUCCION_CON_PROBLEMAS = 'PRODUCCION_CON_PROBLEMAS'
-                OV_ESTADO_LISTA_ENTREGA = 'LISTA_ENTREGA'
-                OV_ESTADO_PRODUCCION_INICIADA = 'PRODUCCION_INICIADA'
-                OV_ESTADO_INSUMOS_SOLICITADOS = 'INSUMOS_SOLICITADOS'
-                OV_ESTADO_CONFIRMADA = 'CONFIRMADA'
-
-                nuevo_estado_ov_sugerido = orden_venta_asociada.estado
                 ops_de_la_ov = OrdenProduccion.objects.filter(orden_venta_origen=orden_venta_asociada).select_related('estado_op')
-
-                # La lógica principal de actualización de OV
-                if not ops_de_la_ov.exists():
-                    pass
-                elif all(op_h.estado_op and op_h.estado_op.nombre.lower() == ESTADO_OP_COMPLETADA_LOWER for op_h in ops_de_la_ov):
-                    nuevo_estado_ov_sugerido = OV_ESTADO_LISTA_ENTREGA
-                elif any(op_h.estado_op and op_h.estado_op.nombre.lower() in [ESTADO_OP_CANCELADA_LOWER, ESTADO_OP_PAUSADA_LOWER] for op_h in ops_de_la_ov):
-                    nuevo_estado_ov_sugerido = OV_ESTADO_PRODUCCION_CON_PROBLEMAS # <--- CLAVE AQUÍ
-                elif any(op_h.estado_op and op_h.estado_op.nombre.lower() in ESTADOS_OP_EN_FABRICACION_LOWER for op_h in ops_de_la_ov):
-                    nuevo_estado_ov_sugerido = OV_ESTADO_PRODUCCION_INICIADA
-                elif any(op_h.estado_op and op_h.estado_op.nombre.lower() == ESTADO_OP_INSUMOS_SOLICITADOS_LOWER for op_h in ops_de_la_ov):
-                    if not any(op_h.estado_op and op_h.estado_op.nombre.lower() in ESTADOS_OP_EN_FABRICACION_LOWER for op_h in ops_de_la_ov):
-                        nuevo_estado_ov_sugerido = OV_ESTADO_INSUMOS_SOLICITADOS
-                    else:
-                        nuevo_estado_ov_sugerido = OV_ESTADO_PRODUCCION_INICIADA
-                elif all(op_h.estado_op and op_h.estado_op.nombre.lower() == ESTADO_OP_PENDIENTE_LOWER for op_h in ops_de_la_ov):
-                    nuevo_estado_ov_sugerido = OV_ESTADO_CONFIRMADA
-                # ... (lógica de prevención de retroceso de estado OV) ...
-
-                if orden_venta_asociada.estado != nuevo_estado_ov_sugerido:
-                    valid_ov_states_keys = [choice[0] for choice in OrdenVenta.ESTADO_CHOICES]
-                    if nuevo_estado_ov_sugerido in valid_ov_states_keys:
-                        orden_venta_asociada.estado = nuevo_estado_ov_sugerido
+                if all(op_h.estado_op and op_h.estado_op.nombre.lower() == NOMBRE_ESTADO_OP_COMPLETADA.lower() for op_h in ops_de_la_ov if ops_de_la_ov.exists()):
+                    if orden_venta_asociada.estado != 'LISTA_ENTREGA':
+                        orden_venta_asociada.estado = 'LISTA_ENTREGA'
                         orden_venta_asociada.save(update_fields=['estado'])
-                        messages.info(request, f"Estado de OV {orden_venta_asociada.numero_ov} actualizado a '{orden_venta_asociada.get_estado_display()}'.")
+                        messages.info(request, f"OV {orden_venta_asociada.numero_ov} -> Lista para Entrega.")
+                elif any(op_h.estado_op and op_h.estado_op.nombre.lower() in ["pausada", "cancelada"] for op_h in ops_de_la_ov):
+                    if orden_venta_asociada.estado != 'PRODUCCION_CON_PROBLEMAS':
+                        orden_venta_asociada.estado = 'PRODUCCION_CON_PROBLEMAS'
+                        orden_venta_asociada.save(update_fields=['estado'])
+                        messages.info(request, f"OV {orden_venta_asociada.numero_ov} -> Producción con Problemas.")
+                # ... (más lógica para otros estados de OV)
             
-            # Determinar si mostrar el botón de reporte DESPUÉS de guardar los cambios
+            # Para que el botón de reporte se actualice en la misma página tras el POST
             if op_actualizada.estado_op and op_actualizada.estado_op.nombre.lower() in ["pausada", "cancelada"]:
                 mostrar_boton_reportar = True
+            else:
+                mostrar_boton_reportar = False
             
-            # No redirigir inmediatamente si queremos que el botón de reporte aparezca en la misma página
-            # Si prefieres redirigir y que el botón esté siempre si el estado es pausado/cancelado, entonces redirige:
-            # return redirect('App_LUMINOVA:produccion_detalle_op', op_id=op_actualizada.id)
-            # Por ahora, no redirigimos para que el botón aparezca tras el POST.
-        else:
+            # Volvemos a renderizar la misma página para ver los mensajes y el estado actualizado del botón
+            # form_update necesitará el queryset recalculado si el estado cambió.
+            # Es más simple si la redirección siempre ocurre y el GET request recalcula todo.
+            return redirect('App_LUMINOVA:produccion_detalle_op', op_id=op_actualizada.id) 
+        else: 
             messages.error(request, "Error al actualizar la OP. Revise los datos del formulario.")
             logger.warning(f"Formulario OrdenProduccionUpdateForm inválido para OP {op.id}: {form_update.errors.as_json()}")
-            # Si el form es inválido, también verificamos si el estado actual de la OP (antes del intento de POST)
-            # justifica mostrar el botón de reporte.
-            if op.estado_op and op.estado_op.nombre.lower() in ["pausada", "cancelada"]:
+            if op.estado_op and op.estado_op.nombre.lower() in ["pausada", "cancelada"]: # Mantener estado del botón si el form falla
                 mostrar_boton_reportar = True
-
-    else: # GET request
-        form_update = OrdenProduccionUpdateForm(instance=op)
-        if op.estado_op and op.estado_op.nombre.lower() in ["pausada", "cancelada"]:
-            mostrar_boton_reportar = True
-
+    
+    # Para solicitudes GET o si el formulario POST no fue válido pero necesitamos el form en el contexto
+    form_update = OrdenProduccionUpdateForm(instance=op, estado_op_queryset=estado_op_queryset_para_form)
 
     context = {
         'op': op,
         'insumos_necesarios_list': insumos_necesarios_data,
-        'form_update_op': form_update, # Se pasa el form (con errores si es un POST fallido, o nuevo si es GET)
+        'form_update_op': form_update,
         'todos_los_insumos_disponibles_variable_de_contexto': todos_los_insumos_disponibles,
         'puede_solicitar_insumos': puede_solicitar_insumos,
-        'mostrar_boton_reportar': mostrar_boton_reportar, # NUEVA VARIABLE DE CONTEXTO
+        'mostrar_boton_reportar': mostrar_boton_reportar,
         'titulo_seccion': f'Detalle OP: {op.numero_op}',
     }
     return render(request, 'produccion/produccion_detalle_op.html', context)

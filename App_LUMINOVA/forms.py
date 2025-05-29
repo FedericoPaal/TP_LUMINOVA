@@ -110,102 +110,75 @@ class OrdenProduccionUpdateForm(forms.ModelForm):
         widgets = {
             'estado_op': forms.Select(attrs={'class': 'form-select'}),
             'sector_asignado_op': forms.Select(attrs={'class': 'form-select'}),
-            'fecha_inicio_planificada': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha_fin_planificada': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'fecha_inicio_planificada': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'DD/MM/YYYY'}),
+            'fecha_fin_planificada': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'DD/MM/YYYY'}),
+            'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notas adicionales de producción...'}),
         }
         labels = {
             'estado_op': 'Cambiar Estado de OP',
             'sector_asignado_op': 'Asignar Sector de Producción',
-            # ... (otras etiquetas)
+            'fecha_inicio_planificada': 'Fecha Inicio Planificada',
+            'fecha_fin_planificada': 'Fecha Fin Planificada',
+            'notas': 'Notas Adicionales de Producción',
         }
 
     def __init__(self, *args, **kwargs):
+        # Pop el queryset personalizado antes de llamar a super()
+        estado_op_queryset_personalizado = kwargs.pop('estado_op_queryset', None)
         super().__init__(*args, **kwargs)
         
         self.fields['sector_asignado_op'].queryset = SectorAsignado.objects.all().order_by('nombre')
         self.fields['sector_asignado_op'].empty_label = "Seleccionar Sector..."
         
-        instance = getattr(self, 'instance', None)
+        # Aplicar el queryset personalizado si se proporcionó
+        if estado_op_queryset_personalizado is not None:
+            self.fields['estado_op'].queryset = estado_op_queryset_personalizado
+        else:
+            # Fallback si no se pasa queryset (aunque la vista siempre debería pasarlo)
+            self.fields['estado_op'].queryset = EstadoOrden.objects.all().order_by('nombre')
+            logger.warning("OrdenProduccionUpdateForm recibió estado_op_queryset=None. Usando todos los estados.")
         
-        # Definición de nombres de estado (minúsculas para comparación)
-        ESTADO_PENDIENTE = "pendiente"
-        ESTADO_INSUMOS_SOLICITADOS = "insumos solicitados"
-        ESTADO_INSUMOS_RECIBIDOS = "insumos recibidos"
-        ESTADO_PRODUCCION_INICIADA = "producción iniciada"
-        ESTADO_EN_PROCESO = "en proceso"
-        ESTADO_PRODUCCION_PARCIAL = "producción parcial"
-        ESTADO_PAUSADA = "pausada"
-        ESTADO_COMPLETADA = "completada"
-        ESTADO_CANCELADA = "cancelada"
+        self.fields['estado_op'].empty_label = None # No mostrar "---------"
 
-        nombres_estados_permitidos_dropdown = [] # Estados que aparecerán en el dropdown
+        # Lógica para deshabilitar campos basada en el estado *inicial* de la instancia
+        # cuando el formulario se carga por primera vez.
+        instance = getattr(self, 'instance', None)
         campos_a_deshabilitar = []
         
         if instance and instance.pk and instance.estado_op:
             estado_actual_nombre_lower = instance.estado_op.nombre.lower()
-            estado_actual_nombre_original = instance.estado_op.nombre
-
-            if estado_actual_nombre_lower == ESTADO_PENDIENTE:
-                nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'Pausada', 'Cancelada']
-                # Deshabilitar otros campos de planificación
-                campos_a_deshabilitar = ['sector_asignado_op', 'fecha_inicio_planificada', 'fecha_fin_planificada', 'notas']
             
-            elif estado_actual_nombre_lower == ESTADO_INSUMOS_SOLICITADOS:
-                nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'Pausada', 'Cancelada']
-                campos_a_deshabilitar = ['sector_asignado_op', 'fecha_inicio_planificada', 'fecha_fin_planificada', 'notas']
+            # Estados donde la planificación/asignación no tiene sentido o ya pasó
+            estados_sin_planificacion_activa = [
+                "pendiente", 
+                "insumos solicitados", # Esperando a depósito
+                "completada", 
+                "cancelada"
+            ]
+            # El estado "Pausada" es un caso especial, podría permitir edición de notas
+            # pero no necesariamente de fechas/sector si se espera reanudar tal cual.
+            # Si desde "Pausada" se permite volver a "Pendiente", entonces sí se deshabilitarían.
+            # Por ahora, si está Pausada, los campos de planificación no se deshabilitan explícitamente aquí,
+            # la lógica de qué estados permite la vista al reanudar es más importante.
 
-            elif estado_actual_nombre_lower == ESTADO_INSUMOS_RECIBIDOS:
-                # ¡AHORA SE HABILITAN LOS CAMPOS!
-                nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'Producción Iniciada', 'Pausada', 'Cancelada']
-                # No hay campos a deshabilitar, o solo notas si prefieres
+            if estado_actual_nombre_lower in estados_sin_planificacion_activa:
+                campos_a_deshabilitar = ['sector_asignado_op', 'fecha_inicio_planificada', 'fecha_fin_planificada']
+                # Notas podría seguir siendo editable en algunos de estos estados.
+                if estado_actual_nombre_lower in ["completada", "cancelada"]:
+                    self.fields['estado_op'].disabled = True # No se puede cambiar el estado si ya está finalizado/cancelado
+                    self.fields['notas'].disabled = True # Tampoco las notas
             
-            elif estado_actual_nombre_lower == ESTADO_PRODUCCION_INICIADA:
-                 nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'En Proceso', 'Producción Parcial', 'Pausada', 'Completada', 'Cancelada']
-            
-            elif estado_actual_nombre_lower == ESTADO_PRODUCCION_PARCIAL:
-                 nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'En Proceso', 'Pausada', 'Completada', 'Cancelada']
+            # Si está pausada, solo notas editables, el resto no.
+            elif estado_actual_nombre_lower == "pausada":
+                campos_a_deshabilitar = ['sector_asignado_op', 'fecha_inicio_planificada', 'fecha_fin_planificada']
 
-            elif estado_actual_nombre_lower == ESTADO_EN_PROCESO:
-                 nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'Producción Parcial', 'Pausada', 'Completada', 'Cancelada']
-            
-            elif estado_actual_nombre_lower == ESTADO_PAUSADA:
-                nombres_estados_permitidos_dropdown = [estado_actual_nombre_original, 'Pendiente', 'Cancelada']
-                # Al volver a Pendiente, los campos de planificación deberían volver a deshabilitarse
-                # hasta que pase a Insumos Recibidos de nuevo.
-                # Si reanuda a un estado productivo, se habilitan.
-                # Por ahora, si vuelve a pendiente, se deshabilitarán en la próxima carga del form.
-                # Podrías añadir lógica aquí para deshabilitar si el estado seleccionado es Pendiente.
-            
-            elif estado_actual_nombre_lower in [ESTADO_COMPLETADA, ESTADO_CANCELADA]:
-                nombres_estados_permitidos_dropdown = [estado_actual_nombre_original]
-                campos_a_deshabilitar = ['sector_asignado_op', 'fecha_inicio_planificada', 'fecha_fin_planificada', 'notas'] # Todo deshabilitado
 
-            else: 
-                logger.warning(f"Estado OP '{instance.estado_op.nombre}' no tiene transiciones/habilitaciones definidas en Form. Mostrando todos.")
-                self.fields['estado_op'].queryset = EstadoOrden.objects.all().order_by('nombre')
-
-            if nombres_estados_permitidos_dropdown:
-                q_objects = Q()
-                for nombre_estado in nombres_estados_permitidos_dropdown:
-                    q_objects |= Q(nombre__iexact=nombre_estado)
-                self.fields['estado_op'].queryset = EstadoOrden.objects.filter(q_objects).order_by('nombre')
-            elif not self.fields['estado_op'].queryset and instance and instance.estado_op:
-                 self.fields['estado_op'].queryset = EstadoOrden.objects.filter(id=instance.estado_op.id)
-        else:
-            self.fields['estado_op'].queryset = EstadoOrden.objects.all().order_by('nombre')
-            
-        self.fields['estado_op'].empty_label = None 
-
-        # Deshabilitar campos según la lógica
         for field_name in campos_a_deshabilitar:
             if field_name in self.fields:
                 self.fields[field_name].disabled = True
-                # Opcionalmente, añadir un placeholder o cambiar el widget si está deshabilitado
-                # self.fields[field_name].widget.attrs['placeholder'] = "No editable en este estado"
-                # self.fields[field_name].widget.attrs['readonly'] = True # Alternativa a disabled
-
-        # Campos opcionales (su 'required' es False si blank=True en el modelo)
+                self.fields[field_name].widget.attrs['placeholder'] = "No editable en este estado"
+        
+        # Definir campos como no requeridos si el modelo lo permite (blank=True)
         self.fields['fecha_inicio_planificada'].required = False
         self.fields['fecha_fin_planificada'].required = False
         self.fields['sector_asignado_op'].required = False 
