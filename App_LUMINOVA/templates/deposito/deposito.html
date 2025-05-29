@@ -95,7 +95,7 @@
             </thead>
             <tbody class="bg-white text-dark">
                 <tr>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">N° OP</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 25%;">N° OP</th>
                     <th class="text-white" style="background-color: #014BAC; width: 50%;">Producto</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Cantidad</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;"></th>
@@ -173,8 +173,8 @@
             <tbody class="bg-white text-dark">
                 <tr>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">ID</th>
-                    <th class="text-white" style="background-color: #014BAC; width: 50%;">Insumo</th>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Stock Actual</th>
+                    <th class="text-white" style="background-color: #014BAC; width: 45%;">Insumo</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">Stock Actual</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 15%;">Pedido</th>
                 </tr>
                 {% for insumo_bajo_stock_item in insumos_con_stock_bajo_list %}
@@ -199,7 +199,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="3" class="text-center" style="background-color: #A19898;">
+                    <td colspan="4" class="text-center text-white" style="background-color: #A19898;">
                         No hay insumos con stock bajo actualmente.
                     </td>
                 </tr>
