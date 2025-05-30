@@ -87,20 +87,54 @@ ItemOrdenVentaFormSet = forms.inlineformset_factory(
 class OrdenVentaForm(forms.ModelForm):
     class Meta:
         model = OrdenVenta
-        fields = ['numero_ov', 'cliente', 'estado', 'notas'] # total_ov se calcula
+        fields = ['numero_ov', 'cliente', 'estado', 'notas']
         widgets = {
             'numero_ov': forms.TextInput(attrs={'class': 'form-control'}),
             'cliente': forms.Select(attrs={'class': 'form-select'}),
-            'estado': forms.Select(attrs={'class': 'form-select'}),
-            'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'estado': forms.Select(attrs={'class': 'form-select'}), # Widget base
+            'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Anotaciones adicionales sobre la orden...'}),
+        }
+        labels = {
+            'numero_ov': "Nº Orden de Venta",
+            'cliente': "Cliente Asociado",
+            'estado': "Estado Actual de la Orden",
+            'notas': "Notas Adicionales"
         }
     
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs) # Llamar al __init__ del padre primero
+
+        # Configurar el queryset y empty_label para el campo cliente
         self.fields['cliente'].queryset = Cliente.objects.all().order_by('nombre')
-        self.fields['cliente'].empty_label = "Seleccione un Cliente"
-        self.fields['estado'].choices = OrdenVenta.ESTADO_CHOICES
-        self.fields['estado'].initial = 'PENDIENTE'
+        self.fields['cliente'].empty_label = "Seleccione un Cliente..."
+        
+        # Las choices para el campo 'estado' ya se toman del modelo OrdenVenta.ESTADO_CHOICES
+        # Ahora, manejamos la lógica de 'disabled' e 'initial' para 'estado'
+
+        instance = getattr(self, 'instance', None)
+        is_new_instance = instance is None or not instance.pk
+
+        if is_new_instance:
+            # Para una nueva OV (creación):
+            # 1. Establecer el valor inicial del campo 'estado' a 'PENDIENTE'.
+            self.initial['estado'] = 'PENDIENTE' # Poner el valor en initial
+            
+            # 2. Deshabilitar el widget para que el usuario no pueda cambiarlo.
+            #    Los campos deshabilitados no envían su valor con el POST,
+            #    así que la vista debe asegurarse de setear 'PENDIENTE' al guardar.
+            self.fields['estado'].widget.attrs['disabled'] = True
+            # Opcionalmente, para algunos navegadores o si quieres ser explícito:
+            # self.fields['estado'].disabled = True 
+            
+            # No es necesario un campo oculto si la vista maneja el estado por defecto al crear.
+        else:
+            # Para una OV existente (edición):
+            # Asegurarse de que el campo 'estado' esté habilitado.
+            # Si se había puesto 'disabled' en alguna otra lógica, lo quitamos.
+            if 'disabled' in self.fields['estado'].widget.attrs:
+                del self.fields['estado'].widget.attrs['disabled']
+            if hasattr(self.fields['estado'], 'disabled'): # Por si se usó self.fields['estado'].disabled = True
+                 self.fields['estado'].disabled = False
 
 # Formulario para actualizar una OP (usado en la vista de detalle de OP)
 class OrdenProduccionUpdateForm(forms.ModelForm):

@@ -485,17 +485,34 @@ def eliminar_cliente_view(request, cliente_id):
 
 @login_required
 def ventas_lista_ov_view(request):
-    if not es_admin_o_rol(request.user, ['ventas', 'produccion', 'administrador']): # Producción también podría ver OVs
-        messages.error(request, "Acceso denegado.")
-        return redirect('App_LUMINOVA:dashboard')
-
-    ordenes = OrdenVenta.objects.select_related('cliente').prefetch_related(
+    ordenes_de_venta_query = OrdenVenta.objects.select_related('cliente').prefetch_related(
         'items_ov__producto_terminado',
-        'ops_generadas' # Usando el related_name de OrdenProduccion.orden_venta_origen
+        Prefetch(
+            'ops_generadas',
+            queryset=OrdenProduccion.objects.select_related('estado_op', 'producto_a_producir')
+                                      .prefetch_related(
+                                          Prefetch(
+                                              'reportes_incidencia',
+                                              queryset=Reportes.objects.select_related('reportado_por', 'sector_reporta').order_by('-fecha')
+                                          )
+                                      ).order_by('numero_op'),
+            to_attr='lista_ops_con_reportes_y_estado' # Nuevo nombre para claridad
+        )
     ).order_by('-fecha_creacion')
 
+    # Procesar para añadir la bandera
+    ordenes_list_con_info_reporte = []
+    for ov in ordenes_de_venta_query:
+        ov.tiene_algun_reporte_asociado = False # Inicializar bandera
+        if hasattr(ov, 'lista_ops_con_reportes_y_estado'): # Verificar si el prefetch funcionó
+            for op in ov.lista_ops_con_reportes_y_estado:
+                if op.reportes_incidencia.all().exists(): # Si alguna OP tiene reportes
+                    ov.tiene_algun_reporte_asociado = True
+                    break # No necesitamos seguir buscando en las OPs de esta OV
+        ordenes_list_con_info_reporte.append(ov)
+    
     context = {
-        'ordenes_list': ordenes,
+        'ordenes_list': ordenes_list_con_info_reporte, # Pasar la lista procesada
         'titulo_seccion': 'Órdenes de Venta',
     }
     return render(request, 'ventas/ventas_lista_ov.html', context)

@@ -4,14 +4,11 @@
 {% url 'App_LUMINOVA:lista_usuarios' as usuarios_url %}
 {% url 'App_LUMINOVA:roles-permisos' as roles_url %}
 {% url 'App_LUMINOVA:auditoria' as auditoria_url %}
-
 {% url 'App_LUMINOVA:ventas_lista_ov' as ventas_url %}
 {% url 'App_LUMINOVA:lista_clientes' as clientes_url %}
 {% url 'App_LUMINOVA:produccion_lista_op' as produccion_url %}
-
 {% url 'App_LUMINOVA:deposito' as deposito_url %}
-
-
+{% url 'App_LUMINOVA:compras_lista_oc' as compras_url %}
 
 {% if request.resolver_match.app_name == 'App_LUMINOVA' %}
     {% if request.path == dashboard_url or request.path == usuarios_url or request.path == roles_url or request.path == auditoria_url %}
