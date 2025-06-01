@@ -5,77 +5,152 @@
 {% block title %}{{ titulo_seccion|default:"Órdenes de Compra" }}{% endblock %}
 
 {% block sidebar_content %}
-{% include 'compras/compras_sidebar.html' %}
+    {% include 'compras/compras_sidebar.html' %}
 {% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="text center">{{ titulo_seccion }}</h1>
+    <h1 class="h2">{{ titulo_seccion }}</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="#" class="btn btn-success">
-            <i class="bi bi-plus-circle"></i> Nueva Órden de Compra
+        <a href="{% url 'App_LUMINOVA:compras_crear_oc' %}" class="btn btn-primary"> {# Botón para crear OC sin preselección de insumo #}
+            <i class="bi bi-plus-circle"></i> Nueva Orden de Compra
         </a>
     </div>
 </div>
 
-
-
 <div class="table-responsive mt-3">
-    <table class="table table-hover">
-        <thead style="background-color: #014BAC;"> {# O tu clase color-thead #}
+    <table class="table table-hover table-sm align-middle"> {# table-sm para más compacidad #}
+        <thead class="color-thead"> {# Tu clase CSS para el encabezado #}
             <tr>
-                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">N° OC</th>
-                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Fecha Creación</th>
-                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Proveedor</th>
-                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Insumo Principal</th>
-                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Cantidad</th>
-                <th class="text-end align-middle" style="color: rgb(25, 11, 216);">Total</th>
-                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Estado</th>
-                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Tracking</th>
-                <th class="text-center align-middle" style="color: rgb(25, 11, 216);">Acciones</th>
+                <th class="text-center">N° OC</th>
+                <th>Fecha Creación</th>
+                <th>Proveedor</th>
+                <th>Insumo Principal</th>
+                <th class="text-center">Cantidad</th>
+                <th class="text-end">Total ($)</th>
+                <th class="text-center">Estado</th>
+                <th class="text-center">Tracking</th>
+                <th class="text-center" style="min-width: 120px;">Acciones</th> {# Ancho mínimo para botones #}
             </tr>
         </thead>
         <tbody>
             {% for oc in ordenes_list %}
             <tr>
-                <td><a href="#">{{ oc.numero_orden }}</a></td> {# Enlace a detalle de OC (futuro) #}
+                <td class="text-center">
+                    <a href="{% url 'App_LUMINOVA:compras_detalle_oc' oc.id %}">{{ oc.numero_orden }}</a>
+                </td>
                 <td>{{ oc.fecha_creacion|date:"d/m/Y H:i" }}</td>
                 <td>{{ oc.proveedor.nombre|default_if_none:"N/A" }}</td>
-                <td>{{ oc.insumo_principal.descripcion|default_if_none:"Varios/No especificado"|truncatechars:30 }}</td>
+                <td>{{ oc.insumo_principal.descripcion|default_if_none:"N/A"|truncatechars:30 }}</td>
                 <td class="text-center">{{ oc.cantidad_principal|default_if_none:"-" }}</td>
-                {# LÍNEA IMPORTANTE - VERIFICA EL NOMBRE DEL CAMPO AQUÍ #}
-                <td class="text-end">${{ oc.total_orden_compra|floatformat:2|default:"0.00" }}</td>
-                <td>
-                    <span class="badge
-                {% if oc.estado == 'BORRADOR' %}bg-secondary
-                {% elif oc.estado == 'PENDIENTE_APROBACION' %}bg-warning text-dark
-                {% elif oc.estado == 'APROBADA' %}bg-info
-                {% elif oc.estado == 'ENVIADA_PROVEEDOR' %}bg-primary
-                {% elif oc.estado == 'RECIBIDA_TOTAL' or oc.estado == 'COMPLETADA' %}bg-success
-                {% elif oc.estado == 'CANCELADA' %}bg-danger
-                {% else %}bg-dark{% endif %}">
-                        {{ oc.get_estado_display }} {# Usar el método estándar de Django #}
+                <td class="text-end">{{ oc.total_orden_compra|floatformat:2|default:"0.00" }}</td>
+                <td class="text-center">
+                    <span class="badge fs-6
+                        {% if oc.estado == 'BORRADOR' %}bg-secondary
+                        {% elif oc.estado == 'PENDIENTE_APROBACION' %}bg-warning text-dark
+                        {% elif oc.estado == 'APROBADA' %}bg-info 
+                        {% elif oc.estado == 'ENVIADA_PROVEEDOR' %}bg-primary
+                        {% elif oc.estado == 'CONFIRMADA_PROVEEDOR' %}bg-primary-subtle text-primary-emphasis border border-primary-subtle
+                        {% elif oc.estado == 'EN_TRANSITO' %}bg-info-subtle text-info-emphasis border border-info-subtle
+                        {% elif oc.estado == 'RECIBIDA_PARCIAL' %}bg-success-subtle text-success-emphasis border border-success-subtle
+                        {% elif oc.estado == 'RECIBIDA_TOTAL' %}bg-success
+                        {% elif oc.estado == 'COMPLETADA' %}bg-success
+                        {% elif oc.estado == 'CANCELADA' %}bg-dark
+                        {% else %}bg-light text-dark{% endif %}">
+                        {{ oc.get_estado_display }}
                     </span>
                 </td>
-                <td>{{ oc.numero_tracking|default_if_none:"N/A" }}</td>
+                <td class="text-center">{{ oc.numero_tracking|default_if_none:"N/A" }}</td>
                 <td class="text-center">
-                    <a href="#" class="btn btn-sm btn-outline-primary" title="Ver Detalles"><i
-                            class="bi bi-eye"></i></a>
-                    {# Aquí podrías añadir botones para Editar, Aprobar, Cancelar OC según su estado #}
+                    <a href="{% url 'App_LUMINOVA:compras_detalle_oc' oc.id %}" class="btn btn-sm btn-outline-info me-1" title="Ver Detalles de OC {{ oc.numero_orden }}">
+                        <i class="bi bi-eye-fill"></i>
+                    </a>
+
+                    {% if oc.estado == 'BORRADOR' %}
+                        {# Enlace para Editar (sigue siendo GET, lleva a un formulario) #}
+                        <a href="{% url 'App_LUMINOVA:compras_editar_oc' oc.id %}" class="btn btn-sm btn-outline-primary me-1" title="Editar OC {{ oc.numero_orden }}">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+
+                        {# Formulario para el botón "Enviar para Aprobación" #}
+                        <form method="post" action="{% url 'App_LUMINOVA:compras_solicitar_aprobacion_oc' oc.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-success me-1" title="Enviar OC {{ oc.numero_orden }} para Aprobación">
+                                <i class="bi bi-send-check-fill"></i>
+                            </button>
+                        </form>
+                        
+                        {# Aquí podrías tener el botón para Cancelar/Eliminar Borrador si lo implementas #}
+                        
+                        <!-- <form method="post" action="#" style="display: inline;" onsubmit="return confirm('¿Está seguro de que desea eliminar este borrador de OC?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar Borrador OC {{ oc.numero_orden }}">
+                                <i class="bi bi-trash3-fill"></i>
+                            </button>
+                        </form>  -->
+                        
+                    {% elif oc.estado == 'PENDIENTE_APROBACION' %}
+                       {# ... (tus botones para Aprobar/Rechazar irían aquí, también como forms POST) ... #}
+                         <a href="{% url 'App_LUMINOVA:compras_editar_oc' oc.id %}" class="btn btn-sm btn-outline-primary me-1" title="Editar OC (si permitido en este estado)">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                    {# ... otros elif para diferentes estados ... #}
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="9" class="text-center fst-italic text-muted">No hay órdenes de compra registradas.</td>
+                <td colspan="9" class="text-center fst-italic text-muted py-3">
+                    No hay órdenes de compra registradas. Puede <a href="{% url 'App_LUMINOVA:compras_crear_oc' %}">crear una nueva</a>.
+                </td>
             </tr>
             {% endfor %}
         </tbody>
-
-
     </table>
 </div>
 
+{# MODALES (EJEMPLO PARA CANCELAR OC) #}
+{# Si implementas la cancelación, necesitarás un modal por cada OC, similar a como hicimos con las OVs #}
+{% for oc in ordenes_list %}
+    {% if oc.estado not in "CANCELADA,COMPLETADA,RECIBIDA_TOTAL,ENVIADA_PROVEEDOR" %} {# Condición para mostrar modal #}
+    <!-- Modal Cancelar OC {{ oc.numero_orden }} -->
+    <div class="modal fade" id="cancelarOCModal{{oc.id}}" tabindex="-1" aria-labelledby="cancelarOCModalLabel{{oc.id}}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                {# <form method="post" action="{% url 'App_LUMINOVA:compras_cancelar_oc' oc.id %}"> #}
+                <form method="post" action="#"> {# URL de cancelación aquí #}
+                    {% csrf_token %}
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="cancelarOCModalLabel{{oc.id}}"><i class="bi bi-exclamation-triangle-fill"></i> Confirmar Cancelación de OC</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>¿Estás seguro de que deseas cancelar la Orden de Compra <strong>{{ oc.numero_orden }}</strong>?</p>
+                        <p class="small text-danger">Esta acción podría ser irreversible y afectará la cantidad en pedido del insumo asociado.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, mantener</button>
+                        <button type="submit" class="btn btn-danger">Sí, Cancelar OC</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
 
+{% endblock %}
 
-
+{% block scripts_extra %}
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f0f8ff; /* AliceBlue, o el color que prefieras para el hover */
+    }
+    /* Si tienes una clase color-thead, asegúrate que esté definida en custom.css o aquí */
+    .color-thead th { 
+        background-color: #014BAC !important; /* Azul oscuro para encabezados */
+        color: white !important;
+        vertical-align: middle;
+    }
+</style>
 {% endblock %}

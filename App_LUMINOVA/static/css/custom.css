@@ -113,9 +113,18 @@ nav.sidebar .nav-link.custom-active-button.active {
     margin-bottom: 0; /* Elimina el margen inferior predeterminado del párrafo */
 }
 
-.color-thead{
-    background-color:  #014BAC !important;
-    color: white !important;
+.table > thead.color-thead {
+    --bs-table-color: white; /* Anula la variable de color de texto de la tabla de Bootstrap */
+    /* --bs-table-bg: #014BAC; /* Podrías usar esto para el fondo también */
+    background-color: #014BAC !important; /* Mantener por si acaso */
+    color: white !important; /* Redundante si --bs-table-color funciona, pero no hace daño */
+    border-color: #014BAC !important;
+}
+
+/* Adicionalmente, para asegurar que los th hereden: */
+.table > thead.color-thead > tr > th {
+    color: inherit !important; /* Heredar el color del padre (thead) */
+    vertical-align: middle !important;
 }
 
 /* NUEVAS CLASES PARA FILAS DE TABLA con mayor especificidad */

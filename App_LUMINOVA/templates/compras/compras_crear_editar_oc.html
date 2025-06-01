@@ -36,7 +36,7 @@
                         
                         <hr class="my-4">
                         <div class="d-flex justify-content-end">
-                            <a href="{% if insumo_preseleccionado %}{% url 'App_LUMINOVA:deposito_view' %}{% else %}{% url 'App_LUMINOVA:compras_lista_oc' %}{% endif %}" class="btn btn-outline-secondary me-2">
+                            <a href="{% url 'App_LUMINOVA:compras_lista_oc' %}" class="btn btn-outline-secondary me-2">
                                 <i class="bi bi-x-circle"></i> Cancelar
                             </a>
                             <button type="submit" class="btn btn-primary">

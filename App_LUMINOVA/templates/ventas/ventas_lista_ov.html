@@ -19,24 +19,22 @@
     </div>
 </div>
 
-
-
 <div class="table-responsive mt-3">
     <table class="table table-striped table-hover align-middle">
-        <thead class="table-light">
+        <thead class="table-light"> {# O tu clase color-thead #}
             <tr>
-                <th>N° OV</th>
-                <th>Fecha Creación</th>
-                <th>Cliente</th>
-                <th>Items</th>
-                <th class="text-end">Total</th>
-                <th>Estado</th>
-                <th>OPs Generadas</th>
-                <th class="text-center">Acciones</th>
+                <th {% if not DEBUG %}class="color-thead"{% endif %}>N° OV</th>
+                <th {% if not DEBUG %}class="color-thead"{% endif %}>Fecha Creación</th>
+                <th {% if not DEBUG %}class="color-thead"{% endif %}>Cliente</th>
+                <th {% if not DEBUG %}class="color-thead"{% endif %}>Items</th>
+                <th {% if not DEBUG %}class="color-thead"{% endif %} class="text-end">Total</th>
+                <th {% if not DEBUG %}class="color-thead"{% endif %}>Estado</th>
+                <th {% if not DEBUG %}class="color-thead"{% endif %}>OPs Generadas</th>
+                <th {% if not DEBUG %}class="color-thead"{% endif %} class="text-center">Acciones</th>
             </tr>
         </thead>
         <tbody>
-            {% for ov in ordenes_list %} {# ordenes_list ahora contiene objetos OV con el atributo tiene_algun_reporte_asociado #}
+            {% for ov in ordenes_list %}
             <tr>
                 <td><a href="{% url 'App_LUMINOVA:ventas_detalle_ov' ov.id %}">{{ ov.numero_ov }}</a></td>
                 <td>{{ ov.fecha_creacion|date:"d/m/Y H:i" }}</td>
@@ -64,7 +62,6 @@
                         {% else %}bg-light text-dark{% endif %}">
                         {{ ov.get_estado_display }}
                     </span>
-                    {# Icono y enlace al Modal si la OV está con problemas Y TIENE REPORTES ASOCIADOS #}
                     {% if ov.estado == 'PRODUCCION_CON_PROBLEMAS' and ov.tiene_algun_reporte_asociado %}
                         <a href="#" data-bs-toggle="modal" data-bs-target="#modalReportesOV{{ ov.id }}" 
                            class="ms-1" title="Ver reportes de problemas asociados a esta OV">
@@ -73,7 +70,7 @@
                     {% endif %}
                 </td>
                 <td>
-                    {% for op_gen in ov.lista_ops_con_reportes_y_estado %} {# Usar el atributo del prefetch #}
+                    {% for op_gen in ov.lista_ops_con_reportes_y_estado %}
                         <a href="{% url 'App_LUMINOVA:produccion_detalle_op' op_gen.id %}">{{ op_gen.numero_op }}</a>
                         <small class="text-muted">({{ op_gen.get_estado_op_display }})</small>
                         {% if not forloop.last %}<br>{% endif %}
@@ -86,12 +83,17 @@
                          <i class="bi bi-eye-fill"></i>
                      </a>
                     {% if ov.estado == 'PENDIENTE' or ov.estado == 'CONFIRMADA' %}
-                     <a href="{% url 'App_LUMINOVA:ventas_editar_ov' ov.id %}" class="btn btn-sm btn-outline-primary me-1" title="Editar OV {{ ov.numero_ov }}">
-                         <i class="bi bi-pencil-square"></i>
+                     <a href="{% url 'App_LUMINOVA:ventas_editar_ov' ov.id %}"
+                        class="btn btn-sm btn-outline-primary me-1" title="Editar OV {{ ov.numero_ov }}">
+                        <i class="bi bi-pencil-square"></i>
                      </a>
                     {% endif %}
+                    {# --- BOTÓN PARA ABRIR MODAL DE CANCELACIÓN RESTAURADO AQUÍ --- #}
                     {% if ov.estado != 'CANCELADA' and ov.estado != 'COMPLETADA' %}
-                     <a href="#" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelarOVModal{{ov.id}}" title="Cancelar OV {{ ov.numero_ov }}">
+                     <a href="#" class="btn btn-sm btn-outline-danger" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#cancelarOVModal{{ ov.id }}" 
+                        title="Cancelar OV {{ ov.numero_ov }}">
                          <i class="bi bi-x-circle-fill"></i>
                      </a>
                     {% endif %}
@@ -106,45 +108,60 @@
     </table>
 </div>
 
-{# Modales de Confirmación de Cancelación (uno por cada OV) - SIN CAMBIOS #}
-{% for ov_cancel_modal_loop_var in ordenes_list %} {# Usar una variable de bucle diferente aquí #}
-    {% if ov_cancel_modal_loop_var.estado != 'CANCELADA' and ov_cancel_modal_loop_var.estado != 'COMPLETADA' %}
-    <div class="modal fade" id="cancelarOVModal{{ov_cancel_modal_loop_var.id}}" tabindex="-1" aria-labelledby="cancelarOVModalLabel{{ov_cancel_modal_loop_var.id}}" aria-hidden="true">
-        {# ... contenido del modal de cancelación ... #}
+{# Modales de Confirmación de Cancelación y de Reportes para cada OV #}
+{% for ov in ordenes_list %}
+    {% if ov.estado != 'CANCELADA' and ov.estado != 'COMPLETADA' %}
+    <div class="modal fade" id="cancelarOVModal{{ ov.id }}" tabindex="-1" aria-labelledby="cancelarOVModalLabel{{ ov.id }}" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form method="post" action="{% url 'App_LUMINOVA:ventas_cancelar_ov' ov.id %}">
+                    {% csrf_token %}
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title" id="cancelarOVModalLabel{{ ov.id }}"><i class="bi bi-exclamation-triangle-fill"></i> Confirmar Cancelación</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>¿Estás seguro de que deseas cancelar la Orden de Venta <strong>{{ ov.numero_ov }}</strong>?</p>
+                        <p class="small text-muted">Esto también intentará cancelar las Órdenes de Producción asociadas que aún no estén completadas.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, mantener</button>
+                        <button type="submit" class="btn btn-danger">Sí, Cancelar OV</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
     {% endif %}
-{% endfor %}
 
-{# Modal para ver Reportes (solo se genera si la OV tiene reportes asociados) #}
-{% for ov_report_modal_loop_var in ordenes_list %} {# Usar una variable de bucle diferente aquí #}
-    {% if ov_report_modal_loop_var.estado == 'PRODUCCION_CON_PROBLEMAS' and ov_report_modal_loop_var.tiene_algun_reporte_asociado %}
-        <div class="modal fade" id="modalReportesOV{{ ov_report_modal_loop_var.id }}" tabindex="-1" aria-labelledby="modalReportesOVLabel{{ ov_report_modal_loop_var.id }}" aria-hidden="true">
+    {% if ov.estado == 'PRODUCCION_CON_PROBLEMAS' and ov.tiene_algun_reporte_asociado %}
+        <div class="modal fade" id="modalReportesOV{{ ov.id }}" tabindex="-1" aria-labelledby="modalReportesOVLabel{{ ov.id }}" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
                     <div class="modal-header bg-danger text-white">
-                        <h5 class="modal-title" id="modalReportesOVLabel{{ ov_report_modal_loop_var.id }}">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>Reportes de Problemas para OV: {{ ov_report_modal_loop_var.numero_ov }}
+                        <h5 class="modal-title" id="modalReportesOVLabel{{ ov.id }}">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>Reportes de Problemas para OV: {{ ov.numero_ov }}
                         </h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        {% for op_gen_modal_detail in ov_report_modal_loop_var.lista_ops_con_reportes_y_estado %} {# Usar el atributo del prefetch #}
-                            {% if op_gen_modal_detail.reportes_incidencia.all %}
+                        {% for op_con_reportes_detail in ov.lista_ops_con_reportes_y_estado %}
+                            {% if op_con_reportes_detail.reportes_incidencia.all %}
                                 <div class="mb-3 p-2 border rounded">
                                     <h6 class="mb-2">
-                                        <i class="bi bi-clipboard-data-fill"></i> Reportes de OP: <a href="{% url 'App_LUMINOVA:produccion_detalle_op' op_gen_modal_detail.id %}">{{ op_gen_modal_detail.numero_op }}</a> 
-                                        <small class="text-muted">({{ op_gen_modal_detail.producto_a_producir.descripcion }})</small>
+                                        <i class="bi bi-clipboard-data-fill"></i> Reportes de OP: <a href="{% url 'App_LUMINOVA:produccion_detalle_op' op_con_reportes_detail.id %}">{{ op_con_reportes_detail.numero_op }}</a> 
+                                        <small class="text-muted">({{ op_con_reportes_detail.producto_a_producir.descripcion }})</small>
                                     </h6>
                                     <ul class="list-group list-group-flush">
-                                        {% for reporte in op_gen_modal_detail.reportes_incidencia.all %}
+                                        {% for reporte_detalle_item in op_con_reportes_detail.reportes_incidencia.all %}
                                         <li class="list-group-item small">
-                                            <p class="mb-1"><strong>Reporte N°:</strong> {{ reporte.n_reporte }} | <strong>Fecha:</strong> {{ reporte.fecha|date:"d/m/Y H:i" }}</p>
-                                            <p class="mb-1"><strong>Tipo:</strong> <span class="fw-semibold">{{ reporte.tipo_problema }}</span></p>
-                                            <p class="mb-1"><strong>Descripción:</strong><br>{{ reporte.informe_reporte|linebreaksbr|default:"Sin descripción detallada." }}</p>
+                                            <p class="mb-1"><strong>Reporte N°:</strong> {{ reporte_detalle_item.n_reporte }} | <strong>Fecha:</strong> {{ reporte_detalle_item.fecha|date:"d/m/Y H:i" }}</p>
+                                            <p class="mb-1"><strong>Tipo:</strong> <span class="fw-semibold">{{ reporte_detalle_item.tipo_problema }}</span></p>
+                                            <p class="mb-1"><strong>Descripción:</strong><br>{{ reporte_detalle_item.informe_reporte|linebreaksbr|default:"Sin descripción detallada." }}</p>
                                             <p class="mb-0 text-muted" style="font-size: 0.8em;">
-                                                <strong>Reportado por:</strong> {{ reporte.reportado_por.username|default:"N/A" }} 
-                                                {% if reporte.sector_reporta %}
-                                                | <strong>Sector:</strong> {{ reporte.sector_reporta.nombre }}
+                                                <strong>Reportado por:</strong> {{ reporte_detalle_item.reportado_por.username|default:"N/A" }} 
+                                                {% if reporte_detalle_item.sector_reporta %}
+                                                | <strong>Sector:</strong> {{ reporte_detalle_item.sector_reporta.nombre }}
                                                 {% endif %}
                                             </p>
                                         </li>
@@ -160,7 +177,16 @@
                 </div>
             </div>
         </div>
-    {% endif %} {# Cierre de if para generar modal #}
-{% endfor %} {# Fin del bucle principal de OVs para modales #}
+    {% endif %}
+{% endfor %}
+{% endblock %}
 
+{% block scripts_extra %}
+<style>
+    .color-thead th { /* Aplicado directamente a los th dentro de .color-thead */
+        background-color: #014BAC !important; 
+        color: white !important;
+        vertical-align: middle;
+    }
+</style>
 {% endblock %}

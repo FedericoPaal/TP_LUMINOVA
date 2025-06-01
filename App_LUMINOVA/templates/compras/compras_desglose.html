@@ -21,16 +21,17 @@
 {% if insumos_criticos_list_con_estado %} 
 <div class="table-responsive mt-3">
     <table class="table table-hover table-sm">
-        <thead class="color-thead"> {# Tu clase para el encabezado de la tabla #}
+        <thead class="color-thead">
+            {# Encabezados de la tabla #}
             <tr>
-                <th>ID</th>
-                <th>Insumo</th>
-                <th>Categoría</th>
+                <th class="color-thead">ID</th>
+                <th class="color-thead">Insumo</th>
+                <th class="color-thead">Categoría</th>
                 {# La columna "Prov. Principal" se elimina ya que la selección de proveedor es el siguiente paso #}
                 {# Si aún deseas mostrar el proveedor principal (si existe en el modelo Insumo directamente), puedes añadirlo #}
                 {# <th>Prov. Principal (del Insumo)</th> #}
-                <th class="text-center">Stock Actual</th>
-                <th class="text-center">Acción</th>
+                <th class="text-center color-thead">Stock Actual</th>
+                <th class="text-center color-thead">Acción</th>
             </tr>
         </thead>
         <tbody>
@@ -84,7 +85,7 @@
 {% endblock %}
 
 {% block scripts_extra %}
-<style>
+<!-- <style>
     /* Puedes mantener tus estilos de .color-thead aquí o en custom.css */
     .color-thead { 
         background-color: #014BAC !important; /* Ejemplo, usa tu color deseado */
@@ -98,5 +99,5 @@
      .img-thumbnail { /* Si usas esta clase para las imágenes */
         padding: 0.1rem;
     }
-</style>
+</style> -->
 {% endblock %}
