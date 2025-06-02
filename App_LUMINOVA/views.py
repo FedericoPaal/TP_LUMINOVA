@@ -1122,7 +1122,13 @@ def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None): # Nombres
         initial_data['cantidad_principal'] = max(10, cantidad_necesaria) # Sugerir comprar al menos 10 o lo necesario
 
     if request.method == 'POST':
-        form = OrdenCompraForm(request.POST, insumo_para_ofertas=insumo_preseleccionado_obj)
+        form_kwargs_post = {}
+        if insumo_preseleccionado_obj: # Si la URL contenía insumo_id
+            form_kwargs_post['insumo_para_ofertas'] = insumo_preseleccionado_obj
+        if proveedor_preseleccionado_obj: # Si la URL contenía proveedor_id
+            form_kwargs_post['proveedor_fijado'] = proveedor_preseleccionado_obj
+            
+        form = OrdenCompraForm(request.POST, **form_kwargs_post) # instance=None para creación
         if form.is_valid():
             try:
                 orden_compra = form.save(commit=False)
@@ -1176,7 +1182,12 @@ def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None): # Nombres
             # y los errores se asociarán a esa instancia.
 
     else: # GET request
-        form = OrdenCompraForm(initial=initial_data, insumo_para_ofertas=insumo_preseleccionado_obj)
+        form_kwargs_get = {}
+        if insumo_preseleccionado_obj:
+            form_kwargs_get['insumo_para_ofertas'] = insumo_preseleccionado_obj
+        if proveedor_preseleccionado_obj:
+            form_kwargs_get['proveedor_fijado'] = proveedor_preseleccionado_obj # Pasar para deshabilitar
+            form = OrdenCompraForm(initial=initial_data, **form_kwargs_get)
 
     context = {
         'form_oc': form, # Pasa el formulario (ya sea nuevo o con errores POST)
@@ -1211,78 +1222,157 @@ def compras_detalle_oc_view(request, oc_id):
 
 @login_required
 @transaction.atomic
-def compras_editar_oc_view(request, oc_id):
-    # if not es_admin_o_rol(request.user, ['compras', 'administrador']):
-    #     messages.error(request, "Acción no permitida.")
-    #     return redirect('App_LUMINOVA:compras_lista_oc')
+def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None): # Nombres deben coincidir con URL pattern
+    insumo_preseleccionado_obj = None
+    proveedor_preseleccionado_obj = None
+    oferta_seleccionada = None
+    initial_data = {}
+    
+    form_kwargs = {} # Para pasar a OrdenCompraForm.__init__
 
-    orden_compra_instance = get_object_or_404(Orden, id=oc_id, tipo='compra')
+    if insumo_id:
+        insumo_preseleccionado_obj = get_object_or_404(Insumo, id=insumo_id)
+        initial_data['insumo_principal'] = insumo_preseleccionado_obj
+        form_kwargs['insumo_fijado'] = insumo_preseleccionado_obj # Insumo no será editable en el form
+        logger.info(f"Creando OC para insumo fijado: {insumo_preseleccionado_obj.descripcion}")
 
-    # Restricción: Solo editar si está en "BORRADOR" o "PENDIENTE_APROBACION"
-    if orden_compra_instance.estado not in ['BORRADOR', 'PENDIENTE_APROBACION']:
-        messages.error(request, f"La Orden de Compra {orden_compra_instance.numero_orden} no se puede editar en su estado actual ({orden_compra_instance.get_estado_display()}).")
-        return redirect('App_LUMINOVA:compras_detalle_oc', oc_id=oc_id)
+        if proveedor_id: # Si el proveedor también viene de la URL (después de la selección)
+            proveedor_preseleccionado_obj = get_object_or_404(Proveedor, id=proveedor_id)
+            initial_data['proveedor'] = proveedor_preseleccionado_obj
+            form_kwargs['proveedor_fijado'] = proveedor_preseleccionado_obj # Proveedor no será editable
 
-    # Guardar la cantidad en pedido original del insumo ANTES de cualquier cambio
-    cantidad_en_pedido_original = 0
-    insumo_original_id = None
-    if orden_compra_instance.insumo_principal and orden_compra_instance.cantidad_principal:
-        cantidad_en_pedido_original = orden_compra_instance.cantidad_principal
-        insumo_original_id = orden_compra_instance.insumo_principal.id
-
+            oferta_seleccionada = OfertaProveedor.objects.filter(
+                insumo=insumo_preseleccionado_obj, 
+                proveedor=proveedor_preseleccionado_obj
+            ).first()
+            
+            if oferta_seleccionada:
+                initial_data['precio_unitario_compra'] = oferta_seleccionada.precio_unitario_compra
+                if oferta_seleccionada.tiempo_entrega_estimado_dias is not None:
+                    try:
+                        dias_entrega = int(oferta_seleccionada.tiempo_entrega_estimado_dias)
+                        fecha_estimada = timezone.now().date() + timedelta(days=dias_entrega)
+                        initial_data['fecha_estimada_entrega'] = fecha_estimada.strftime('%Y-%m-%d')
+                    except ValueError: pass
+        
+        # Sugerir cantidad si el insumo está preseleccionado
+        UMBRAL_STOCK_BAJO_INSUMOS = 15000 
+        cantidad_necesaria = UMBRAL_STOCK_BAJO_INSUMOS - insumo_preseleccionado_obj.stock
+        initial_data['cantidad_principal'] = max(10, cantidad_necesaria) # Mínimo 10 o lo necesario
 
     if request.method == 'POST':
-        form = OrdenCompraForm(request.POST, instance=orden_compra_instance, insumo_para_ofertas=orden_compra_instance.insumo_principal)
+        # Al instanciar para POST, también pasamos los kwargs para que __init__ y clean funcionen bien
+        form = OrdenCompraForm(request.POST, **form_kwargs)
         if form.is_valid():
             try:
-                oc_actualizada = form.save(commit=False) # No guardar todavía para manejar cantidad_en_pedido
+                orden_compra = form.save(commit=False)
+                orden_compra.tipo = 'compra' 
+                orden_compra.estado = 'BORRADOR' 
+                
+                # Los valores de campos deshabilitados (insumo, proveedor, precio, fecha)
+                # se restauran en form.clean() usando initial_data o la instancia.
+                # Por lo tanto, form.cleaned_data ya debería tenerlos correctos aquí.
+                # No es necesario reasignarlos explícitamente si form.clean() es robusto.
+                
+                orden_compra.save() # El save() del modelo calcula el total
 
-                # Lógica para ajustar cantidad_en_pedido del Insumo:
-                # 1. Si el insumo cambió o la cantidad cambió, revertir el original y aplicar el nuevo.
-                insumo_nuevo = oc_actualizada.insumo_principal
-                cantidad_nueva = oc_actualizada.cantidad_principal if oc_actualizada.cantidad_principal else 0
-                
-                # Revertir la cantidad en pedido del insumo original si cambió o la cantidad cambió
-                if insumo_original_id and (insumo_original_id != (insumo_nuevo.id if insumo_nuevo else None) or cantidad_en_pedido_original != cantidad_nueva):
-                    Insumo.objects.filter(id=insumo_original_id).update(
-                        cantidad_en_pedido=F('cantidad_en_pedido') - cantidad_en_pedido_original
+                if orden_compra.insumo_principal and orden_compra.cantidad_principal and orden_compra.cantidad_principal > 0:
+                    Insumo.objects.filter(id=orden_compra.insumo_principal.id).update(
+                        cantidad_en_pedido=F('cantidad_en_pedido') + orden_compra.cantidad_principal
                     )
-                    logger.info(f"Revertida cantidad_en_pedido para insumo ID {insumo_original_id} en {cantidad_en_pedido_original}")
-
-                # Aplicar la nueva cantidad en pedido si hay un nuevo insumo y cantidad
-                if insumo_nuevo and cantidad_nueva > 0 and (insumo_original_id != insumo_nuevo.id or cantidad_en_pedido_original != cantidad_nueva):
-                    Insumo.objects.filter(id=insumo_nuevo.id).update(
-                        cantidad_en_pedido=F('cantidad_en_pedido') + cantidad_nueva
-                    )
-                    logger.info(f"Actualizada cantidad_en_pedido para insumo ID {insumo_nuevo.id} en {cantidad_nueva}")
+                    logger.info(f"Incrementada cantidad_en_pedido para '{orden_compra.insumo_principal.descripcion}' en {orden_compra.cantidad_principal} unidades.")
                 
-                # El total se recalcula en el save() del modelo
-                oc_actualizada.save() # Ahora guarda la OC
-                
-                messages.success(request, f"Orden de Compra '{oc_actualizada.numero_orden}' actualizada exitosamente.")
-                return redirect('App_LUMINOVA:compras_detalle_oc', oc_id=oc_actualizada.id)
-            # ... (manejo de errores como en compras_crear_oc_view) ...
+                messages.success(request, f"Orden de Compra '{orden_compra.numero_orden}' creada en estado '{orden_compra.get_estado_display()}'. Total: ${orden_compra.total_orden_compra or 0:.2f}")
+                return redirect('App_LUMINOVA:compras_lista_oc') 
             except DjangoIntegrityError as e_int:
-                if 'UNIQUE constraint' in str(e_int) and 'numero_orden' in str(e_int).lower(): 
-                    messages.error(request, f"Error: El número de orden de compra '{form.cleaned_data.get('numero_orden')}' ya existe.")
+                if 'UNIQUE constraint' in str(e_int).lower() and 'numero_orden' in str(e_int).lower(): 
+                    messages.error(request, f"Error: El N° de OC '{form.cleaned_data.get('numero_orden', '')}' ya existe.")
                 else:
                     messages.error(request, f"Error de base de datos al guardar la OC: {e_int}")
             except Exception as e:
-                messages.error(request, f"Error inesperado al actualizar la OC: {e}")
-                logger.exception("Error inesperado en compras_editar_oc_view POST:")
-        else: # Formulario no es válido
-            logger.warning(f"Formulario OC (edición) inválido: {form.errors.as_json()}")
+                messages.error(request, f"Error inesperado al crear la OC: {e}")
+                logger.exception("Error inesperado en compras_crear_oc_view POST:")
+        else:
+            logger.warning(f"Formulario OC inválido (POST): {form.errors.as_json()}")
+            messages.error(request, "Por favor, corrija los errores en el formulario.")
     else: # GET request
-        form = OrdenCompraForm(instance=orden_compra_instance, insumo_para_ofertas=orden_compra_instance.insumo_principal)
+        form = OrdenCompraForm(initial=initial_data, **form_kwargs)
+
+    context = {
+        'form_oc': form,
+        'titulo_seccion': 'Crear Nueva Orden de Compra',
+        'insumo_preseleccionado': insumo_preseleccionado_obj,
+        'proveedor_preseleccionado': proveedor_preseleccionado_obj,
+        'oferta_seleccionada': oferta_seleccionada
+    }
+    return render(request, 'compras/compras_crear_editar_oc.html', context)
+
+@login_required
+@transaction.atomic
+def compras_editar_oc_view(request, oc_id):
+    orden_compra_instance = get_object_or_404(Orden, id=oc_id, tipo='compra')
+    logger.info(f"Editando OC: {orden_compra_instance.numero_orden} (ID: {oc_id}), Estado actual: {orden_compra_instance.estado}")
+
+    estados_no_editables_campos_principales = ['APROBADA', 'ENVIADA_PROVEEDOR', 'CONFIRMADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL', 'RECIBIDA_TOTAL', 'COMPLETADA', 'CANCELADA']
+
+    if orden_compra_instance.estado in estados_no_editables_campos_principales and orden_compra_instance.estado != 'PENDIENTE_APROBACION': # PENDIENTE_APROBACION podría tener edición limitada
+        messages.error(request, f"La OC {orden_compra_instance.numero_orden} no puede editarse significativamente en estado '{orden_compra_instance.get_estado_display()}'.")
+        # return redirect('App_LUMINOVA:compras_detalle_oc', oc_id=oc_id) # O permitir editar solo notas/tracking
+
+    insumo_original_obj = orden_compra_instance.insumo_principal
+    cantidad_original_para_pedido = orden_compra_instance.cantidad_principal or 0
+
+    form_kwargs = {'instance': orden_compra_instance}
+    if insumo_original_obj: # Para que el __init__ del form sepa cuál es el insumo actual si necesita filtrar proveedores (aunque en edición de no-borrador, el proveedor se deshabilita)
+        form_kwargs['insumo_fijado'] = insumo_original_obj # Tratar el insumo como fijado si no es borrador
+    if orden_compra_instance.proveedor and orden_compra_instance.estado != 'BORRADOR':
+        form_kwargs['proveedor_fijado'] = orden_compra_instance.proveedor
+
+
+    if request.method == 'POST':
+        form = OrdenCompraForm(request.POST, **form_kwargs)
+        if form.is_valid():
+            try:
+                oc_actualizada = form.save(commit=False)
+                
+                insumo_nuevo_obj_form = form.cleaned_data.get('insumo_principal') # Debería ser el mismo que el original si el campo estaba disabled
+                cantidad_nueva_form = form.cleaned_data.get('cantidad_principal') or 0
+
+                if orden_compra_instance.estado == 'BORRADOR': # Solo ajustar cantidad_en_pedido si es borrador
+                    if insumo_original_obj and insumo_nuevo_obj_form and insumo_original_obj.id != insumo_nuevo_obj_form.id:
+                        Insumo.objects.filter(id=insumo_original_obj.id).update(cantidad_en_pedido=F('cantidad_en_pedido') - cantidad_original_para_pedido)
+                        Insumo.objects.filter(id=insumo_nuevo_obj_form.id).update(cantidad_en_pedido=F('cantidad_en_pedido') + cantidad_nueva_form)
+                    elif insumo_original_obj and insumo_original_obj.id == (insumo_nuevo_obj_form.id if insumo_nuevo_obj_form else None) and cantidad_original_para_pedido != cantidad_nueva_form:
+                        cambio_neto_cantidad = cantidad_nueva_form - cantidad_original_para_pedido
+                        Insumo.objects.filter(id=insumo_original_obj.id).update(cantidad_en_pedido=F('cantidad_en_pedido') + cambio_neto_cantidad)
+                    elif not insumo_original_obj and insumo_nuevo_obj_form and cantidad_nueva_form > 0:
+                         Insumo.objects.filter(id=insumo_nuevo_obj_form.id).update(cantidad_en_pedido=F('cantidad_en_pedido') + cantidad_nueva_form)
+                    elif insumo_original_obj and not insumo_nuevo_obj_form:
+                         Insumo.objects.filter(id=insumo_original_obj.id).update(cantidad_en_pedido=F('cantidad_en_pedido') - cantidad_original_para_pedido)
+                
+                oc_actualizada.save() 
+                messages.success(request, f"Orden de Compra '{oc_actualizada.numero_orden}' actualizada.")
+                return redirect('App_LUMINOVA:compras_detalle_oc', oc_id=oc_actualizada.id)
+            
+            except DjangoIntegrityError as e_int: # ... (manejo de errores)
+                if 'UNIQUE constraint' in str(e_int).lower() and 'numero_orden' in str(e_int).lower(): 
+                    messages.error(request, f"Error: El N° de OC '{form.cleaned_data.get('numero_orden', '')}' ya existe.")
+                else: messages.error(request, f"Error de BD: {e_int}")
+            except Exception as e: messages.error(request, f"Error inesperado: {e}"); logger.exception("Error en compras_editar_oc_view POST:")
+        else:
+            logger.warning(f"Formulario OC (edición) inválido: {form.errors.as_json()}")
+            messages.error(request, "Por favor, corrija los errores en el formulario.")
+    else: # GET
+        form = OrdenCompraForm(**form_kwargs)
 
     context = {
         'form_oc': form,
         'titulo_seccion': f'Editar Orden de Compra: {orden_compra_instance.numero_orden}',
-        'oc_instance': orden_compra_instance, # Para la plantilla si necesita info de la OC
-        'insumo_preseleccionado': orden_compra_instance.insumo_principal, # Para consistencia con el form de creación
+        'oc_instance': orden_compra_instance,
+        'insumo_preseleccionado': orden_compra_instance.insumo_principal,
         'proveedor_preseleccionado': orden_compra_instance.proveedor,
     }
-    return render(request, 'compras/compras_crear_editar_oc.html', context) # Reutilizamos la plantilla de creación
+    return render(request, 'compras/compras_crear_editar_oc.html', context)
 
 @login_required
 @require_POST # Esta acción debería ser un POST, ya que modifica datos
@@ -1307,6 +1397,43 @@ def compras_solicitar_aprobacion_oc_view(request, oc_id):
         messages.warning(request, f"La Orden de Compra '{orden_compra.numero_orden}' no está en estado 'Borrador' y no puede ser enviada para aprobación nuevamente desde aquí.")
 
     return redirect('App_LUMINOVA:compras_lista_oc')
+
+@login_required
+@require_GET # Esta vista solo necesita obtener datos
+def get_oferta_proveedor_ajax(request):
+    insumo_id = request.GET.get('insumo_id')
+    proveedor_id = request.GET.get('proveedor_id')
+
+    if not insumo_id or not proveedor_id:
+        return JsonResponse({'error': 'Faltan IDs de insumo o proveedor'}, status=400)
+
+    try:
+        insumo_id = int(insumo_id)
+        proveedor_id = int(proveedor_id)
+    except ValueError:
+        return JsonResponse({'error': 'IDs inválidos'}, status=400)
+
+    oferta = OfertaProveedor.objects.filter(insumo_id=insumo_id, proveedor_id=proveedor_id).first()
+
+    if oferta:
+        fecha_estimada_entrega_calculada = None
+        if oferta.tiempo_entrega_estimado_dias is not None:
+            try:
+                dias = int(oferta.tiempo_entrega_estimado_dias)
+                fecha_estimada_entrega_calculada = (timezone.now().date() + timedelta(days=dias)).strftime('%Y-%m-%d')
+            except ValueError:
+                pass # No se pudo calcular
+
+        data = {
+            'success': True,
+            'precio_unitario': oferta.precio_unitario_compra,
+            'tiempo_entrega_dias': oferta.tiempo_entrega_estimado_dias,
+            'fecha_estimada_entrega': fecha_estimada_entrega_calculada,
+            'fecha_actualizacion_oferta': oferta.fecha_actualizacion_precio.strftime('%d/%m/%Y') if oferta.fecha_actualizacion_precio else None
+        }
+        return JsonResponse(data)
+    else:
+        return JsonResponse({'success': False, 'error': 'No se encontró oferta para esta combinación.'}, status=404)
 
 # --- PRODUCCIÓN VIEWS ---
 def proveedor_create_view(request):
@@ -1485,7 +1612,6 @@ def produccion_detalle_op_view(request, op_id):
     ESTADO_OP_INSUMOS_RECIBIDOS_LOWER = "insumos recibidos" 
     ESTADO_OP_PRODUCCION_INICIADA_LOWER = "producción iniciada"
     ESTADO_OP_EN_PROCESO_LOWER = "en proceso"
-    ESTADO_OP_PRODUCCION_PARCIAL_LOWER = "producción parcial"
     ESTADO_OP_PAUSADA_LOWER = "pausada"
     NOMBRE_ESTADO_OP_COMPLETADA_CONST = "Completada" # Mantener el nombre exacto de la DB para esta constante
     ESTADO_OP_COMPLETADA_LOWER = NOMBRE_ESTADO_OP_COMPLETADA_CONST.lower()
@@ -1505,8 +1631,6 @@ def produccion_detalle_op_view(request, op_id):
             nombres_permitidos_dropdown.extend(["Producción Iniciada", "Pausada", "Cancelada"])
         elif estado_actual_nombre_lower == ESTADO_OP_PRODUCCION_INICIADA_LOWER:
             nombres_permitidos_dropdown.extend(["En Proceso", "Producción Parcial", "Pausada", "Completada", "Cancelada"])
-        elif estado_actual_nombre_lower == ESTADO_OP_PRODUCCION_PARCIAL_LOWER:
-            nombres_permitidos_dropdown.extend(["En Proceso", "Pausada", "Completada", "Cancelada"])
         elif estado_actual_nombre_lower == ESTADO_OP_EN_PROCESO_LOWER:
             nombres_permitidos_dropdown.extend(["Producción Parcial", "Pausada", "Completada", "Cancelada"])
         elif estado_actual_nombre_lower == ESTADO_OP_PAUSADA_LOWER:
@@ -1573,7 +1697,6 @@ def produccion_detalle_op_view(request, op_id):
                 ESTADOS_OP_EN_FABRICACION_ACTIVA_LOWER_LIST = [ # Renombrado para evitar confusión con la constante string
                     ESTADO_OP_PRODUCCION_INICIADA_LOWER, 
                     ESTADO_OP_EN_PROCESO_LOWER, 
-                    ESTADO_OP_PRODUCCION_PARCIAL_LOWER
                 ]
 
                 nuevo_estado_ov_sugerido = orden_venta_asociada.estado 

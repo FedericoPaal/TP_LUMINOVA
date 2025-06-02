@@ -1,3 +1,4 @@
+from datetime import timedelta, timezone
 import logging
 from django import apps, forms
 from django.contrib.auth.models import  Group, Permission
@@ -246,32 +247,32 @@ class OrdenCompraForm(forms.ModelForm):
         model = Orden
         fields = [
             'numero_orden', 
-            'proveedor', # Este es el proveedor al que se le hace la OC
-            'insumo_principal', # El insumo principal de la OC
+            'proveedor', 
+            'insumo_principal', 
             'cantidad_principal', 
-            'precio_unitario_compra', # Precio ACORDADO para esta OC para este insumo con este proveedor
-            'fecha_estimada_entrega',
+            'precio_unitario_compra', 
+            'fecha_estimada_entrega', 
             'numero_tracking', 
-            'notas',
+            'notas'
         ]
-        # 'tipo' y 'estado' se manejarán en la vista o tendrán defaults en el modelo.
-        # 'total_orden_compra' se calcula automáticamente en el save() del modelo si los campos necesarios están.
-        
         widgets = {
-            'numero_orden': forms.TextInput(attrs={'class': 'form-control mb-2'}),
-            'proveedor': forms.Select(attrs={'class': 'form-select mb-2'}),
-            'insumo_principal': forms.Select(attrs={'class': 'form-select mb-2'}),
-            'cantidad_principal': forms.NumberInput(attrs={'class': 'form-control mb-2', 'min': '1'}),
-            'precio_unitario_compra': forms.NumberInput(attrs={'class': 'form-control mb-2', 'step': '0.01', 'placeholder': '0.00'}),
-            'fecha_estimada_entrega': forms.DateInput(attrs={'class': 'form-control mb-2', 'type': 'date'}),
-            'numero_tracking': forms.TextInput(attrs={'class': 'form-control mb-2', 'placeholder': 'Opcional'}),
-            'notas': forms.Textarea(attrs={'class': 'form-control mb-2', 'rows': 3, 'placeholder': 'Notas adicionales...'}),
+            'numero_orden': forms.TextInput(attrs={'class': 'form-control mb-3'}),
+            'proveedor': forms.Select(attrs={'class': 'form-select mb-3'}),
+            'insumo_principal': forms.Select(attrs={'class': 'form-select mb-3'}),
+            'cantidad_principal': forms.NumberInput(attrs={'class': 'form-control mb-3', 'min': '1', 'placeholder':'Cantidad a comprar'}),
+            'precio_unitario_compra': forms.NumberInput(attrs={'class': 'form-control mb-3', 'step': '0.01', 'placeholder': '0.00 (de la oferta)'}),
+            'fecha_estimada_entrega': forms.DateInput(
+                attrs={'class': 'form-control mb-3', 'type': 'date'},
+                format='%Y-%m-%d' 
+            ),
+            'numero_tracking': forms.TextInput(attrs={'class': 'form-control mb-3', 'placeholder': 'Opcional'}),
+            'notas': forms.Textarea(attrs={'class': 'form-control mb-3', 'rows': 3, 'placeholder': 'Notas adicionales...'}),
         }
         labels = {
             'numero_orden': 'N° Orden de Compra',
-            'proveedor': 'Proveedor Asociado',
-            'insumo_principal': 'Insumo Principal a Comprar',
-            'cantidad_principal': 'Cantidad del Insumo Principal',
+            'proveedor': 'Proveedor Seleccionado',
+            'insumo_principal': 'Insumo Principal Requerido',
+            'cantidad_principal': 'Cantidad a Comprar',
             'precio_unitario_compra': 'Precio Unitario de Compra ($)',
             'fecha_estimada_entrega': 'Fecha Estimada de Entrega',
             'numero_tracking': 'Número de Seguimiento (Tracking)',
@@ -279,80 +280,131 @@ class OrdenCompraForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        self.insumo_para_ofertas = kwargs.pop('insumo_para_ofertas', None) # Nuevo: para pasar el insumo objetivo
-        super().__init__(*args, **kwargs)
+        # Extraer argumentos personalizados ANTES de llamar a super().__init__()
+        # 'insumo_fijado' es el objeto Insumo que no debe cambiarse en el form.
+        self.insumo_fijado_por_vista = kwargs.pop('insumo_fijado', None)
+        # 'proveedor_fijado' es el objeto Proveedor si ya fue seleccionado y no debe cambiarse.
+        self.proveedor_fijado_por_vista = kwargs.pop('proveedor_fijado', None) 
         
-        self.fields['insumo_principal'].queryset = Insumo.objects.all().order_by('descripcion')
-        self.fields['insumo_principal'].empty_label = "Seleccionar Insumo..."
+        super().__init__(*args, **kwargs) # Llamar al __init__ del padre DESPUÉS de extraer
+        
+        instance = getattr(self, 'instance', None)
+        is_new_instance = not (instance and instance.pk)
 
-        # El queryset de proveedores ahora podría filtrarse si un insumo está preseleccionado
-        # y si queremos mostrar solo proveedores que *ofrecen* ese insumo.
-        if self.insumo_para_ofertas:
-            # Obtener IDs de proveedores que tienen una oferta para self.insumo_para_ofertas
-            proveedor_ids_con_oferta = OfertaProveedor.objects.filter(insumo=self.insumo_para_ofertas).values_list('proveedor_id', flat=True)
-            self.fields['proveedor'].queryset = Proveedor.objects.filter(id__in=proveedor_ids_con_oferta).order_by('nombre')
-            if not self.fields['proveedor'].queryset.exists(): # Fallback si no hay ofertas registradas
-                 self.fields['proveedor'].queryset = Proveedor.objects.all().order_by('nombre')
-        else:
+        # Configuración Insumo Principal
+        if self.insumo_fijado_por_vista:
+            self.fields['insumo_principal'].queryset = Insumo.objects.filter(pk=self.insumo_fijado_por_vista.pk)
+            self.fields['insumo_principal'].initial = self.insumo_fijado_por_vista
+            self.fields['insumo_principal'].widget.attrs['disabled'] = True
+            self.fields['insumo_principal'].empty_label = None
+        else: # Si no está fijado (ej. creación manual de OC, o edición de borrador donde se permite cambiar)
+            self.fields['insumo_principal'].queryset = Insumo.objects.all().order_by('descripcion')
+            self.fields['insumo_principal'].empty_label = "Seleccionar Insumo..."
+        
+        # Configuración Proveedor
+        if self.proveedor_fijado_por_vista:
+            self.fields['proveedor'].queryset = Proveedor.objects.filter(pk=self.proveedor_fijado_por_vista.pk)
+            self.fields['proveedor'].initial = self.proveedor_fijado_por_vista
+            self.fields['proveedor'].widget.attrs['disabled'] = True
+            self.fields['proveedor'].empty_label = None
+        else: # Permitir seleccionar cualquier proveedor si no está fijado
             self.fields['proveedor'].queryset = Proveedor.objects.all().order_by('nombre')
-        self.fields['proveedor'].empty_label = "Seleccionar Proveedor..."
+            self.fields['proveedor'].empty_label = "Seleccionar Proveedor..."
         
-        # ... (lógica de campos opcionales y número de OC inicial) ...
-        if not self.instance.pk:
-            # ... (sugerencia de numero_orden)
-            last_oc = Orden.objects.filter(tipo='compra').order_by('id').last()
-            next_id = (last_oc.id + 1) if last_oc else 1
-            next_oc_number = f"OC-{str(next_id).zfill(5)}" 
-            while Orden.objects.filter(numero_orden=next_oc_number).exists():
-                next_id += 1
+        # Lógica de campos deshabilitados / iniciales para creación y edición
+        if is_new_instance:
+            if not self.initial.get('numero_orden'): # Solo si la vista no lo pasó ya en initial
+                last_oc = Orden.objects.filter(tipo='compra').order_by('id').last()
+                next_id = (last_oc.id + 1) if last_oc else 1
                 next_oc_number = f"OC-{str(next_id).zfill(5)}"
-            self.fields['numero_orden'].initial = next_oc_number
+                while Orden.objects.filter(numero_orden=next_oc_number).exists():
+                    next_id += 1; next_oc_number = f"OC-{str(next_id).zfill(5)}"
+                self.initial['numero_orden'] = next_oc_number # Usar self.initial para que el widget lo tome
+            
+            # Si el insumo y proveedor están fijados (vienen de la selección de oferta),
+            # el precio y fecha de entrega también se consideran "fijados" por esa oferta.
+            if self.insumo_fijado_por_vista and self.proveedor_fijado_por_vista:
+                if self.initial.get('precio_unitario_compra') is not None:
+                    self.fields['precio_unitario_compra'].widget.attrs['disabled'] = True
+                if self.initial.get('fecha_estimada_entrega'):
+                    self.fields['fecha_estimada_entrega'].widget.attrs['disabled'] = True
+        else: # Editando una OC existente
+            self.fields['numero_orden'].widget.attrs['readonly'] = True # N° OC no se edita una vez creada
+            if instance.estado != 'BORRADOR': # Restricciones más fuertes si ya no es borrador
+                # self.fields['proveedor'].widget.attrs['disabled'] = True # Ya manejado si proveedor_fijado_por_vista se pasa
+                self.fields['insumo_principal'].widget.attrs['disabled'] = True # Insumo no cambia después de borrador
+                self.fields['cantidad_principal'].widget.attrs['disabled'] = True
+                self.fields['precio_unitario_compra'].widget.attrs['disabled'] = True
+                # fecha_estimada_entrega podría ser editable si el proveedor actualiza
+                # self.fields['fecha_estimada_entrega'].widget.attrs['disabled'] = True
 
-        # Si hay un insumo y proveedor preseleccionados (ej. desde la vista de selección),
-        # intentar obtener el precio de la oferta.
-        insumo_inicial = self.initial.get('insumo_principal')
-        proveedor_inicial = self.initial.get('proveedor')
-
-        if insumo_inicial and proveedor_inicial and not self.initial.get('precio_unitario_compra'):
-            try:
-                # Asegurarse de que insumo_inicial y proveedor_inicial sean objetos o IDs
-                insumo_obj = insumo_inicial if isinstance(insumo_inicial, Insumo) else Insumo.objects.get(pk=insumo_inicial)
-                proveedor_obj = proveedor_inicial if isinstance(proveedor_inicial, Proveedor) else Proveedor.objects.get(pk=proveedor_inicial)
-                
-                oferta = OfertaProveedor.objects.filter(insumo=insumo_obj, proveedor=proveedor_obj).first()
-                if oferta:
-                    self.initial['precio_unitario_compra'] = oferta.precio_unitario_compra
-                    # También podrías pre-rellenar fecha_estimada_entrega si está en OfertaProveedor
-                    # self.initial['fecha_estimada_entrega'] = ...
-            except (Insumo.DoesNotExist, Proveedor.DoesNotExist, TypeError):
-                pass # No hacer nada si los objetos no se pueden obtener
-
+        # Configuración de campos requeridos/opcionales
+        self.fields['fecha_estimada_entrega'].required = False
+        self.fields['numero_tracking'].required = False
+        self.fields['notas'].required = False
+        
+        # Cantidad y Precio son requeridos si hay un insumo
+        current_insumo_for_validation = cleaned_data.get('insumo_principal') if hasattr(self, 'cleaned_data') else self.initial.get('insumo_principal', getattr(instance, 'insumo_principal', None))
+        if current_insumo_for_validation:
+            self.fields['cantidad_principal'].required = True
+            self.fields['precio_unitario_compra'].required = True
+        else:
+            self.fields['cantidad_principal'].required = False
+            self.fields['precio_unitario_compra'].required = False
 
     def clean_numero_orden(self):
         numero_orden = self.cleaned_data.get('numero_orden')
-        # Si estamos editando una instancia existente, no verificamos la unicidad contra sí misma
-        if self.instance and self.instance.pk and self.instance.numero_orden == numero_orden:
+        instance = getattr(self, 'instance', None)
+        if instance and instance.pk and instance.numero_orden == numero_orden:
             return numero_orden
-        # Si es una nueva instancia o el número_orden ha cambiado, verificar unicidad
         if Orden.objects.filter(numero_orden=numero_orden).exists():
             raise forms.ValidationError("Una orden de compra con este número ya existe.")
         return numero_orden
 
     def clean(self):
         cleaned_data = super().clean()
+        instance = getattr(self, 'instance', None)
+        is_new_instance = not (instance and instance.pk)
+
+        # Restaurar valores de campos deshabilitados para que estén en cleaned_data
+        # Esto es crucial porque los campos 'disabled' no se envían en el POST.
+        fields_potentially_disabled = [
+            'insumo_principal', 'proveedor', 
+            'precio_unitario_compra', 'fecha_estimada_entrega'
+        ]
+        # El campo 'numero_orden' si es readonly en edición
+        if not is_new_instance and self.fields['numero_orden'].widget.attrs.get('readonly'):
+             if 'numero_orden' not in cleaned_data and hasattr(instance, 'numero_orden'):
+                 cleaned_data['numero_orden'] = instance.numero_orden
+
+
+        for field_name in fields_potentially_disabled:
+            if field_name in self.fields and self.fields[field_name].widget.attrs.get('disabled', False):
+                # Si el campo está deshabilitado, su valor no vendrá en el POST.
+                # Necesitamos tomarlo de 'initial' (si es creación) o 'instance' (si es edición).
+                if field_name in self.initial: # Priorizar initial si existe (para creación con pre-relleno)
+                    cleaned_data[field_name] = self.initial[field_name]
+                elif instance and instance.pk and hasattr(instance, field_name): # Para edición
+                    cleaned_data[field_name] = getattr(instance, field_name)
+        
+        # Re-validaciones que dependen de los valores (ahora completos en cleaned_data)
         insumo = cleaned_data.get("insumo_principal")
         cantidad = cleaned_data.get("cantidad_principal")
         precio = cleaned_data.get("precio_unitario_compra")
 
-        # Si se proporciona un insumo, la cantidad y el precio deberían ser requeridos
-        # para calcular el total, a menos que permitas OCs sin estos detalles inicialmente.
-        # Por ahora, lo haremos opcional, el cálculo del total en el modelo lo manejará.
-        # Si quieres que sean requeridos si hay un insumo:
-        # if insumo:
-        #     if not cantidad:
-        #         self.add_error('cantidad_principal', 'La cantidad es requerida si se selecciona un insumo.')
-        #     if not precio:
-        #         self.add_error('precio_unitario_compra', 'El precio unitario es requerido si se selecciona un insumo.')
+        if insumo: # Si hay un insumo (ya sea fijado o seleccionado)
+            if not cantidad and self.fields['cantidad_principal'].required:
+                self.add_error('cantidad_principal', 'La cantidad es requerida si se ha seleccionado un insumo.')
+            if precio is None and self.fields['precio_unitario_compra'].required:
+                self.add_error('precio_unitario_compra', 'El precio unitario es requerido si se ha seleccionado un insumo.')
+        elif not insumo and (cantidad or precio is not None):
+            # Si no hay insumo pero se ingresó cantidad o precio, es un error
+            if not insumo:
+                 self.add_error('insumo_principal', 'Debe seleccionar un insumo si ingresa cantidad o precio.')
+            if cantidad:
+                 self.add_error('cantidad_principal', 'No puede ingresar cantidad sin un insumo.')
+            if precio is not None:
+                 self.add_error('precio_unitario_compra', 'No puede ingresar precio sin un insumo.')
         return cleaned_data
     
 class ReporteProduccionForm(forms.ModelForm):

@@ -26,7 +26,7 @@
                             (Stock actual: {{ insumo_preseleccionado.stock }}).
                             {% if insumo_preseleccionado.proveedor %} {# Este es el if de la línea 26 #}
                                 Proveedor sugerido: {{ insumo_preseleccionado.proveedor.nombre }}.
-                            {% endif %} {# <--- AÑADE ESTE ENDIF #}
+                            {% endif %} 
                         </div>
                     {% endif %}
 
@@ -49,4 +49,79 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const insumoSelect = document.getElementById('id_insumo_principal'); // Ajusta el ID si es diferente
+    const proveedorSelect = document.getElementById('id_proveedor');     // Ajusta el ID
+    const precioInput = document.getElementById('id_precio_unitario_compra');
+    const fechaEntregaInput = document.getElementById('id_fecha_estimada_entrega');
+    // const debugInfoDiv = document.getElementById('debug-oferta-info'); // Opcional para debug
+
+    function fetchAndSetOfertaData() {
+        const insumoId = insumoSelect.value;
+        const proveedorId = proveedorSelect.value;
+
+        // if (debugInfoDiv) debugInfoDiv.innerHTML = ''; // Limpiar debug
+
+        if (insumoId && proveedorId) {
+            // console.log(`Fetching oferta para Insumo: ${insumoId}, Proveedor: ${proveedorId}`);
+            fetch(`{% url 'App_LUMINOVA:ajax_get_oferta_proveedor' %}?insumo_id=${insumoId}&proveedor_id=${proveedorId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // console.log("Data recibida:", data);
+                    if (data.success) {
+                        precioInput.value = parseFloat(data.precio_unitario).toFixed(2);
+                        if (data.fecha_estimada_entrega) {
+                            fechaEntregaInput.value = data.fecha_estimada_entrega; // Viene en YYYY-MM-DD
+                        } else {
+                            fechaEntregaInput.value = ''; // Limpiar si no hay fecha estimada
+                        }
+                        // if (debugInfoDiv) debugInfoDiv.innerHTML = `Oferta encontrada: Precio $${data.precio_unitario}, Entrega: ${data.tiempo_entrega_dias} días (Actualizado: ${data.fecha_actualizacion_oferta || 'N/A'})`;
+                    } else {
+                        // No se encontró oferta, limpiar campos o poner valores por defecto/mensaje
+                        precioInput.value = '0.00'; // O dejar vacío y que el usuario ingrese
+                        fechaEntregaInput.value = '';
+                        // if (debugInfoDiv) debugInfoDiv.innerHTML = `<span class="text-danger">No se encontró oferta para esta combinación. Ingrese datos manualmente.</span>`;
+                        // Podrías mostrar un mensaje más amigable al usuario aquí
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching oferta:', error);
+                    precioInput.value = '0.00';
+                    fechaEntregaInput.value = '';
+                    // if (debugInfoDiv) debugInfoDiv.innerHTML = `<span class="text-danger">Error al buscar oferta.</span>`;
+                });
+        } else {
+            // Si no están seleccionados ambos, no hacer nada o limpiar
+            // precioInput.value = ''; // Comentado para no borrar si el usuario está escribiendo
+            // fechaEntregaInput.value = '';
+        }
+    }
+
+    if (insumoSelect) {
+        insumoSelect.addEventListener('change', fetchAndSetOfertaData);
+    }
+    if (proveedorSelect) {
+        proveedorSelect.addEventListener('change', fetchAndSetOfertaData);
+    }
+
+    // Llamada inicial por si el formulario ya tiene valores preseleccionados al cargar (para edición)
+    // Esto es importante si el formulario se carga para editar una OC existente
+    // y queremos que el precio y fecha reflejen la oferta del proveedor ya guardado.
+    // if (insumoSelect.value && proveedorSelect.value && "{% if oc_instance %}true{% else %}false{% endif %}" === "true" ) { // Solo en modo edición
+    //     fetchAndSetOfertaData();
+    // }
+    // Nota: Al editar, los campos ya tendrán los valores guardados de la OC.
+    // Esta lógica AJAX es para cuando el *usuario cambia* el proveedor en el formulario de edición.
+    // El pre-rellenado inicial para edición ya lo hace Django al pasar `instance=orden_compra_instance` al form.
+});
+</script>
 {% endblock %}

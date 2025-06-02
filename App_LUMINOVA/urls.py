@@ -23,6 +23,7 @@ from .views import (
     desglose3, compras_crear_oc_view,
     compras_seleccionar_proveedor_para_insumo_view,
     compras_detalle_oc_view, compras_editar_oc_view, compras_solicitar_aprobacion_oc_view,
+    get_oferta_proveedor_ajax,
 
     # Producción
 
@@ -100,7 +101,7 @@ urlpatterns = [
     path('compras/orden/<int:oc_id>/', compras_detalle_oc_view, name='compras_detalle_oc'),      
     path('compras/orden/<int:oc_id>/editar/', compras_editar_oc_view, name='compras_editar_oc'),
     path('compras/orden/<int:oc_id>/solicitar-aprobacion/', compras_solicitar_aprobacion_oc_view, name='compras_solicitar_aprobacion_oc'),
-    
+    path('ajax/get-oferta-proveedor/', get_oferta_proveedor_ajax, name='ajax_get_oferta_proveedor'),
 
     # --- Rutas de Producción ---
     path('produccion/', produccion_lista_op_view, name='produccion_principal'), # La lista de OPs es la vista principal
