@@ -1432,7 +1432,7 @@ def compras_editar_oc_view(request, oc_id):
 
     estados_no_editables_campos_principales = ['APROBADA', 'ENVIADA_PROVEEDOR', 'CONFIRMADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL', 'RECIBIDA_TOTAL', 'COMPLETADA', 'CANCELADA']
 
-    if orden_compra_instance.estado in estados_no_editables_campos_principales and orden_compra_instance.estado != 'PENDIENTE_APROBACION': # PENDIENTE_APROBACION podría tener edición limitada
+    if orden_compra_instance.estado != 'BORRADOR':
         messages.error(request, f"La OC {orden_compra_instance.numero_orden} no puede editarse significativamente en estado '{orden_compra_instance.get_estado_display()}'.")
         # return redirect('App_LUMINOVA:compras_detalle_oc', oc_id=oc_id) # O permitir editar solo notas/tracking
 
@@ -1494,24 +1494,36 @@ def compras_editar_oc_view(request, oc_id):
 @login_required
 @require_POST # Esta acción debería ser un POST, ya que modifica datos
 @transaction.atomic
-def compras_solicitar_aprobacion_oc_view(request, oc_id):
-    # if not es_admin_o_rol(request.user, ['compras', 'administrador']): # Control de permisos
-    #     messages.error(request, "Acción no permitida.")
+def compras_aprobar_oc_directamente_view(request, oc_id): # Nuevo nombre
+    # if not es_admin_o_rol(request.user, ['compras_manager', 'administrador']): # Permisos
+    #     messages.error(request, "No tiene permiso para aprobar Órdenes de Compra.")
     #     return redirect('App_LUMINOVA:compras_lista_oc')
 
     orden_compra = get_object_or_404(Orden, id=oc_id, tipo='compra')
 
-    if orden_compra.estado == 'BORRADOR':
+    if orden_compra.estado == 'BORRADOR': # Solo aprobar desde borrador
         try:
-            orden_compra.estado = 'PENDIENTE_APROBACION'
+            orden_compra.estado = 'APROBADA'
+            # Aquí es un buen lugar para confirmar/actualizar la cantidad_en_pedido del insumo
+            # si no se hizo al crear el borrador, o si quieres que solo las aprobadas la afecten.
+            if orden_compra.insumo_principal and orden_compra.cantidad_principal and orden_compra.cantidad_principal > 0:
+                # Asegúrate que esta lógica no duplique si ya lo hiciste en la creación del borrador.
+                # Si la cantidad_en_pedido se suma al crear el BORRADOR, no necesitas hacerlo de nuevo aquí.
+                # Si solo se suma al APROBAR, entonces este es el lugar:
+                # Insumo.objects.filter(id=orden_compra.insumo_principal.id).update(
+                #     cantidad_en_pedido=F('cantidad_en_pedido') + orden_compra.cantidad_principal
+                # )
+                # logger.info(f"OC {orden_compra.numero_orden} aprobada. Incrementada cantidad_en_pedido para {orden_compra.insumo_principal.descripcion}.")
+                pass # Asumimos que cantidad_en_pedido ya se actualizó al crear el borrador
+
             orden_compra.save(update_fields=['estado'])
-            messages.success(request, f"Orden de Compra '{orden_compra.numero_orden}' enviada para aprobación.")
-            logger.info(f"OC {orden_compra.numero_orden} (ID: {oc_id}) cambió de estado a PENDIENTE_APROBACION por usuario {request.user.username}")
+            messages.success(request, f"Orden de Compra '{orden_compra.numero_orden}' ha sido APROBADA.")
+            logger.info(f"OC {orden_compra.numero_orden} (ID: {oc_id}) cambió estado a APROBADA por {request.user.username}")
         except Exception as e:
-            messages.error(request, f"Error al intentar enviar la OC para aprobación: {e}")
-            logger.error(f"Error al cambiar estado de OC {oc_id} a PENDIENTE_APROBACION: {e}")
+            messages.error(request, f"Error al aprobar la OC: {e}")
+            logger.error(f"Error al cambiar estado de OC {oc_id} a APROBADA: {e}")
     else:
-        messages.warning(request, f"La Orden de Compra '{orden_compra.numero_orden}' no está en estado 'Borrador' y no puede ser enviada para aprobación nuevamente desde aquí.")
+        messages.warning(request, f"La OC '{orden_compra.numero_orden}' no está en estado 'Borrador'. Estado actual: {orden_compra.get_estado_display()}")
 
     return redirect('App_LUMINOVA:compras_lista_oc')
 

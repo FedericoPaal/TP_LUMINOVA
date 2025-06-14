@@ -409,7 +409,7 @@ class Orden(models.Model):  # Este será para Órdenes de Compra
     ]
     ESTADO_ORDEN_COMPRA_CHOICES = [
         ("BORRADOR", "Borrador"),
-        ("PENDIENTE_APROBACION", "Pendiente Aprobación"),
+        
         ("APROBADA", "Aprobada"),
         ("ENVIADA_PROVEEDOR", "Enviada al Proveedor"),
         ("CONFIRMADA_PROVEEDOR", "Confirmada por Proveedor"),

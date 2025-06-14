@@ -68,15 +68,10 @@
 
                     {% if oc.estado == 'BORRADOR' %}
                         {# Enlace para Editar (sigue siendo GET, lleva a un formulario) #}
-                        <a href="{% url 'App_LUMINOVA:compras_editar_oc' oc.id %}" class="btn btn-sm btn-outline-primary me-1" title="Editar OC {{ oc.numero_orden }}">
-                            <i class="bi bi-pencil-square"></i>
-                        </a>
-
-                        {# Formulario para el botón "Enviar para Aprobación" #}
-                        <form method="post" action="{% url 'App_LUMINOVA:compras_solicitar_aprobacion_oc' oc.id %}" style="display: inline;">
+                        <form method="post" action="{% url 'App_LUMINOVA:compras_aprobar_oc_directamente' oc.id %}" style="display: inline;"> {# Nueva URL #}
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-outline-success me-1" title="Enviar OC {{ oc.numero_orden }} para Aprobación">
-                                <i class="bi bi-send-check-fill"></i>
+                            <button type="submit" class="btn btn-sm btn-outline-success me-1" title="Aprobar OC {{ oc.numero_orden }}">
+                                <i class="bi bi-check2-circle"></i> Aprobar
                             </button>
                         </form>
                         
