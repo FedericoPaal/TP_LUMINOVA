@@ -1,0 +1,224 @@
+{% extends 'padre.html' %}
+{% load static %}
+{% load django_bootstrap5 %}
+
+{% block title %}{{ titulo_seccion|default:"Editar Orden de Venta" }}{% endblock %}
+
+{% block sidebar_content %}
+    {% include 'ventas/ventas_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 col-xl-9 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">{{ titulo_seccion }}</h4>
+                </div>
+                <div class="card-body p-4">
+                    {% bootstrap_messages %}
+
+                    <form method="post" id="formEditarOV" novalidate>
+                        {% csrf_token %}
+                        
+                        <h5 class="mb-3">Datos Generales de la Orden</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {% bootstrap_field form_ov.numero_ov layout='vertical' field_class="form-control-plaintext" readonly="True" %}
+                            </div>
+                            <div class="col-md-6">
+                                {% bootstrap_field form_ov.cliente layout='vertical' %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                             {% bootstrap_field form_ov.estado layout='vertical' %}
+                        </div>
+                        <div class="mb-3">
+                            {% bootstrap_field form_ov.notas layout='vertical' placeholder="Anotaciones adicionales sobre la orden..." %}
+                        </div>
+                        
+                        <hr class="my-4">
+                        <h5 class="mb-3">Ítems de la Orden de Venta</h5>
+                        {% if not puede_editar_items %}
+                        <div class="alert alert-warning small">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Los ítems no pueden modificarse porque la producción asociada ya ha avanzado. Solo se pueden editar los datos generales de la orden.
+                        </div>
+                        {% endif %}
+
+                        {{ formset_items.management_form }}
+                        
+                        <div id="item-forms-container">
+                            {% for form_item in formset_items %}
+                                <div class="item-form border p-3 mb-3 rounded {% if form_item.non_field_errors or form_item.errors %}border-danger bg-danger-subtle{% endif %}">
+                                    <h6 class="mb-3">Ítem <span class="item-counter">{{ forloop.counter }}</span></h6>
+                                    <div class="row align-items-center">
+                                        <div class="col-md-5 mb-2">
+                                            {% if puede_editar_items %}
+                                                {% bootstrap_field form_item.producto_terminado show_label=True layout='vertical' form_group_class='mb-0' %}
+                                            {% else %}
+                                                {% bootstrap_field form_item.producto_terminado show_label=True layout='vertical' form_group_class='mb-0' disabled=True %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2 mb-2">
+                                            {% if puede_editar_items %}
+                                                {% bootstrap_field form_item.cantidad show_label=True layout='vertical' form_group_class='mb-0' %}
+                                            {% else %}
+                                                {% bootstrap_field form_item.cantidad show_label=True layout='vertical' form_group_class='mb-0' disabled=True %}
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-3 mb-2">
+                                            {% bootstrap_field form_item.precio_unitario_venta show_label=True layout='vertical' form_group_class='mb-0' readonly="True" %}
+                                        </div>
+                                        <div class="col-md-2 d-flex align-items-end justify-content-center pb-md-2 mb-2">
+                                            {% if formset_items.can_delete and puede_editar_items %}
+                                                {% if form_item.instance.pk %} 
+                                                    <div class="form-check pt-4">
+                                                        {{ form_item.DELETE }}
+                                                        <label for="{{ form_item.DELETE.id_for_label }}" class="form-check-label small text-danger">Eliminar</label>
+                                                    </div>
+                                                {% else %}
+                                                     {# Para nuevos forms (extra) JS podría manejar su eliminación visual #}
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if puede_editar_items %}
+                        <button type="button" id="add-item-button" class="btn btn-outline-success btn-sm mb-3">
+                            <i class="bi bi-plus-circle"></i> Añadir Producto
+                        </button>
+                        <div id="empty-form-template" style="display: none;">
+                            {# ... tu HTML para el form vacío del formset ... #}
+                            {# Ejemplo de un campo dentro del empty_form_template #}
+                            {# {% bootstrap_field formset_items.empty_form.producto_terminado show_label=True layout='vertical' form_group_class='mb-0' %} #}
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mt-3 p-3 bg-light rounded text-end">
+                            <h4>Total Orden de Venta: <span id="total-ov-display">${{ form_ov.instance.total_ov|floatformat:2|default:"0.00" }}</span></h4>
+                        </div>
+
+                        <hr class="my-4">
+                        <div class="d-flex justify-content-end">
+                            <a href="{% url 'App_LUMINOVA:ventas_detalle_ov' orden_venta.id %}" class="btn btn-outline-secondary me-2">
+                                <i class="bi bi-x-circle"></i> Cancelar Edición
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle-fill"></i> Guardar Cambios en Orden
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+// JavaScript similar al de ventas_crear_ov.html para añadir/eliminar ítems y actualizar total
+// Pero ten en cuenta la variable `puede_editar_items` para habilitar/deshabilitar
+// la funcionalidad de añadir/eliminar ítems del formset.
+document.addEventListener('DOMContentLoaded', function() {
+    const puedeEditarItems = "{{ puede_editar_items|yesno:'true,false'|lower }}" === "true";
+    const itemsContainer = document.getElementById('item-forms-container');
+    const addButton = document.getElementById('add-item-button');
+    const emptyFormHtmlSource = document.getElementById('empty-form-template');
+    const totalFormsInput = document.getElementById('id_{{ formset_items.prefix }}-TOTAL_FORMS');
+    const formSetPrefix = '{{ formset_items.prefix }}';
+    
+    if (!totalFormsInput) {
+        console.error("TOTAL_FORMS input no encontrado para el formset_items.");
+        return; 
+    }
+    let formCount = parseInt(totalFormsInput.value);
+
+    function updateTotalOVDisplay() {
+        let granTotal = 0;
+        itemsContainer.querySelectorAll('.item-form').forEach(formDiv => {
+            const deleteCheckbox = formDiv.querySelector(`input[type="checkbox"][name$="-DELETE"]`);
+            if (deleteCheckbox && deleteCheckbox.checked) {
+                return; 
+            }
+            const cantidadInput = formDiv.querySelector('.cantidad-ov-item');
+            const precioInput = formDiv.querySelector('.precio-ov-item');
+            if (cantidadInput && precioInput && !cantidadInput.disabled) { // Considerar solo si no está deshabilitado
+                const cantidad = parseInt(cantidadInput.value) || 0;
+                const precio = parseFloat(precioInput.value) || 0;
+                granTotal += cantidad * precio;
+            }
+        });
+        const totalDisplayElement = document.getElementById('total-ov-display');
+        if(totalDisplayElement) totalDisplayElement.textContent = '$' + granTotal.toFixed(2);
+    }
+
+    function updateItemEventListeners(formElement) {
+        const productoSelect = formElement.querySelector('.producto-selector-ov-item');
+        const cantidadInput = formElement.querySelector('.cantidad-ov-item');
+        const precioInput = formElement.querySelector('.precio-ov-item');
+
+        function setPriceAndTotal() {
+            if (productoSelect && precioInput && !productoSelect.disabled) { // Solo si no está deshabilitado
+                const selectedOption = productoSelect.options[productoSelect.selectedIndex];
+                if (selectedOption && selectedOption.value) {
+                    const text = selectedOption.text;
+                    const precioMatch = text.match(/P\.U: \$\s*([\d,]+\.?\d*)/);
+                    if (precioMatch && precioMatch[1]) {
+                        precioInput.value = parseFloat(precioMatch[1].replace(',', '.')).toFixed(2);
+                    } else {
+                        precioInput.value = '0.00';
+                    }
+                } else {
+                    precioInput.value = '0.00';
+                }
+            }
+            updateTotalOVDisplay();
+        }
+        
+        if (productoSelect) productoSelect.addEventListener('change', setPriceAndTotal);
+        if (cantidadInput) cantidadInput.addEventListener('input', updateTotalOVDisplay);
+        // Precio no debería cambiar por input del usuario aquí, se toma del producto
+        // if (precioInput) precioInput.addEventListener('input', updateTotalOVDisplay); 
+
+        // Si los campos están deshabilitados al cargar, la función de arriba podría no llenarlos bien
+        // pero Django ya los llena con instance data.
+        // SetPriceAndTotal(); // No llamar aquí para edición para no sobrescribir precios guardados si el producto no cambia
+        updateTotalOVDisplay(); // Calcular total inicial
+    }
+
+    itemsContainer.querySelectorAll('.item-form').forEach(formDiv => {
+        updateItemEventListeners(formDiv);
+        // Si no se pueden editar ítems, deshabilitar los campos del formset
+        if (!puedeEditarItems) {
+            formDiv.querySelectorAll('input, select, textarea').forEach(field => {
+                if (!field.name.endsWith('-DELETE')) { // No deshabilitar el checkbox DELETE
+                    field.disabled = true;
+                }
+            });
+        }
+    });
+    
+    if (addButton && puedeEditarItems && emptyFormHtmlSource) { // Solo habilitar añadir si se permite editar
+        const emptyFormHtml = emptyFormHtmlSource.innerHTML;
+        addButton.addEventListener('click', function() {
+            let newFormContent = emptyFormHtml.replace(/__prefix__/g, formCount).replace(/__prefix_counter__/g, formCount + 1);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = newFormContent;
+            const newFormElement = tempDiv.firstElementChild;
+            
+            itemsContainer.appendChild(newFormElement);
+            updateItemEventListeners(newFormElement);
+            
+            totalFormsInput.value = formCount + 1;
+            formCount++;
+            updateTotalOVDisplay();
+        });
+    } else if (addButton) {
+        addButton.style.display = 'none'; // Ocultar el botón de añadir si no se puede editar
+    }
+});
+
+</script>
+{% endblock %}

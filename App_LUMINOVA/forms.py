@@ -92,7 +92,7 @@ class OrdenVentaForm(forms.ModelForm):
         widgets = {
             'numero_ov': forms.TextInput(attrs={'class': 'form-control'}),
             'cliente': forms.Select(attrs={'class': 'form-select'}),
-            'estado': forms.Select(attrs={'class': 'form-select'}), 
+            'estado': forms.Select(attrs={'class': 'form-select'}),
             'notas': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Anotaciones adicionales...'}),
         }
         labels = {
@@ -103,36 +103,42 @@ class OrdenVentaForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs) # Llamar al __init__ del padre primero
+        super().__init__(*args, **kwargs)
 
         self.fields['cliente'].queryset = Cliente.objects.all().order_by('nombre')
         self.fields['cliente'].empty_label = "Seleccione un Cliente..."
-        
-        # Las choices para el campo 'estado' ya se toman del modelo OrdenVenta.ESTADO_CHOICES
         
         instance = getattr(self, 'instance', None)
         is_new_instance = instance is None or not instance.pk
 
         if is_new_instance:
-            # Para una nueva OV (creación):
-            # 1. Establecer el valor inicial que se mostrará en el campo.
-            self.initial['estado'] = 'PENDIENTE' # El valor que se seleccionará por defecto
-            
-            # 2. Deshabilitar el widget para que el usuario no pueda cambiarlo visualmente.
+            # CREACIÓN DE NUEVA OV
+            self.initial['estado'] = 'PENDIENTE'
             self.fields['estado'].widget.attrs['disabled'] = True
+            self.fields['estado'].required = False # No se envía, la vista lo asigna
             
-            # 3. Hacer el campo no requerido a nivel de validación del formulario.
-            #    Esto es crucial para que form.is_valid() no falle si el campo está deshabilitado
-            #    y, por lo tanto, no se envía en el POST. La vista se encargará de setear el valor.
-            self.fields['estado'].required = False 
-        else: # Es una instancia existente (edición)
-            # Asegurarse de que el campo 'estado' esté habilitado y sea requerido.
-            if 'disabled' in self.fields['estado'].widget.attrs:
-                del self.fields['estado'].widget.attrs['disabled']
-            # También es buena práctica asegurar que 'disabled' como atributo del campo no esté True
-            if hasattr(self.fields['estado'], 'disabled'): # Verificar si el atributo existe
-                 self.fields['estado'].disabled = False
-            self.fields['estado'].required = True # En edición, el estado sí debe ser enviado
+            # El numero_ov se sugiere en la vista ventas_crear_ov_view y se pasa como initial.
+            # Podríamos hacerlo readonly aquí también si siempre viene de initial.
+            if self.initial.get('numero_ov'):
+                 self.fields['numero_ov'].widget.attrs['readonly'] = True
+
+        else: # EDICIÓN DE OV EXISTENTE
+            # Hacer numero_ov siempre readonly después de la creación
+            self.fields['numero_ov'].widget.attrs['readonly'] = True
+            
+            # Hacer estado siempre disabled (o readonly si prefieres que el valor se envíe)
+            # Si está disabled, el valor no se envía en el POST, la vista no debe intentar guardarlo desde el form.
+            self.fields['estado'].widget.attrs['disabled'] = True
+            self.fields['estado'].required = False # No es requerido del POST si está disabled
+
+            # Si lo pones readonly, el valor SÍ se envía, pero el widget Select no tiene un buen estado readonly nativo.
+            # 'disabled' es visualmente más claro para un Select que no se debe cambiar.
+            # La vista 'ventas_editar_ov_view' DEBE OMITIR la actualización del campo 'estado' desde el formulario
+            # si se decide que el estado solo cambia por acciones específicas.
+
+        # Opcional: quitar el "---------" si siempre quieres un estado seleccionado y el campo está habilitado
+        if not self.fields['estado'].widget.attrs.get('disabled'):
+           self.fields['estado'].empty_label = None
 
 # Formulario para actualizar una OP (usado en la vista de detalle de OP)
 class OrdenProduccionUpdateForm(forms.ModelForm):
@@ -343,8 +349,8 @@ class OrdenCompraForm(forms.ModelForm):
         self.fields['numero_tracking'].required = False
         self.fields['notas'].required = False
         
-        # Cantidad y Precio son requeridos si hay un insumo
-        current_insumo_for_validation = cleaned_data.get('insumo_principal') if hasattr(self, 'cleaned_data') else self.initial.get('insumo_principal', getattr(instance, 'insumo_principal', None))
+        # Cantidad y Precio son requeridos si hay un insumo en initial o en la instancia (solo para el render, la validación real va en clean)
+        current_insumo_for_validation = self.initial.get('insumo_principal', getattr(instance, 'insumo_principal', None))
         if current_insumo_for_validation:
             self.fields['cantidad_principal'].required = True
             self.fields['precio_unitario_compra'].required = True

@@ -816,60 +816,178 @@ def ventas_generar_factura_view(request, ov_id):
 @login_required
 @transaction.atomic
 def ventas_editar_ov_view(request, ov_id):
-    # if not es_admin_o_rol(request.user, ['ventas', 'administrador']):
-    #     messages.error(request, "Acción no permitida.")
-    #     return redirect('App_LUMINOVA:ventas_lista_ov')
+    orden_venta = get_object_or_404(
+        OrdenVenta.objects.prefetch_related(
+            'ops_generadas__estado_op', # Para chequear el estado de las OPs
+            'items_ov__producto_terminado'  # Para el formset
+        ), 
+        id=ov_id
+    )
+    logger.info(f"Editando OV: {orden_venta.numero_ov}, Estado actual OV: {orden_venta.get_estado_display()}")
 
-    orden_venta = get_object_or_404(OrdenVenta, id=ov_id)
+    # --- Lógica de Restricción de Edición ---
+    # Por defecto, permitimos editar campos generales de la OV (cliente, notas)
+    # La edición de ítems (que afecta a las OPs) es más restrictiva.
+    puede_editar_campos_generales_ov = True
+    puede_editar_items_y_ops = True # Asumir que sí, y luego restringir
 
-    # RESTRICCIÓN: Solo editar si está en estados permitidos y OPs no avanzadas
-    if orden_venta.estado not in ['PENDIENTE', 'CONFIRMADA'] or \
-       orden_venta.ops_generadas.exclude(estado_op__nombre__iexact='Pendiente').exists():
-        messages.error(request, f"La Orden de Venta {orden_venta.numero_ov} no se puede editar porque su producción ya ha avanzado o su estado no lo permite.")
+    # Estados finales de la OV donde no se edita nada (o casi nada)
+    if orden_venta.estado in ['COMPLETADA', 'CANCELADA']:
+        messages.warning(request, f"La Orden de Venta {orden_venta.numero_ov} está en estado '{orden_venta.get_estado_display()}' y no puede ser modificada.")
         return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
+
+    # Si la OV no está en Pendiente o Confirmada, no se deberían poder cambiar ítems que afecten OPs.
+    if orden_venta.estado not in ['PENDIENTE', 'CONFIRMADA']:
+        puede_editar_items_y_ops = False
+        logger.info(f"Edición de ítems deshabilitada para OV {orden_venta.numero_ov} porque su estado es '{orden_venta.get_estado_display()}'.")
+
+    if puede_editar_items_y_ops: # Solo chequear OPs si el estado de la OV permite editar ítems
+        # Estados de OP que indican que la producción ha avanzado y no se deben modificar ítems de OV fácilmente
+        estados_op_avanzados = [
+            "insumos recibidos", "producción iniciada", "en proceso", 
+            "producción parcial", "completada"
+            # "Pausada" podría considerarse avanzado si no se puede revertir fácilmente la asignación de insumos.
+            # "Cancelada" por producción también es un estado avanzado.
+        ]
+        for op_asociada in orden_venta.ops_generadas.all():
+            if op_asociada.estado_op and op_asociada.estado_op.nombre.lower() in estados_op_avanzados:
+                messages.error(request, f"No se pueden modificar los ítems de la OV {orden_venta.numero_ov} porque la OP '{op_asociada.numero_op}' ya ha avanzado (Estado OP: {op_asociada.get_estado_op_display()}).")
+                puede_editar_items_y_ops = False
+                break
+    
+    # Si es POST y no se pueden editar ítems pero el formset de ítems cambió, mostrar error.
+    if request.method == 'POST' and not puede_editar_items_y_ops:
+        # Crear un formset temporal solo para chequear si hubo cambios en los ítems
+        temp_formset_check = ItemOrdenVentaFormSet(request.POST, instance=orden_venta, prefix='items')
+        if temp_formset_check.has_changed():
+            messages.error(request, f"Los ítems de la OV {orden_venta.numero_ov} no pueden ser modificados en este momento debido al estado de producción.")
+            # Re-renderizar con el formulario GET para mostrar el estado actual y el mensaje
+            form_ov_get = OrdenVentaForm(instance=orden_venta, prefix='ov')
+            formset_items_get = ItemOrdenVentaFormSet(instance=orden_venta, prefix='items')
+            context = {
+                'form_ov': form_ov_get, 'formset_items': formset_items_get, 
+                'orden_venta': orden_venta, 'titulo_seccion': f'Editar OV: {orden_venta.numero_ov}',
+                'puede_editar_items': puede_editar_items_y_ops
+            }
+            return render(request, 'ventas/ventas_editar_ov.html', context)
+
 
     if request.method == 'POST':
         form_ov = OrdenVentaForm(request.POST, instance=orden_venta, prefix='ov')
+        # El formset se instancia incluso si no se pueden editar ítems, pero su validez/guardado se condicionará
         formset_items = ItemOrdenVentaFormSet(request.POST, instance=orden_venta, prefix='items')
 
-        if form_ov.is_valid() and formset_items.is_valid():
-            ov_actualizada = form_ov.save(commit=False)
-            # Guardar ítems primero para recalcular total
-            items_actualizados = formset_items.save(commit=False)
+        form_ov_valido = form_ov.is_valid()
+        formset_items_valido_o_no_relevante = formset_items.is_valid() if puede_editar_items_y_ops else True
 
-            total_recalculado = 0
-            for item in items_actualizados:
-                item.precio_unitario_venta = item.producto_terminado.precio_unitario # Re-asegurar precio
-                item.subtotal = item.cantidad * item.precio_unitario_venta
-                total_recalculado += item.subtotal
-                item.save() # Guardar cada item
+        if form_ov_valido and formset_items_valido_o_no_relevante:
+            try:
+                ov_actualizada = form_ov.save(commit=False) # Guardar cambios en Cliente, Notas
+                # El estado de la OV no se cambia directamente desde este form (debe ser por acciones)
 
-            # Guardar items marcados para eliminar
-            for form_item_deleted in formset_items.deleted_forms:
-                if form_item_deleted.instance.pk: # Solo si el item ya existía
-                    form_item_deleted.instance.delete()
+                if puede_editar_items_y_ops:
+                    logger.info(f"Procesando edición de ítems para OV {ov_actualizada.numero_ov}")
+                    # Eliminar OPs existentes que estén en 'Pendiente' o 'Insumos Solicitados' (antes de la preparación en depósito)
+                    # ya que los ítems/cantidades de la OV pueden cambiar.
+                    ops_a_revisar_o_eliminar = orden_venta.ops_generadas.filter(
+                        Q(estado_op__nombre__iexact='Pendiente') | Q(estado_op__nombre__iexact='Insumos Solicitados')
+                    )
+                    if ops_a_revisar_o_eliminar.exists():
+                        logger.info(f"Eliminando {ops_a_revisar_o_eliminar.count()} OPs en estado inicial para OV {ov_actualizada.numero_ov}.")
+                        ops_a_revisar_o_eliminar.delete()
+                        messages.warning(request, "Órdenes de Producción asociadas (en estado inicial) han sido eliminadas y se regenerarán según los nuevos ítems.")
+                    
+                    # Guardar el formset de ítems
+                    items_actualizados_para_op = []
+                    total_recalculado = 0
+                    
+                    # Primero, procesar y guardar los forms que NO están marcados para eliminar
+                    formset_items.save(commit=False) # Asigna la instancia de OV a los items nuevos
+                    for form_item in formset_items.forms:
+                        if form_item.is_valid() and not form_item.cleaned_data.get('DELETE', False) and form_item.has_changed():
+                            if form_item.cleaned_data.get('producto_terminado') and form_item.cleaned_data.get('cantidad'):
+                                item = form_item.save(commit=False) # Ya tiene orden_venta de formset.save(commit=False) si es nuevo
+                                if not item.orden_venta_id: item.orden_venta = ov_actualizada # Asegurar
+                                
+                                item.precio_unitario_venta = item.producto_terminado.precio_unitario
+                                item.subtotal = item.cantidad * item.precio_unitario_venta
+                                total_recalculado += item.subtotal
+                                item.save() # Guardar el item individual
+                                items_actualizados_para_op.append(item)
+                            elif form_item.instance.pk : # Es un form existente que no se borra y no tiene errores graves
+                                total_recalculado += form_item.instance.subtotal # Usar subtotal existente
+                                items_actualizados_para_op.append(form_item.instance)
 
-            formset_items.save_m2m()
+
+                    # Luego, procesar los forms marcados para eliminar
+                    for form_item_deleted in formset_items.deleted_forms:
+                        if form_item_deleted.instance.pk: 
+                            logger.info(f"Eliminando Item ID {form_item_deleted.instance.pk} de OV {ov_actualizada.numero_ov}")
+                            form_item_deleted.instance.delete()
+                    
+                    # Si no hay items después de eliminar/procesar, podría ser un error o una OV vacía
+                    if not items_actualizados_para_op and not ItemOrdenVenta.objects.filter(orden_venta=ov_actualizada).exists():
+                        messages.error(request, "La Orden de Venta debe tener al menos un ítem.")
+                        # No guardar ov_actualizada.total_ov, y forzar re-render del form
+                        # Esto es un poco complejo porque la transacción ya está en curso.
+                        # Idealmente, la validación del formset debería impedir esto.
+                        raise DjangoIntegrityError("OV no puede quedar sin ítems.")
 
 
-            ov_actualizada.total_ov = total_recalculado
-            ov_actualizada.save() # Guardar la OV actualizada
+                    ov_actualizada.total_ov = total_recalculado
+                    ov_actualizada.save() # Guardar la OV con el nuevo total y otros campos.
+                    formset_items.save_m2m() # Para cualquier relación M2M en ItemOrdenVenta (si la hubiera)
 
-            messages.success(request, f"Orden de Venta {ov_actualizada.numero_ov} actualizada exitosamente.")
-            # Aquí deberías decidir qué hacer con las OPs si los ítems cambiaron.
-            # Por ahora, solo actualizamos la OV. Una lógica más compleja podría cancelar OPs antiguas y crear nuevas.
-            return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=ov_actualizada.id)
-        else:
+                    # Regenerar OPs basadas en items_actualizados_para_op
+                    estado_op_inicial = EstadoOrden.objects.filter(nombre__iexact='Pendiente').first()
+                    if not estado_op_inicial:
+                        messages.error(request, "Error crítico: Estado 'Pendiente' para OP no configurado. No se pudieron regenerar OPs.")
+                    else:
+                        for item_guardado in items_actualizados_para_op:
+                            # TODO: Mejorar generación de número de OP para asegurar unicidad real
+                            op_count = OrdenProduccion.objects.count() 
+                            next_op_number = f"OP-{str(timezone.now().timestamp()).replace('.', '')[-6:]}-{item_guardado.id}" # Un intento de hacerlo más único
+                            # Una mejor forma es un sequence o UUID
+                            
+                            OrdenProduccion.objects.create(
+                                numero_op=next_op_number, # Hay que asegurar que este número sea único
+                                orden_venta_origen=ov_actualizada,
+                                producto_a_producir=item_guardado.producto_terminado,
+                                cantidad_a_producir=item_guardado.cantidad,
+                                fecha_solicitud=timezone.now(),
+                                estado_op=estado_op_inicial
+                            )
+                            messages.info(request, f'Nueva OP "{next_op_number}" generada para "{item_guardado.producto_terminado.descripcion}".')
+                else: # No se pueden editar items, solo guardar cambios generales de la OV
+                    ov_actualizada.save() # Guardar cambios en Cliente, Notas
+
+                messages.success(request, f"Orden de Venta '{ov_actualizada.numero_ov}' actualizada exitosamente.")
+                return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=ov_actualizada.id)
+            
+            except DjangoIntegrityError as e_int:
+                messages.error(request, f"Error de integridad al guardar la Orden de Venta: {e_int}")
+            except Exception as e:
+                messages.error(request, f"Error inesperado al guardar la Orden de Venta: {e}")
+                logger.exception(f"Error al editar y guardar OV {ov_id}:")
+        
+        else: # Formulario(s) no válido(s)
+            if not form_ov.is_valid():
+                 logger.warning(f"Formulario OV (edición) inválido: {form_ov.errors.as_json()}")
+            if puede_editar_items_y_ops and not formset_items.is_valid():
+                 logger.warning(f"Formset Items OV (edición) inválido: {formset_items.errors}")
             messages.error(request, "Por favor, corrija los errores en el formulario.")
-    else: # GET
+            # El formulario con errores se pasará al contexto para re-renderizar
+
+    else: # GET request
         form_ov = OrdenVentaForm(instance=orden_venta, prefix='ov')
         formset_items = ItemOrdenVentaFormSet(instance=orden_venta, prefix='items')
 
     context = {
         'form_ov': form_ov,
         'formset_items': formset_items,
-        'orden_venta': orden_venta, # Para el título y otros datos
+        'orden_venta': orden_venta, 
         'titulo_seccion': f'Editar Orden de Venta: {orden_venta.numero_ov}',
+        'puede_editar_items': puede_editar_items_y_ops,
     }
     return render(request, 'ventas/ventas_editar_ov.html', context)
 

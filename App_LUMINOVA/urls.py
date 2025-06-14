@@ -87,6 +87,7 @@ urlpatterns = [
     path('ventas/orden/<int:ov_id>/editar/', ventas_editar_ov_view, name='ventas_editar_ov'),   # NUEVA
     path('ventas/orden/<int:ov_id>/cancelar/', ventas_cancelar_ov_view, name='ventas_cancelar_ov'), # NUEVA
     path('ventas/factura/<int:factura_id>/pdf/', ventas_ver_factura_pdf_view, name='ventas_ver_factura_pdf'),
+    path('ventas/orden/<int:ov_id>/editar/', ventas_editar_ov_view, name='ventas_editar_ov'),
 
     # --- Rutas de Compras ---
     path('compras/', compras_lista_oc_view, name='compras_lista_oc'), # Vista principal de compras
