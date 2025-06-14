@@ -94,8 +94,11 @@ class Insumo(models.Model):
     imagen = models.ImageField(null=True, blank=True, upload_to="insumos/")
     stock = models.IntegerField(default=0)
     cantidad_en_pedido = models.PositiveIntegerField(
-        default=0, verbose_name="Cantidad en Pedido"
-    )
+    default=0, 
+    verbose_name="Cantidad en Pedido",
+    blank=True,
+    null=True # PERMITIR NULL EN LA BASE DE DATOS
+)
     # Puedes añadir un campo para un precio de referencia o último costo si lo deseas aquí,
     # pero el precio de compra específico vendrá de OfertaProveedor.
     # ultimo_costo_compra = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

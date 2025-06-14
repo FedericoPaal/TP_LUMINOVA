@@ -2313,8 +2313,35 @@ class InsumoDetailView(DetailView):
 class InsumoCreateView(CreateView):
     model = Insumo
     template_name = 'deposito/insumo_crear.html'
-    fields = '__all__'
-    success_url = reverse_lazy('App_LUMINOVA:deposito_view')
+    # Define los campos que SÍ están en el modelo Insumo y quieres en el formulario de creación
+    fields = ['descripcion', 'categoria', 'fabricante', 'stock', 'imagen'] 
+    # success_url = reverse_lazy('App_LUMINOVA:deposito_view') # Redirige a la vista principal de depósito
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Insumo '{form.instance.descripcion}' creado exitosamente.")
+        logger.info(f"Insumo creado: {form.instance.descripcion} (ID: {form.instance.id}) por usuario {self.request.user.username}")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        logger.warning(f"InsumoCreateView - Formulario inválido: {form.errors.as_json()}")
+        messages.error(self.request, "Error al crear el insumo. Por favor, revise los campos marcados.")
+        return super().form_invalid(form)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        categoria_id = self.request.GET.get('categoria')
+        if categoria_id:
+            try:
+                initial['categoria'] = CategoriaInsumo.objects.get(pk=categoria_id)
+            except CategoriaInsumo.DoesNotExist:
+                messages.warning(self.request, "La categoría preseleccionada para el insumo no es válida.")
+        return initial
+    
+    def get_success_url(self):
+        # Redirigir al detalle de la categoría del insumo creado, o a la vista principal de depósito
+        if hasattr(self.object, 'categoria') and self.object.categoria:
+            return reverse_lazy('App_LUMINOVA:categoria_i_detail', kwargs={'pk': self.object.categoria.pk})
+        return reverse_lazy('App_LUMINOVA:deposito_view')
 
 
 class InsumoUpdateView(UpdateView):
