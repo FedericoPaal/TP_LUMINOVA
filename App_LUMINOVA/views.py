@@ -1784,9 +1784,9 @@ def produccion_detalle_op_view(request, op_id):
         elif estado_actual_nombre_lower == ESTADO_OP_INSUMOS_RECIBIDOS_LOWER:
             nombres_permitidos_dropdown.extend(["Producción Iniciada", "Pausada", "Cancelada"])
         elif estado_actual_nombre_lower == ESTADO_OP_PRODUCCION_INICIADA_LOWER:
-            nombres_permitidos_dropdown.extend(["En Proceso", "Producción Parcial", "Pausada", "Completada", "Cancelada"])
+            nombres_permitidos_dropdown.extend(["En Proceso", "Pausada", "Completada", "Cancelada"])
         elif estado_actual_nombre_lower == ESTADO_OP_EN_PROCESO_LOWER:
-            nombres_permitidos_dropdown.extend(["Producción Parcial", "Pausada", "Completada", "Cancelada"])
+            nombres_permitidos_dropdown.extend(["Pausada", "Completada", "Cancelada"])
         elif estado_actual_nombre_lower == ESTADO_OP_PAUSADA_LOWER:
             nombres_permitidos_dropdown.extend(["Cancelada"])
             if EstadoOrden.objects.filter(nombre__iexact=ESTADO_OP_INSUMOS_RECIBIDOS_LOWER).exists():
