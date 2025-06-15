@@ -80,7 +80,7 @@ class ItemOrdenVentaForm(forms.ModelForm):
 ItemOrdenVentaFormSet = forms.inlineformset_factory(
     OrdenVenta, ItemOrdenVenta, form=ItemOrdenVentaForm,
     fields=['producto_terminado', 'cantidad', 'precio_unitario_venta'],
-    extra=1, # Empieza con 1 form para ítem
+    extra=0, # Empieza con 1 form para ítem
     can_delete=True, # Permite marcar para eliminar ítems existentes
     can_delete_extra=True # Permite eliminar forms "extra" añadidos por JS antes de guardar
 )

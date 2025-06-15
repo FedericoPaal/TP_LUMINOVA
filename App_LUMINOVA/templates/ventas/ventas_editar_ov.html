@@ -17,7 +17,7 @@
                     <h4 class="mb-0">{{ titulo_seccion }}</h4>
                 </div>
                 <div class="card-body p-4">
-                    {% bootstrap_messages %}
+                    
 
                     <form method="post" id="formEditarOV" novalidate>
                         {% csrf_token %}
@@ -25,6 +25,7 @@
                         <h5 class="mb-3">Datos Generales de la Orden</h5>
                         <div class="row">
                             <div class="col-md-6">
+                                {# Este campo siempre será readonly en la edición #}
                                 {% bootstrap_field form_ov.numero_ov layout='vertical' field_class="form-control-plaintext" readonly="True" %}
                             </div>
                             <div class="col-md-6">
@@ -51,21 +52,14 @@
                         <div id="item-forms-container">
                             {% for form_item in formset_items %}
                                 <div class="item-form border p-3 mb-3 rounded {% if form_item.non_field_errors or form_item.errors %}border-danger bg-danger-subtle{% endif %}">
+                                    <input type="hidden" name="{{ form_item.prefix }}-id" value="{{ form_item.instance.id|default:'' }}" id="id_{{ form_item.prefix }}-id">
                                     <h6 class="mb-3">Ítem <span class="item-counter">{{ forloop.counter }}</span></h6>
                                     <div class="row align-items-center">
                                         <div class="col-md-5 mb-2">
-                                            {% if puede_editar_items %}
-                                                {% bootstrap_field form_item.producto_terminado show_label=True layout='vertical' form_group_class='mb-0' %}
-                                            {% else %}
-                                                {% bootstrap_field form_item.producto_terminado show_label=True layout='vertical' form_group_class='mb-0' disabled=True %}
-                                            {% endif %}
+                                            {% bootstrap_field form_item.producto_terminado show_label=True layout='vertical' form_group_class='mb-0' disabled=not.puede_editar_items %}
                                         </div>
                                         <div class="col-md-2 mb-2">
-                                            {% if puede_editar_items %}
-                                                {% bootstrap_field form_item.cantidad show_label=True layout='vertical' form_group_class='mb-0' %}
-                                            {% else %}
-                                                {% bootstrap_field form_item.cantidad show_label=True layout='vertical' form_group_class='mb-0' disabled=True %}
-                                            {% endif %}
+                                            {% bootstrap_field form_item.cantidad show_label=True layout='vertical' form_group_class='mb-0' disabled=not.puede_editar_items %}
                                         </div>
                                         <div class="col-md-3 mb-2">
                                             {% bootstrap_field form_item.precio_unitario_venta show_label=True layout='vertical' form_group_class='mb-0' readonly="True" %}
@@ -77,8 +71,6 @@
                                                         {{ form_item.DELETE }}
                                                         <label for="{{ form_item.DELETE.id_for_label }}" class="form-check-label small text-danger">Eliminar</label>
                                                     </div>
-                                                {% else %}
-                                                     {# Para nuevos forms (extra) JS podría manejar su eliminación visual #}
                                                 {% endif %}
                                             {% endif %}
                                         </div>
@@ -91,11 +83,30 @@
                         <button type="button" id="add-item-button" class="btn btn-outline-success btn-sm mb-3">
                             <i class="bi bi-plus-circle"></i> Añadir Producto
                         </button>
+                        
+                        {# --- INICIO DE LA CORRECCIÓN CLAVE --- #}
                         <div id="empty-form-template" style="display: none;">
-                            {# ... tu HTML para el form vacío del formset ... #}
-                            {# Ejemplo de un campo dentro del empty_form_template #}
-                            {# {% bootstrap_field formset_items.empty_form.producto_terminado show_label=True layout='vertical' form_group_class='mb-0' %} #}
+                           <div class="item-form border p-3 mb-3 rounded">
+                                <h6 class="mb-3">Ítem <span class="item-counter">__prefix_counter__</span></h6>
+                                <div class="row align-items-center">
+                                    <div class="col-md-5 mb-2">
+                                        {% bootstrap_field formset_items.empty_form.producto_terminado layout='vertical' show_label=True form_group_class='mb-0' %}
+                                    </div>
+                                    <div class="col-md-2 mb-2">
+                                        {% bootstrap_field formset_items.empty_form.cantidad layout='vertical' show_label=True form_group_class='mb-0' %}
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        {% bootstrap_field formset_items.empty_form.precio_unitario_venta layout='vertical' show_label=True form_group_class='mb-0' %}
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end justify-content-center pb-md-2 mb-2">
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-new-item-button" title="Eliminar este ítem">
+                                            <i class="bi bi-trash3-fill"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+                        {# --- FIN DE LA CORRECCIÓN CLAVE --- #}
                         {% endif %}
                         
                         <div class="mt-3 p-3 bg-light rounded text-end">
@@ -117,10 +128,8 @@
         </div>
     </div>
 </div>
+
 <script>
-// JavaScript similar al de ventas_crear_ov.html para añadir/eliminar ítems y actualizar total
-// Pero ten en cuenta la variable `puede_editar_items` para habilitar/deshabilitar
-// la funcionalidad de añadir/eliminar ítems del formset.
 document.addEventListener('DOMContentLoaded', function() {
     const puedeEditarItems = "{{ puede_editar_items|yesno:'true,false'|lower }}" === "true";
     const itemsContainer = document.getElementById('item-forms-container');
@@ -130,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const formSetPrefix = '{{ formset_items.prefix }}';
     
     if (!totalFormsInput) {
-        console.error("TOTAL_FORMS input no encontrado para el formset_items.");
+        console.error("Management form (TOTAL_FORMS) no encontrado.");
         return; 
     }
     let formCount = parseInt(totalFormsInput.value);
@@ -140,11 +149,11 @@ document.addEventListener('DOMContentLoaded', function() {
         itemsContainer.querySelectorAll('.item-form').forEach(formDiv => {
             const deleteCheckbox = formDiv.querySelector(`input[type="checkbox"][name$="-DELETE"]`);
             if (deleteCheckbox && deleteCheckbox.checked) {
-                return; 
+                return; // No sumar items marcados para eliminar
             }
             const cantidadInput = formDiv.querySelector('.cantidad-ov-item');
             const precioInput = formDiv.querySelector('.precio-ov-item');
-            if (cantidadInput && precioInput && !cantidadInput.disabled) { // Considerar solo si no está deshabilitado
+            if (cantidadInput && precioInput) {
                 const cantidad = parseInt(cantidadInput.value) || 0;
                 const precio = parseFloat(precioInput.value) || 0;
                 granTotal += cantidad * precio;
@@ -160,7 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const precioInput = formElement.querySelector('.precio-ov-item');
 
         function setPriceAndTotal() {
-            if (productoSelect && precioInput && !productoSelect.disabled) { // Solo si no está deshabilitado
+            if (productoSelect && precioInput) {
                 const selectedOption = productoSelect.options[productoSelect.selectedIndex];
                 if (selectedOption && selectedOption.value) {
                     const text = selectedOption.text;
@@ -179,31 +188,30 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (productoSelect) productoSelect.addEventListener('change', setPriceAndTotal);
         if (cantidadInput) cantidadInput.addEventListener('input', updateTotalOVDisplay);
-        // Precio no debería cambiar por input del usuario aquí, se toma del producto
-        // if (precioInput) precioInput.addEventListener('input', updateTotalOVDisplay); 
-
-        // Si los campos están deshabilitados al cargar, la función de arriba podría no llenarlos bien
-        // pero Django ya los llena con instance data.
-        // SetPriceAndTotal(); // No llamar aquí para edición para no sobrescribir precios guardados si el producto no cambia
-        updateTotalOVDisplay(); // Calcular total inicial
-    }
-
-    itemsContainer.querySelectorAll('.item-form').forEach(formDiv => {
-        updateItemEventListeners(formDiv);
-        // Si no se pueden editar ítems, deshabilitar los campos del formset
-        if (!puedeEditarItems) {
-            formDiv.querySelectorAll('input, select, textarea').forEach(field => {
-                if (!field.name.endsWith('-DELETE')) { // No deshabilitar el checkbox DELETE
-                    field.disabled = true;
-                }
+        
+        const removeButton = formElement.querySelector('.remove-new-item-button');
+        if (removeButton) {
+            removeButton.addEventListener('click', function() {
+                this.closest('.item-form').remove();
+                updateTotalOVDisplay();
+                // Ojo: No estamos decrementando TOTAL_FORMS aquí. Django maneja bien los huecos, pero es más limpio si lo hiciéramos.
             });
         }
+    }
+
+    // Aplicar listeners a los forms existentes
+    itemsContainer.querySelectorAll('.item-form').forEach(formDiv => {
+        updateItemEventListeners(formDiv);
     });
-    
-    if (addButton && puedeEditarItems && emptyFormHtmlSource) { // Solo habilitar añadir si se permite editar
+
+    // Calcular el total inicial al cargar la página
+    updateTotalOVDisplay();
+
+    if (addButton && puedeEditarItems && emptyFormHtmlSource) {
         const emptyFormHtml = emptyFormHtmlSource.innerHTML;
         addButton.addEventListener('click', function() {
             let newFormContent = emptyFormHtml.replace(/__prefix__/g, formCount).replace(/__prefix_counter__/g, formCount + 1);
+            
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = newFormContent;
             const newFormElement = tempDiv.firstElementChild;
@@ -213,12 +221,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             totalFormsInput.value = formCount + 1;
             formCount++;
-            updateTotalOVDisplay();
         });
     } else if (addButton) {
-        addButton.style.display = 'none'; // Ocultar el botón de añadir si no se puede editar
+        addButton.style.display = 'none'; // Ocultar el botón si no se puede editar
     }
 });
-
 </script>
 {% endblock %}
