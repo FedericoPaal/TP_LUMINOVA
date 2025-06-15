@@ -2162,7 +2162,7 @@ def deposito_view(request):
         messages.error(request, f"Error al cargar OPs pendientes para depósito: {e_op}")
         logger.error(f"Deposito_view (OPs): Excepción al cargar OPs: {e_op}")
 
-    productos_terminados_con_stock = ProductoTerminado.objects.filter(stock__gt=0).order_by('-stock', 'descripcion')
+    productos_terminados_con_stock = ProductoTerminado.objects.filter(stock__gt=0).select_related('op_asociada').order_by('-stock', 'descripcion')
     logger.info(f"Deposito_view (PTs): Productos terminados con stock > 0 encontrados: {productos_terminados_con_stock.count()}")
 
     # --- LÓGICA PARA INSUMOS CON STOCK BAJO ---
@@ -2176,7 +2176,7 @@ def deposito_view(request):
     else:
         logger.info("  -> No se encontraron insumos con stock por debajo del umbral.")
     # --- FIN LÓGICA STOCK BAJO ---
-
+    
     context = {
         'categorias_I': categorias_I,
         'categorias_PT': categorias_PT,

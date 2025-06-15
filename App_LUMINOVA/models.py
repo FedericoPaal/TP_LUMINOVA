@@ -36,6 +36,13 @@ class ProductoTerminado(models.Model):
     color_luz = models.CharField(max_length=50, blank=True, null=True)
     material = models.CharField(max_length=50, blank=True, null=True)
     imagen = models.ImageField(null=True, blank=True, upload_to="productos_terminados/")
+    op_asociada = models.ForeignKey(
+        'OrdenProduccion',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='productos_terminados'
+    )
 
     def __str__(self):
         return f"{self.descripcion} (Modelo: {self.modelo or 'N/A'})"

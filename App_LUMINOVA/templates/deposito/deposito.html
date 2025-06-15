@@ -132,14 +132,20 @@
             </thead>
             <tbody class="bg-white text-dark">
                 <tr>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">ID</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">N° OP</th>
                     <th class="text-white" style="background-color: #014BAC; width: 50%;">Descripción</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Stock</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Acciones</th>
                 </tr>
                 {% for pt_stock in productos_terminados_en_stock_list %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
-                    <td class="text-white text-center">{{ pt_stock.id }}</td>
+                    <td class="text-white text-center">
+                        {% if pt_stock.op_asociada %}
+                            {{ pt_stock.op_asociada.numero_op }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                     <td class="text-white">
                         {% if pt_stock.categoria %}
                         <a href="{% url 'App_LUMINOVA:categoria_pt_detail' pt_stock.categoria.id %}"
