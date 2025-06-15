@@ -252,7 +252,7 @@ class OrdenCompraForm(forms.ModelForm):
     class Meta:
         model = Orden
         fields = [
-            'numero_orden', 'proveedor', 'insumo_principal', 'cantidad_principal', 
+            'numero_orden',  'insumo_principal','proveedor', 'cantidad_principal', 
             'precio_unitario_compra', 'fecha_estimada_entrega', 
             'numero_tracking', 'notas'
         ]
