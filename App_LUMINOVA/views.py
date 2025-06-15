@@ -1339,80 +1339,76 @@ def compras_detalle_oc_view(request, oc_id):
 
 @login_required
 @transaction.atomic
-def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None): # Nombres deben coincidir con URL pattern
+def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None):
     insumo_preseleccionado_obj = None
     proveedor_preseleccionado_obj = None
     oferta_seleccionada = None
     initial_data = {}
-
-    form_kwargs = {} # Para pasar a OrdenCompraForm.__init__
+    form_kwargs = {} # Para pasar al constructor del formulario
 
     if insumo_id:
         insumo_preseleccionado_obj = get_object_or_404(Insumo, id=insumo_id)
         initial_data['insumo_principal'] = insumo_preseleccionado_obj
-        form_kwargs['insumo_fijado'] = insumo_preseleccionado_obj # Insumo no será editable en el form
-        logger.info(f"Creando OC para insumo fijado: {insumo_preseleccionado_obj.descripcion}")
+        form_kwargs['insumo_fijado'] = insumo_preseleccionado_obj # Para que el form lo deshabilite
 
-        if proveedor_id: # Si el proveedor también viene de la URL (después de la selección)
+        if proveedor_id:
             proveedor_preseleccionado_obj = get_object_or_404(Proveedor, id=proveedor_id)
             initial_data['proveedor'] = proveedor_preseleccionado_obj
-            form_kwargs['proveedor_fijado'] = proveedor_preseleccionado_obj # Proveedor no será editable
+            # form_kwargs['proveedor_fijado'] = proveedor_preseleccionado_obj # Ya no es necesario si el form lo toma de initial
 
             oferta_seleccionada = OfertaProveedor.objects.filter(
-                insumo=insumo_preseleccionado_obj,
+                insumo=insumo_preseleccionado_obj, 
                 proveedor=proveedor_preseleccionado_obj
             ).first()
-
+            
             if oferta_seleccionada:
                 initial_data['precio_unitario_compra'] = oferta_seleccionada.precio_unitario_compra
                 if oferta_seleccionada.tiempo_entrega_estimado_dias is not None:
                     try:
-                        dias_entrega = int(oferta_seleccionada.tiempo_entrega_estimado_dias)
-                        fecha_estimada = timezone.now().date() + timedelta(days=dias_entrega)
+                        dias = int(oferta_seleccionada.tiempo_entrega_estimado_dias)
+                        fecha_estimada = timezone.now().date() + timedelta(days=dias)
                         initial_data['fecha_estimada_entrega'] = fecha_estimada.strftime('%Y-%m-%d')
                     except ValueError: pass
-
-        # Sugerir cantidad si el insumo está preseleccionado
-        UMBRAL_STOCK_BAJO_INSUMOS = 15000
+        
+        UMBRAL_STOCK_BAJO_INSUMOS = 15000 
         cantidad_necesaria = UMBRAL_STOCK_BAJO_INSUMOS - insumo_preseleccionado_obj.stock
-        initial_data['cantidad_principal'] = max(10, cantidad_necesaria) # Mínimo 10 o lo necesario
+        initial_data['cantidad_principal'] = max(1, cantidad_necesaria if cantidad_necesaria > 0 else 10)
+
+    # Siempre se sugiere N° de OC para nuevas
+    last_oc = Orden.objects.filter(tipo='compra').order_by('id').last()
+    next_id = (last_oc.id + 1) if last_oc else 1
+    next_oc_number = f"OC-{str(next_id).zfill(5)}"
+    while Orden.objects.filter(numero_orden=next_oc_number).exists():
+        next_id += 1; next_oc_number = f"OC-{str(next_id).zfill(5)}"
+    initial_data['numero_orden'] = next_oc_number
+
 
     if request.method == 'POST':
-        # Al instanciar para POST, también pasamos los kwargs para que __init__ y clean funcionen bien
-        form = OrdenCompraForm(request.POST, **form_kwargs)
+        form = OrdenCompraForm(request.POST, initial=initial_data, **form_kwargs) # Pasar initial para que clean() pueda usarlo
         if form.is_valid():
             try:
                 orden_compra = form.save(commit=False)
-                orden_compra.tipo = 'compra'
+                orden_compra.tipo = 'compra' 
                 orden_compra.estado = 'BORRADOR'
+                
+                # Los valores de los campos deshabilitados/readonly son restaurados por form.clean()
+                # a partir de 'initial' o 'instance'.
+                # No es necesario reasignarlos aquí si clean() es correcto.
+                orden_compra.save() # El save() del modelo Orden calcula el total
 
-                # Los valores de campos deshabilitados (insumo, proveedor, precio, fecha)
-                # se restauran en form.clean() usando initial_data o la instancia.
-                # Por lo tanto, form.cleaned_data ya debería tenerlos correctos aquí.
-                # No es necesario reasignarlos explícitamente si form.clean() es robusto.
-
-                orden_compra.save() # El save() del modelo calcula el total
-
-                if orden_compra.insumo_principal and orden_compra.cantidad_principal and orden_compra.cantidad_principal > 0:
-                    Insumo.objects.filter(id=orden_compra.insumo_principal.id).update(
-                        cantidad_en_pedido=F('cantidad_en_pedido') + orden_compra.cantidad_principal
-                    )
-                    logger.info(f"Incrementada cantidad_en_pedido para '{orden_compra.insumo_principal.descripcion}' en {orden_compra.cantidad_principal} unidades.")
-
-                messages.success(request, f"Orden de Compra '{orden_compra.numero_orden}' creada en estado '{orden_compra.get_estado_display()}'. Total: ${orden_compra.total_orden_compra or 0:.2f}")
+                # ... (actualizar cantidad_en_pedido) ...
+                if orden_compra.insumo_principal and orden_compra.cantidad_principal > 0:
+                     Insumo.objects.filter(id=orden_compra.insumo_principal.id).update(
+                        cantidad_en_pedido=F('cantidad_en_pedido') + orden_compra.cantidad_principal)
+                
+                messages.success(request, f"OC '{orden_compra.numero_orden}' creada en Borrador. Total: ${orden_compra.total_orden_compra or 0:.2f}")
                 return redirect('App_LUMINOVA:compras_lista_oc')
-            except DjangoIntegrityError as e_int:
-                if 'UNIQUE constraint' in str(e_int).lower() and 'numero_orden' in str(e_int).lower():
-                    messages.error(request, f"Error: El N° de OC '{form.cleaned_data.get('numero_orden', '')}' ya existe.")
-                else:
-                    messages.error(request, f"Error de base de datos al guardar la OC: {e_int}")
-            except Exception as e:
-                messages.error(request, f"Error inesperado al crear la OC: {e}")
-                logger.exception("Error inesperado en compras_crear_oc_view POST:")
-        else:
-            logger.warning(f"Formulario OC inválido (POST): {form.errors.as_json()}")
+            # ... (manejo de errores) ...
+            except Exception as e: messages.error(request, f"Error inesperado: {e}")
+        else: # form inválido
             messages.error(request, "Por favor, corrija los errores en el formulario.")
-    else: # GET request
+            logger.warning(f"Formulario OC (creación) inválido: {form.errors.as_json()}")
+    else: # GET
         form = OrdenCompraForm(initial=initial_data, **form_kwargs)
 
     context = {
@@ -1430,57 +1426,86 @@ def compras_editar_oc_view(request, oc_id):
     orden_compra_instance = get_object_or_404(Orden, id=oc_id, tipo='compra')
     logger.info(f"Editando OC: {orden_compra_instance.numero_orden} (ID: {oc_id}), Estado actual: {orden_compra_instance.estado}")
 
-    estados_no_editables_campos_principales = ['APROBADA', 'ENVIADA_PROVEEDOR', 'CONFIRMADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL', 'RECIBIDA_TOTAL', 'COMPLETADA', 'CANCELADA']
+    estados_no_editables_campos_principales = [
+        'APROBADA', 'ENVIADA_PROVEEDOR', 'CONFIRMADA_PROVEEDOR', 
+        'EN_TRANSITO', 'RECIBIDA_PARCIAL', 'RECIBIDA_TOTAL', 
+        'COMPLETADA', 'CANCELADA'
+    ]
 
-    if orden_compra_instance.estado != 'BORRADOR':
-        messages.error(request, f"La OC {orden_compra_instance.numero_orden} no puede editarse significativamente en estado '{orden_compra_instance.get_estado_display()}'.")
-        # return redirect('App_LUMINOVA:compras_detalle_oc', oc_id=oc_id) # O permitir editar solo notas/tracking
+    if orden_compra_instance.estado in estados_no_editables_campos_principales:
+        messages.warning(request, f"La OC {orden_compra_instance.numero_orden} en estado '{orden_compra_instance.get_estado_display()}' tiene edición limitada (ej. solo notas o tracking). Los campos principales no se modificarán.")
+        # La lógica del __init__ del form deshabilitará la mayoría de los campos.
 
-    insumo_original_obj = orden_compra_instance.insumo_principal
-    cantidad_original_para_pedido = orden_compra_instance.cantidad_principal or 0
+    insumo_original_obj_al_cargar = orden_compra_instance.insumo_principal
+    cantidad_original_guardada = orden_compra_instance.cantidad_principal or 0
 
-    form_kwargs = {'instance': orden_compra_instance}
-    if insumo_original_obj: # Para que el __init__ del form sepa cuál es el insumo actual si necesita filtrar proveedores (aunque en edición de no-borrador, el proveedor se deshabilita)
-        form_kwargs['insumo_fijado'] = insumo_original_obj # Tratar el insumo como fijado si no es borrador
+    # Preparar kwargs para el formulario, sin incluir 'instance' aquí si se pasa explícitamente
+    form_init_kwargs = {} 
+    if insumo_original_obj_al_cargar:
+        form_init_kwargs['insumo_fijado'] = insumo_original_obj_al_cargar
     if orden_compra_instance.proveedor and orden_compra_instance.estado != 'BORRADOR':
-        form_kwargs['proveedor_fijado'] = orden_compra_instance.proveedor
+        form_init_kwargs['proveedor_fijado'] = orden_compra_instance.proveedor
 
 
     if request.method == 'POST':
-        form = OrdenCompraForm(request.POST, **form_kwargs)
+        # Al instanciar para POST, pasamos instance explícitamente, y el resto en form_init_kwargs
+        form = OrdenCompraForm(request.POST, instance=orden_compra_instance, **form_init_kwargs)
         if form.is_valid():
             try:
-                oc_actualizada = form.save(commit=False)
-
-                insumo_nuevo_obj_form = form.cleaned_data.get('insumo_principal') # Debería ser el mismo que el original si el campo estaba disabled
+                oc_actualizada = form.save(commit=False) 
+                
+                insumo_nuevo_obj_form = form.cleaned_data.get('insumo_principal')
                 cantidad_nueva_form = form.cleaned_data.get('cantidad_principal') or 0
 
-                if orden_compra_instance.estado == 'BORRADOR': # Solo ajustar cantidad_en_pedido si es borrador
-                    if insumo_original_obj and insumo_nuevo_obj_form and insumo_original_obj.id != insumo_nuevo_obj_form.id:
-                        Insumo.objects.filter(id=insumo_original_obj.id).update(cantidad_en_pedido=F('cantidad_en_pedido') - cantidad_original_para_pedido)
-                        Insumo.objects.filter(id=insumo_nuevo_obj_form.id).update(cantidad_en_pedido=F('cantidad_en_pedido') + cantidad_nueva_form)
-                    elif insumo_original_obj and insumo_original_obj.id == (insumo_nuevo_obj_form.id if insumo_nuevo_obj_form else None) and cantidad_original_para_pedido != cantidad_nueva_form:
-                        cambio_neto_cantidad = cantidad_nueva_form - cantidad_original_para_pedido
-                        Insumo.objects.filter(id=insumo_original_obj.id).update(cantidad_en_pedido=F('cantidad_en_pedido') + cambio_neto_cantidad)
-                    elif not insumo_original_obj and insumo_nuevo_obj_form and cantidad_nueva_form > 0:
-                         Insumo.objects.filter(id=insumo_nuevo_obj_form.id).update(cantidad_en_pedido=F('cantidad_en_pedido') + cantidad_nueva_form)
-                    elif insumo_original_obj and not insumo_nuevo_obj_form:
-                         Insumo.objects.filter(id=insumo_original_obj.id).update(cantidad_en_pedido=F('cantidad_en_pedido') - cantidad_original_para_pedido)
+                if orden_compra_instance.estado == 'BORRADOR':
+                    insumo_original_en_db = Orden.objects.get(pk=oc_id).insumo_principal # Estado del insumo antes de esta edición
+                    cantidad_original_en_db = Orden.objects.get(pk=oc_id).cantidad_principal or 0
 
+                    # Caso 1: El insumo principal cambió
+                    if insumo_original_en_db and insumo_nuevo_obj_form and insumo_original_en_db.id != insumo_nuevo_obj_form.id:
+                        Insumo.objects.filter(id=insumo_original_en_db.id).update(
+                            cantidad_en_pedido=F('cantidad_en_pedido') - cantidad_original_en_db
+                        )
+                        Insumo.objects.filter(id=insumo_nuevo_obj_form.id).update(
+                            cantidad_en_pedido=F('cantidad_en_pedido') + cantidad_nueva_form
+                        )
+                    # Caso 2: El insumo no cambió, pero la cantidad sí
+                    elif insumo_original_en_db and insumo_original_en_db.id == (insumo_nuevo_obj_form.id if insumo_nuevo_obj_form else None) and \
+                         cantidad_original_en_db != cantidad_nueva_form:
+                        cambio_neto_cantidad = cantidad_nueva_form - cantidad_original_en_db
+                        Insumo.objects.filter(id=insumo_original_en_db.id).update(
+                            cantidad_en_pedido=F('cantidad_en_pedido') + cambio_neto_cantidad
+                        )
+                    # Caso 3: Se añadió un insumo donde antes no había
+                    elif not insumo_original_en_db and insumo_nuevo_obj_form and cantidad_nueva_form > 0:
+                        Insumo.objects.filter(id=insumo_nuevo_obj_form.id).update(
+                            cantidad_en_pedido=F('cantidad_en_pedido') + cantidad_nueva_form
+                        )
+                    # Caso 4: Se quitó un insumo que antes estaba
+                    elif insumo_original_en_db and not insumo_nuevo_obj_form:
+                         Insumo.objects.filter(id=insumo_original_en_db.id).update(
+                            cantidad_en_pedido=F('cantidad_en_pedido') - cantidad_original_en_db
+                        )
+                
                 oc_actualizada.save()
-                messages.success(request, f"Orden de Compra '{oc_actualizada.numero_orden}' actualizada.")
+                messages.success(request, f"Orden de Compra '{oc_actualizada.numero_orden}' actualizada exitosamente.")
                 return redirect('App_LUMINOVA:compras_detalle_oc', oc_id=oc_actualizada.id)
-
-            except DjangoIntegrityError as e_int: # ... (manejo de errores)
-                if 'UNIQUE constraint' in str(e_int).lower() and 'numero_orden' in str(e_int).lower():
+            
+            except DjangoIntegrityError as e_int:
+                if 'UNIQUE constraint' in str(e_int).lower() and 'numero_orden' in str(e_int).lower(): 
                     messages.error(request, f"Error: El N° de OC '{form.cleaned_data.get('numero_orden', '')}' ya existe.")
-                else: messages.error(request, f"Error de BD: {e_int}")
-            except Exception as e: messages.error(request, f"Error inesperado: {e}"); logger.exception("Error en compras_editar_oc_view POST:")
-        else:
+                else: messages.error(request, f"Error de base de datos: {e_int}")
+            except Exception as e:
+                messages.error(request, f"Error inesperado al actualizar la OC: {e}")
+                logger.exception(f"Error al editar OC {oc_id} (POST):")
+        else: # Formulario no es válido
             logger.warning(f"Formulario OC (edición) inválido: {form.errors.as_json()}")
             messages.error(request, "Por favor, corrija los errores en el formulario.")
-    else: # GET
-        form = OrdenCompraForm(**form_kwargs)
+            # El form con errores (ya instanciado con request.POST, instance y form_init_kwargs) 
+            # se pasará al contexto
+    else: # GET request
+        # Al instanciar para GET, pasamos instance explícitamente y el resto en form_init_kwargs
+        form = OrdenCompraForm(instance=orden_compra_instance, **form_init_kwargs)
 
     context = {
         'form_oc': form,
