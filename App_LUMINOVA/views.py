@@ -2172,15 +2172,21 @@ def deposito_view(request):
     lotes_en_stock = LoteProductoTerminado.objects.filter(enviado=False).select_related('producto', 'op_asociada').order_by('-fecha_creacion')
     logger.info(f"Deposito_view (Lotes PTs): Lotes de productos terminados en stock (no enviados): {lotes_en_stock.count()}")
 
+    ESTADOS_OC_EN_ESPERA = ['APROBADA', 'ENVIADA_PROVEEDOR', 'CONFIRMADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL']
+
     UMBRAL_STOCK_BAJO_INSUMOS = 15000
     insumos_con_stock_bajo = Insumo.objects.filter(stock__lt=UMBRAL_STOCK_BAJO_INSUMOS).order_by('stock', 'descripcion')
 
-    logger.info(f"Deposito_view: Insumos con stock bajo (<{UMBRAL_STOCK_BAJO_INSUMOS}) encontrados: {insumos_con_stock_bajo.count()}")
-    if insumos_con_stock_bajo.exists():
-        for ins_debug in insumos_con_stock_bajo:
-            logger.info(f"  -> Insumo bajo stock: {ins_debug.descripcion}, Stock: {ins_debug.stock}, ID: {ins_debug.id}")
-    else:
-        logger.info("  -> No se encontraron insumos con stock por debajo del umbral.")
+    insumos_bajo_con_oc = []
+    for insumo in insumos_con_stock_bajo:
+        oc = Orden.objects.filter(
+            insumo_principal=insumo,
+            estado__in=ESTADOS_OC_EN_ESPERA
+        ).order_by('-fecha_creacion').first()
+        insumos_bajo_con_oc.append({
+            'insumo': insumo,
+            'oc': oc
+        })
 
     context = {
         'categorias_I': categorias_I,
@@ -2188,7 +2194,7 @@ def deposito_view(request):
         'ops_pendientes_deposito_list': ops_pendientes_deposito_list,
         'ops_pendientes_deposito_count': ops_pendientes_deposito_count,
         'lotes_productos_terminados_en_stock': lotes_en_stock,  # Cambiado: ahora se pasan los lotes
-        'insumos_con_stock_bajo_list': insumos_con_stock_bajo,
+        'insumos_con_stock_bajo_list': insumos_bajo_con_oc,
         'umbral_stock_bajo': UMBRAL_STOCK_BAJO_INSUMOS,
     }
 
