@@ -109,7 +109,8 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" class="text-center text-white" style="background-color: #A19898;">No hay OPs con insumos
+                    <td colspan="4" class="text-center text-white" style="background-color: #A19898;">No hay OPs con
+                        insumos
                         solicitados.</td>
                 </tr>
                 {% endfor %}
@@ -137,33 +138,26 @@
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Stock</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Acciones</th>
                 </tr>
-                {% for pt_stock in productos_terminados_en_stock_list %}
+                {% for lote in lotes_productos_terminados_en_stock %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
                     <td class="text-white text-center">
-                        {% if pt_stock.op_asociada %}
-                            {{ pt_stock.op_asociada.numero_op }}
-                        {% else %}
-                            -
-                        {% endif %}
+                        {{ lote.op_asociada.numero_op }}
                     </td>
                     <td class="text-white">
-                        {% if pt_stock.categoria %}
-                        <a href="{% url 'App_LUMINOVA:categoria_pt_detail' pt_stock.categoria.id %}"
-                            class="text-white text-decoration-none"
-                            title="Ver en categoría: {{ pt_stock.categoria.nombre }}">
-                            {{ pt_stock.descripcion|truncatechars:20 }}
-                        </a>
-                        {% else %}
-                        {{ pt_stock.descripcion|truncatechars:20 }}
-                        {% endif %}
+                        {{ lote.producto.descripcion|truncatechars:20 }}
                     </td>
-                    <td class="text-white text-center">{{ pt_stock.stock }}</td>
-                    <td class="text-white text-center"><button class="btn btn-success btn-enviar-pt">Enviar</button></td>
+                    <td class="text-white text-center">
+                        {{ lote.cantidad }}
+                    </td>
+                    <td class="text-white text-center">
+                        <button class="btn btn-success btn-enviar-pt">Enviar</button>
+                    </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" class="text-white text-center" style="background-color: #A19898;">No hay productos
-                        terminados con stock.</td>
+                    <td colspan="4" class="text-white text-center" style="background-color: #A19898;">
+                        No hay productos terminados con stock.
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -198,7 +192,7 @@
                         <a href="{% url 'App_LUMINOVA:compras_seleccionar_proveedor_para_insumo' insumo_bajo_stock_item.id %}"
                             class="btn btn-sm btn-warning"
                             title="Gestionar Compra para {{ insumo_bajo_stock_item.descripcion }}">
-                            <i class="bi bi-cart-plus-fill"></i> 
+                            <i class="bi bi-cart-plus-fill"></i>
                         </a>
                         {% endif %}
                     </td>

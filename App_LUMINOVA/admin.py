@@ -153,3 +153,11 @@ class OrdenAdmin(admin.ModelAdmin):
             'fields': ('notas', 'total_orden_compra', 'fecha_creacion')
         }),
     )
+
+from .models import LoteProductoTerminado
+
+@admin.register(LoteProductoTerminado)
+class LoteProductoTerminadoAdmin(admin.ModelAdmin):
+    list_display = ('producto', 'op_asociada', 'cantidad', 'enviado', 'fecha_creacion')
+    list_filter = ('enviado', 'producto')
+    search_fields = ('producto__descripcion', 'op_asociada__numero_op')

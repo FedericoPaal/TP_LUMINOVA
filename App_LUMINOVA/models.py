@@ -36,13 +36,7 @@ class ProductoTerminado(models.Model):
     color_luz = models.CharField(max_length=50, blank=True, null=True)
     material = models.CharField(max_length=50, blank=True, null=True)
     imagen = models.ImageField(null=True, blank=True, upload_to="productos_terminados/")
-    op_asociada = models.ForeignKey(
-        'OrdenProduccion',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='productos_terminados'
-    )
+    
 
     def __str__(self):
         return f"{self.descripcion} (Modelo: {self.modelo or 'N/A'})"
@@ -509,3 +503,12 @@ class Orden(models.Model):  # Este será para Órdenes de Compra
 #         self.subtotal = self.cantidad * self.precio_unitario_compra
 #         super().save(*args, **kwargs)
 #         self.orden_compra.actualizar_total_oc() # Necesitarías un método en Orden para actualizar
+class LoteProductoTerminado(models.Model):
+    producto = models.ForeignKey(ProductoTerminado, on_delete=models.PROTECT, related_name='lotes')
+    op_asociada = models.ForeignKey(OrdenProduccion, on_delete=models.PROTECT, related_name='lotes_pt')
+    cantidad = models.PositiveIntegerField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    enviado = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Lote de {self.producto.descripcion} - OP {self.op_asociada.numero_op} ({self.cantidad})"

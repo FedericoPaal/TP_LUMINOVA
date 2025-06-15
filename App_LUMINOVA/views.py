@@ -28,7 +28,7 @@ from reportlab.lib import colors
 
 # Local Application Imports (Models)
 from .models import (
-    AuditoriaAcceso, CategoriaProductoTerminado, OfertaProveedor, ProductoTerminado,
+    AuditoriaAcceso, CategoriaProductoTerminado, LoteProductoTerminado, OfertaProveedor, ProductoTerminado,
     CategoriaInsumo, Insumo, ComponenteProducto, Proveedor, Cliente, Orden,
     OrdenVenta, ItemOrdenVenta, EstadoOrden, SectorAsignado, OrdenProduccion,
     Reportes, Factura, RolDescripcion, Fabricante,
@@ -1823,15 +1823,23 @@ def produccion_detalle_op_view(request, op_id):
                 producto_terminado_obj = op_actualizada.producto_a_producir
                 cantidad_producida = op_actualizada.cantidad_a_producir
                 if producto_terminado_obj and cantidad_producida > 0:
-                    ProductoTerminado.objects.filter(id=producto_terminado_obj.id).update(stock=F('stock') + cantidad_producida)
-                    stock_actualizado_pt = ProductoTerminado.objects.get(id=producto_terminado_obj.id).stock
-                    messages.success(request, f"Stock de '{producto_terminado_obj.descripcion}' incrementado en {cantidad_producida}. Nuevo stock: {stock_actualizado_pt}.")
-                    logger.info(f"OP {op_actualizada.numero_op} completada. Stock de PT ID {producto_terminado_obj.id} inc. Nuevo stock: {stock_actualizado_pt}")
+                    # --- CREA UN NUEVO LOTE ---
+                    from .models import LoteProductoTerminado
+                    LoteProductoTerminado.objects.create(
+                        producto=producto_terminado_obj,
+                        op_asociada=op_actualizada,
+                        cantidad=cantidad_producida
+                    )
+                    messages.success(request, f"Lote de '{producto_terminado_obj.descripcion}' generado por OP {op_actualizada.numero_op} (cantidad: {cantidad_producida}).")
+                    logger.info(f"OP {op_actualizada.numero_op} completada. Lote creado para PT ID {producto_terminado_obj.id} (cantidad: {cantidad_producida})")
                     if not op_actualizada.fecha_fin_real:
-                         op_actualizada.fecha_fin_real = timezone.now()
+                        op_actualizada.fecha_fin_real = timezone.now()
                 else:
-                    logger.error(f"No se pudo actualizar stock para OP {op_actualizada.numero_op}: producto/cantidad inválidos.")
-                    messages.error(request, "No se pudo actualizar stock: producto no asignado o cantidad cero.")
+                    logger.error(f"No se pudo crear lote para OP {op_actualizada.numero_op}: producto/cantidad inválidos.")
+                    messages.error(request, "No se pudo crear lote: producto no asignado o cantidad cero.")
+
+            op_actualizada.save()
+            messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.get_estado_op_display()}'.")
 
             op_actualizada.save()
             messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.get_estado_op_display()}'.")
@@ -2154,18 +2162,16 @@ def deposito_view(request):
             ops_pendientes_deposito_count = ops_pendientes_deposito_list.count()
             logger.info(f"Deposito_view (OPs): Encontradas {ops_pendientes_deposito_count} OPs pendientes (estado: '{estado_sol.nombre}').")
         else:
-            # Este mensaje solo se muestra si el estado "Insumos Solicitados" NO EXISTE.
-            # Si existe pero no hay OPs en ese estado, ops_pendientes_deposito_count será 0, lo cual es correcto.
             messages.warning(request, "Configuración: El estado 'Insumos Solicitados' para OP no se encontró en la base de datos. La lista de OPs pendientes no se poblará.")
             logger.warning("Deposito_view (OPs): Estado 'Insumos Solicitados' NO encontrado.")
-    except Exception as e_op: # Captura de excepción más genérica
+    except Exception as e_op:
         messages.error(request, f"Error al cargar OPs pendientes para depósito: {e_op}")
         logger.error(f"Deposito_view (OPs): Excepción al cargar OPs: {e_op}")
 
-    productos_terminados_con_stock = ProductoTerminado.objects.filter(stock__gt=0).select_related('op_asociada').order_by('-stock', 'descripcion')
-    logger.info(f"Deposito_view (PTs): Productos terminados con stock > 0 encontrados: {productos_terminados_con_stock.count()}")
+    # NUEVO: Mostrar lotes de productos terminados en stock (no enviados)
+    lotes_en_stock = LoteProductoTerminado.objects.filter(enviado=False).select_related('producto', 'op_asociada').order_by('-fecha_creacion')
+    logger.info(f"Deposito_view (Lotes PTs): Lotes de productos terminados en stock (no enviados): {lotes_en_stock.count()}")
 
-    # --- LÓGICA PARA INSUMOS CON STOCK BAJO ---
     UMBRAL_STOCK_BAJO_INSUMOS = 15000
     insumos_con_stock_bajo = Insumo.objects.filter(stock__lt=UMBRAL_STOCK_BAJO_INSUMOS).order_by('stock', 'descripcion')
 
@@ -2175,19 +2181,18 @@ def deposito_view(request):
             logger.info(f"  -> Insumo bajo stock: {ins_debug.descripcion}, Stock: {ins_debug.stock}, ID: {ins_debug.id}")
     else:
         logger.info("  -> No se encontraron insumos con stock por debajo del umbral.")
-    # --- FIN LÓGICA STOCK BAJO ---
-    
+
     context = {
         'categorias_I': categorias_I,
         'categorias_PT': categorias_PT,
         'ops_pendientes_deposito_list': ops_pendientes_deposito_list,
         'ops_pendientes_deposito_count': ops_pendientes_deposito_count,
-        'productos_terminados_en_stock_list': productos_terminados_con_stock,
-        'insumos_con_stock_bajo_list': insumos_con_stock_bajo, # Esta es la lista clave
+        'lotes_productos_terminados_en_stock': lotes_en_stock,  # Cambiado: ahora se pasan los lotes
+        'insumos_con_stock_bajo_list': insumos_con_stock_bajo,
         'umbral_stock_bajo': UMBRAL_STOCK_BAJO_INSUMOS,
     }
 
-    logger.info(f"Deposito_view: Contexto final - pt_stock_count={productos_terminados_con_stock.count()}, insumos_bajos_count={insumos_con_stock_bajo.count()}")
+    logger.info(f"Deposito_view: Contexto final - lotes_pt_count={lotes_en_stock.count()}, insumos_bajos_count={insumos_con_stock_bajo.count()}")
     return render(request, 'deposito/deposito.html', context)
 
 
