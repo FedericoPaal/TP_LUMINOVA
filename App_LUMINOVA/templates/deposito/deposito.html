@@ -135,7 +135,7 @@
                     <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">ID</th>
                     <th class="text-white" style="background-color: #014BAC; width: 50%;">Descripción</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Stock</th>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 30%;"></th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Acciones</th>
                 </tr>
                 {% for pt_stock in productos_terminados_en_stock_list %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
@@ -152,7 +152,7 @@
                         {% endif %}
                     </td>
                     <td class="text-white text-center">{{ pt_stock.stock }}</td>
-                    <td class="text-white text-center"></td>
+                    <td class="text-white text-center"><button class="btn btn-success btn-enviar-pt">Enviar</button></td>
                 </tr>
                 {% empty %}
                 <tr>
