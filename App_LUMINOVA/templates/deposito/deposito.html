@@ -140,23 +140,27 @@
                 </tr>
                 {% for lote in lotes_productos_terminados_en_stock %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
+                    <td class="text-white text-center">{{ lote.op_asociada.numero_op }}</td>
+                    <td class="text-white">{{ lote.producto.descripcion|truncatechars:20 }}</td>
+                    <td class="text-white text-center">{{ lote.cantidad }}</td>
                     <td class="text-white text-center">
-                        {{ lote.op_asociada.numero_op }}
-                    </td>
-                    <td class="text-white">
-                        {{ lote.producto.descripcion|truncatechars:20 }}
-                    </td>
-                    <td class="text-white text-center">
-                        {{ lote.cantidad }}
-                    </td>
-                    <td class="text-white text-center">
-                        <button class="btn btn-success btn-enviar-pt">Enviar</button>
+                        <form id="form-enviar-lote-{{ lote.id }}" method="post" action="{% url 'App_LUMINOVA:deposito_enviar_lote_pt' lote.id %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="button" class="btn btn-success btn-sm btn-enviar-lote" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#confirmarEnvioModal"
+                                    data-lote-id="{{ lote.id }}"
+                                    data-lote-info="lote de {{lote.cantidad}} x {{lote.producto.descripcion}}"
+                                    title="Enviar lote de {{lote.cantidad}} x {{lote.producto.descripcion}}">
+                                <i class="bi bi-truck me-1"></i> Enviar
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
                     <td colspan="4" class="text-white text-center" style="background-color: #A19898;">
-                        No hay productos terminados con stock.
+                        No hay lotes de productos terminados en stock pendientes de envío.
                     </td>
                 </tr>
                 {% endfor %}
@@ -181,9 +185,9 @@
                     <td class="text-white" colspan="2">{{ item.insumo.descripcion|truncatechars:25 }}</td>
                     <td class="text-white text-center fw-bold text-danger">{{ item.insumo.stock }}</td>
                     <td class="text-white text-center">
-                        <a href="{% url 'App_LUMINOVA:compras_desglose' %}" title="Gestionar compra para {{ item.insumo.descripcion }}">
-                            <i class="bi bi-cart-plus-fill text-warning fs-5"></i>
-                        </a>
+                        <button class="btn btn-success btn-sm" title="Gestionar compra para {{ item.insumo.descripcion }}">
+                            <i class="bi bi-cart-plus-fill"></i>Comprar
+                        </button>
                     </td>
                 </tr>
                 {% empty %}
@@ -252,6 +256,39 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         mostrarInsumos();
+
+        // Lógica para el modal de confirmación
+        const confirmarEnvioModal = document.getElementById('confirmarEnvioModal');
+        if (confirmarEnvioModal) {
+            confirmarEnvioModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget; // Botón que activó el modal
+                const loteInfo = button.getAttribute('data-lote-info');
+                const loteId = button.getAttribute('data-lote-id');
+
+                // Actualizar el contenido del modal
+                const modalBodyInfo = confirmarEnvioModal.querySelector('#modal-lote-info');
+                modalBodyInfo.textContent = loteInfo;
+
+                // Guardar el ID del lote en el botón de confirmación del modal
+                const btnConfirmar = confirmarEnvioModal.querySelector('#btn-confirmar-envio-modal');
+                btnConfirmar.setAttribute('data-lote-id-to-send', loteId);
+            });
+        }
+
+        const btnConfirmar = document.getElementById('btn-confirmar-envio-modal');
+        if (btnConfirmar) {
+            btnConfirmar.addEventListener('click', function() {
+                const loteIdToSend = this.getAttribute('data-lote-id-to-send');
+                if (loteIdToSend) {
+                    const form = document.getElementById(`form-enviar-lote-${loteIdToSend}`);
+                    if (form) {
+                        form.submit();
+                    } else {
+                        console.error('No se encontró el formulario para el lote ID:', loteIdToSend);
+                    }
+                }
+            });
+        }
     });
 </script>
 
@@ -259,6 +296,26 @@
 
 
 <script src="{% static 'js/cards_deposito.js' %}"></script>
+
+<!-- Modal de Confirmación de Envío -->
+<div class="modal fade" id="confirmarEnvioModal" tabindex="-1" aria-labelledby="confirmarEnvioModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="confirmarEnvioModalLabel"><i class="bi bi-truck me-2"></i>Confirmar Envío</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>¿Estás seguro de que deseas enviar este <strong id="modal-lote-info"></strong> al cliente?</p>
+        <p class="text-danger small">Esta acción descontará el stock permanentemente.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" id="btn-confirmar-envio-modal">Sí, Enviar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Modal Modulos LED -->
 <div class="modal fade" id="exampleModal1" tabindex="-1" aria-labelledby="exampleModalLabel1" aria-hidden="true">

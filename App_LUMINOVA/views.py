@@ -2112,6 +2112,59 @@ def deposito_detalle_solicitud_op_view(request, op_id):
     }
     return render(request, 'deposito/deposito_detalle_solicitud_op.html', context)
 
+@login_required
+@require_POST # Asegura que esta vista solo se pueda llamar con un método POST
+@transaction.atomic # Garantiza que todas las operaciones de DB se completen o ninguna
+def deposito_enviar_lote_pt_view(request, lote_id):
+    """
+    Procesa el envío de un lote de producto terminado.
+    - Descuenta el stock del producto.
+    - Marca el lote como enviado.
+    - Actualiza el estado de la OV si corresponde.
+    """
+    # if not es_admin_o_rol(request.user, ['deposito', 'administrador']):
+    #     messages.error(request, "Acción no permitida.")
+    #     return redirect('App_LUMINOVA:deposito_view')
+
+    lote = get_object_or_404(LoteProductoTerminado.objects.select_related('producto', 'op_asociada__orden_venta_origen'), id=lote_id)
+
+    if lote.enviado:
+        messages.warning(request, f"El lote del producto '{lote.producto.descripcion}' ya fue enviado anteriormente.")
+        return redirect('App_LUMINOVA:deposito_view')
+
+    producto_terminado = lote.producto
+    cantidad_a_enviar = lote.cantidad
+
+    # Sanity check: verificar si hay stock suficiente (aunque debería haberlo)
+    if producto_terminado.stock < cantidad_a_enviar:
+        messages.error(request, f"Error de consistencia de datos: No hay stock suficiente para '{producto_terminado.descripcion}' para enviar el lote. Stock actual: {producto_terminado.stock}, se necesita: {cantidad_a_enviar}.")
+        return redirect('App_LUMINOVA:deposito_view')
+
+    # 1. Descontar el stock del producto terminado
+    producto_terminado.stock -= cantidad_a_enviar
+    producto_terminado.save(update_fields=['stock'])
+    logger.info(f"Stock de '{producto_terminado.descripcion}' descontado en {cantidad_a_enviar}. Nuevo stock: {producto_terminado.stock}")
+
+    # 2. Marcar el lote como enviado
+    lote.enviado = True
+    lote.save(update_fields=['enviado'])
+    logger.info(f"Lote ID {lote.id} (OP: {lote.op_asociada.numero_op}) marcado como enviado.")
+
+    # 3. (Opcional pero recomendado) Actualizar estado de la Orden de Venta
+    orden_venta = lote.op_asociada.orden_venta_origen
+    if orden_venta:
+        # Verificar si todos los lotes de esta OV ya han sido enviados
+        todos_los_lotes_de_la_ov = LoteProductoTerminado.objects.filter(op_asociada__orden_venta_origen=orden_venta)
+        if not todos_los_lotes_de_la_ov.filter(enviado=False).exists():
+            # Si no queda ningún lote sin enviar, la OV está completada
+            orden_venta.estado = 'COMPLETADA'
+            orden_venta.save(update_fields=['estado'])
+            messages.info(request, f"Todos los lotes para la Orden de Venta '{orden_venta.numero_ov}' han sido enviados. La orden se ha marcado como 'Completada/Entregada'.")
+            logger.info(f"OV {orden_venta.numero_ov} actualizada a COMPLETADA.")
+
+    messages.success(request, f"Lote de {cantidad_a_enviar} x '{producto_terminado.descripcion}' enviado exitosamente.")
+    return redirect('App_LUMINOVA:deposito_view')
+
 # --- CLASS-BASED VIEWS (CRUDs) ---
 class Categoria_IListView(ListView):
     model = CategoriaInsumo

@@ -37,6 +37,7 @@ from .views import (
     deposito_solicitudes_insumos_view,
     deposito_detalle_solicitud_op_view,
     deposito_enviar_insumos_op_view,
+    deposito_enviar_lote_pt_view,
 
     depo_seleccion,# (Eliminar si ya no se usan directamente por el nuevo flujo)
 
@@ -119,8 +120,8 @@ urlpatterns = [
     path('deposito/solicitudes-insumos/', deposito_solicitudes_insumos_view, name='deposito_solicitudes_insumos'),
     path('deposito/solicitud-op/<int:op_id>/', deposito_detalle_solicitud_op_view, name='deposito_detalle_solicitud_op'),
     path('deposito/enviar-insumos-op/<int:op_id>/', deposito_enviar_insumos_op_view, name='deposito_enviar_insumos_op'),
-    path('deposito/seleccion/', depo_seleccion, name='depo_seleccion'), # Eliminar si ya no se usa
-    # path('deposito/enviar/', depo_enviar, name='depo_enviar'),       # Eliminar si ya no se usa
+    path('deposito/seleccion/', depo_seleccion, name='depo_seleccion'), 
+    path('deposito/enviar-lote-pt/<int:lote_id>/', deposito_enviar_lote_pt_view, name='deposito_enviar_lote_pt'),
 
     # CRUDs para Fabricantes, Proveedores (Class-Based Views)
     path('ventas/proveedores/proveedor/', ProveedorListView.as_view(), name='proveedor_list'),
