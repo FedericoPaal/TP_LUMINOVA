@@ -28,7 +28,7 @@ from reportlab.lib import colors
 
 # Local Application Imports (Models)
 from .models import (
-    AuditoriaAcceso, CategoriaProductoTerminado, LoteProductoTerminado, OfertaProveedor, ProductoTerminado,
+    AuditoriaAcceso, CategoriaProductoTerminado, HistorialOV, LoteProductoTerminado, OfertaProveedor, ProductoTerminado,
     CategoriaInsumo, Insumo, ComponenteProducto, Proveedor, Cliente, Orden,
     OrdenVenta, ItemOrdenVenta, EstadoOrden, SectorAsignado, OrdenProduccion,
     Reportes, Factura, RolDescripcion, Fabricante,
@@ -696,71 +696,77 @@ def ventas_detalle_ov_view(request, ov_id):
 @login_required
 @transaction.atomic
 def ventas_generar_factura_view(request, ov_id):
+    """
+    Gestiona la creación de una factura para una Orden de Venta.
+    Esta vista ahora solo genera la factura sin cambiar el estado final de la OV.
+    El estado final a 'COMPLETADA' se gestiona desde el envío en depósito.
+    """
     orden_venta = get_object_or_404(OrdenVenta.objects.prefetch_related('items_ov__producto_terminado', 'ops_generadas__estado_op'), id=ov_id)
 
+    # 1. Verificar si ya existe una factura
     if hasattr(orden_venta, 'factura_asociada') and orden_venta.factura_asociada:
         messages.warning(request, f"La factura para la OV {orden_venta.numero_ov} ya ha sido generada.")
         return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
 
+    # 2. Verificar si la OV está en un estado que permite facturación
+    #    La condición principal es que esté 'LISTA_ENTREGA'.
     puede_facturar_ahora = False
-    total_a_facturar_calculado = 0
-    items_a_facturar_desc = []
-
-    ops_asociadas = orden_venta.ops_generadas.all()
-    items_ov = orden_venta.items_ov.all()
-
-    # Simplificamos la lógica: si está 'LISTA_ENTREGA', se puede facturar el total.
     if orden_venta.estado == 'LISTA_ENTREGA':
         puede_facturar_ahora = True
-        total_a_facturar_calculado = orden_venta.total_ov
     else:
-        # Lógica de respaldo por si el estado no se actualizó bien
-        if not ops_asociadas.exists() and orden_venta.estado == 'CONFIRMADA':
+        # Lógica de respaldo para casos donde el estado no se actualizó, pero las condiciones se cumplen.
+        ops_asociadas = orden_venta.ops_generadas.all()
+        if not ops_asociadas.exists() and orden_venta.estado == 'CONFIRMADA': # OV de solo stock
             puede_facturar_ahora = True
-            total_a_facturar_calculado = orden_venta.total_ov
         elif ops_asociadas.exists():
-            ops_completadas = ops_asociadas.filter(estado_op__nombre__iexact="Completada").count()
-            ops_canceladas = ops_asociadas.filter(estado_op__nombre__iexact="Cancelada").count()
-            if ops_completadas > 0 and (ops_completadas + ops_canceladas == ops_asociadas.count()):
-                puede_facturar_ahora = True
-                total_a_facturar_calculado = orden_venta.total_ov
-    
+            ops_completadas_count = ops_asociadas.filter(estado_op__nombre__iexact="Completada").count()
+            ops_canceladas_count = ops_asociadas.filter(estado_op__nombre__iexact="Cancelada").count()
+            if ops_completadas_count > 0 and (ops_completadas_count + ops_canceladas_count == ops_asociadas.count()):
+                puede_facturar_ahora = True # Todas las OPs están resueltas (completadas o canceladas)
+
     if not puede_facturar_ahora:
-        messages.error(request, f"La Orden de Venta {orden_venta.numero_ov} no cumple las condiciones para ser facturada.")
+        messages.error(request, f"La Orden de Venta {orden_venta.numero_ov} no está lista para ser facturada. Estado actual: '{orden_venta.get_estado_display()}'.")
         return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
 
+    # 3. Procesar el formulario si es un método POST
     if request.method == 'POST':
         form = FacturaForm(request.POST)
         if form.is_valid():
             try:
                 factura = form.save(commit=False)
                 factura.orden_venta = orden_venta
-                factura.total_facturado = total_a_facturar_calculado
+                # El total a facturar es el total de la OV, ya que solo se factura cuando todo está listo.
+                factura.total_facturado = orden_venta.total_ov
                 factura.fecha_emision = timezone.now()
+                # El cliente se puede obtener de la OV, pero no es necesario guardarlo en la factura si no está en el modelo.
+                # factura.cliente = orden_venta.cliente
                 factura.save()
 
-                # --- INICIO DE LA CORRECCIÓN CLAVE ---
-                # YA NO CAMBIAMOS EL ESTADO DE LA OV A 'COMPLETADA' AQUÍ.
-                # Lo dejamos en 'LISTA_ENTREGA' o el estado que tuviera.
-                # Si en el futuro necesitas un estado 'FACTURADA', se cambiaría aquí.
+                # --- REGISTRO EN HISTORIAL ---
+                from .models import HistorialOV # Importación local para evitar importación circular
+                HistorialOV.objects.create(
+                    orden_venta=orden_venta,
+                    descripcion=f"Se generó la factura N° {factura.numero_factura} por un total de ${factura.total_facturado:.2f}.",
+                    tipo_evento='Facturado',
+                    realizado_por=request.user
+                )
                 
-                # Línea original comentada/eliminada:
-                # if orden_venta.estado != 'COMPLETADA':
-                #     orden_venta.estado = 'COMPLETADA'
-                #     orden_venta.save(update_fields=['estado'])
-                #     messages.info(request, f"Estado de OV {orden_venta.numero_ov} actualizado a 'Completada'.")
-                # --- FIN DE LA CORRECCIÓN CLAVE ---
-
-                messages.success(request, f"Factura N° {factura.numero_factura} generada por ${factura.total_facturado:.2f} para la OV {orden_venta.numero_ov}.")
+                # --- CORRECCIÓN CLAVE ---
+                # YA NO CAMBIAMOS EL ESTADO DE LA OV A 'COMPLETADA' AQUÍ.
+                # La OV permanece en 'LISTA_ENTREGA' hasta que se confirme el envío desde depósito.
+                
+                messages.success(request, f"Factura N° {factura.numero_factura} generada exitosamente para la OV {orden_venta.numero_ov}.")
                 return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
             
             except DjangoIntegrityError:
                  messages.error(request, f"Error: El número de factura '{form.cleaned_data.get('numero_factura')}' ya existe.")
             except Exception as e:
-                messages.error(request, f"Error al generar la factura: {e}")
+                messages.error(request, f"Ocurrió un error inesperado al generar la factura: {e}")
+                logger.exception(f"Error generando factura para OV {ov_id}")
         else:
-            messages.error(request, "El formulario de la factura no es válido.")
+            messages.error(request, "El formulario de la factura contiene errores. Por favor, inténtelo de nuevo.")
     
+    # Si la petición es GET o el formulario es inválido, redirigir de vuelta a la página de detalle.
     return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
 
 @login_required
@@ -2150,6 +2156,13 @@ def deposito_enviar_lote_pt_view(request, lote_id):
     lote.save(update_fields=['enviado'])
     logger.info(f"Lote ID {lote.id} (OP: {lote.op_asociada.numero_op}) marcado como enviado.")
 
+    HistorialOV.objects.create(
+        orden_venta=lote.op_asociada.orden_venta_origen,
+        descripcion=f"Lote de {lote.cantidad} x '{lote.producto.descripcion}' (de OP {lote.op_asociada.numero_op}) enviado al cliente.",
+        tipo_evento='Envío',
+        realizado_por=request.user
+    )
+    
     # 3. (Opcional pero recomendado) Actualizar estado de la Orden de Venta
     orden_venta = lote.op_asociada.orden_venta_origen
     if orden_venta:

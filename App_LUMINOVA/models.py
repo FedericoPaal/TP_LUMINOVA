@@ -490,19 +490,6 @@ class Orden(models.Model):  # Este será para Órdenes de Compra
         # Si vas a tener múltiples items, el total se calcularía iterando los items.
         super().save(*args, **kwargs)
 
-
-# Si necesitas múltiples insumos por Orden de Compra, crearías:
-# class ItemOrdenCompra(models.Model):
-#     orden_compra = models.ForeignKey(Orden, on_delete=models.CASCADE, related_name='items_oc')
-#     insumo = models.ForeignKey(Insumo, on_delete=models.PROTECT)
-#     cantidad = models.PositiveIntegerField()
-#     precio_unitario_compra = models.DecimalField(max_digits=10, decimal_places=2)
-#     subtotal = models.DecimalField(max_digits=12, decimal_places=2)
-
-#     def save(self, *args, **kwargs):
-#         self.subtotal = self.cantidad * self.precio_unitario_compra
-#         super().save(*args, **kwargs)
-#         self.orden_compra.actualizar_total_oc() # Necesitarías un método en Orden para actualizar
 class LoteProductoTerminado(models.Model):
     producto = models.ForeignKey(ProductoTerminado, on_delete=models.PROTECT, related_name='lotes')
     op_asociada = models.ForeignKey(OrdenProduccion, on_delete=models.PROTECT, related_name='lotes_pt')
@@ -512,3 +499,18 @@ class LoteProductoTerminado(models.Model):
 
     def __str__(self):
         return f"Lote de {self.producto.descripcion} - OP {self.op_asociada.numero_op} ({self.cantidad})"
+
+class HistorialOV(models.Model):
+    orden_venta = models.ForeignKey(OrdenVenta, on_delete=models.CASCADE, related_name='historial')
+    fecha_evento = models.DateTimeField(auto_now_add=True)
+    descripcion = models.CharField(max_length=255)
+    tipo_evento = models.CharField(max_length=50, blank=True, null=True, help_text="Ej: 'Estado Cambiado', 'Producción Iniciada', 'Facturado'")
+    realizado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-fecha_evento'] # Ordenar del más reciente al más antiguo
+        verbose_name = "Historial de Orden de Venta"
+        verbose_name_plural = "Historiales de Órdenes de Venta"
+
+    def __str__(self):
+        return f"{self.fecha_evento.strftime('%d/%m/%Y %H:%M')} - {self.orden_venta.numero_ov}: {self.descripcion}"

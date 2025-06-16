@@ -24,10 +24,13 @@
         </div>
     </div>
 
-
+    {% bootstrap_messages %}
 
     <div class="row g-4">
+        {# --- COLUMNA IZQUIERDA --- #}
         <div class="col-lg-8">
+            
+            <!-- TARJETA 1: Información de la OV y su Historial (Unificados) -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
                     <i class="bi bi-file-earmark-text-fill me-2"></i>Información de la Orden de Venta
@@ -60,11 +63,34 @@
                         </dd>
 
                         <dt class="col-sm-4 col-md-3">Notas de la Orden:</dt>
-                        <dd class="col-sm-8 col-md-9">{{ ov.notas|default_if_none:"Sin notas."|linebreaksbr }}</dd>
+                        <dd class="col-sm-8 col-md-9">{{ ov.notas|default_if_none:"-"|linebreaksbr }}</dd>
                     </dl>
+                    
+                    <!-- Sección de Historial (AHORA DENTRO) -->
+                    <div class="mt-4 pt-3 border-top">
+                        <h6 class="text-secondary"><i class="bi bi-clock-history me-2"></i>Historial de la Orden</h6>
+                        <div style="max-height: 200px; overflow-y: auto;">
+                             <ul class="list-group list-group-flush">
+                                {% for evento in ov.historial.all %}
+                                <li class="list-group-item px-0 py-2">
+                                    <div class="d-flex w-100 justify-content-between">
+                                        <p class="mb-1 small">{{ evento.descripcion }}</p>
+                                        <small class="text-muted text-nowrap ms-3">{{ evento.fecha_evento|date:"d/m/y H:i" }}</small>
+                                    </div>
+                                    {% if evento.realizado_por %}
+                                    <small class="text-muted">Por: {{ evento.realizado_por.username }}</small>
+                                    {% endif %}
+                                </li>
+                                {% empty %}
+                                <li class="list-group-item px-0 py-2 text-muted small">No hay eventos en el historial.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
                 </div>
             </div>
 
+            <!-- TARJETA 2: Ítems de la Orden -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-success text-white">
                      <i class="bi bi-list-ul me-2"></i>Ítems de la Orden
@@ -96,7 +122,9 @@
             </div>
         </div>
 
+        {# --- COLUMNA DERECHA --- #}
         <div class="col-lg-4">
+            <!-- TARJETA 3: Facturación -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-info text-white">
                     <i class="bi bi-receipt me-2"></i>Facturación
@@ -117,10 +145,7 @@
                            target="_blank">
                             <i class="bi bi-printer-fill"></i> Ver/Imprimir Factura
                         </a>
-                    {# --- INICIO DE LA CORRECCIÓN CLAVE --- #}
-                    {% elif factura_form and ov.estado == 'LISTA_ENTREGA' %}
-                    {# Ahora solo se muestra si está LISTA_ENTREGA #}
-                    {# --- FIN DE LA CORRECCIÓN CLAVE --- #}
+                    {% elif factura_form and puede_facturar %}
                         <h6>Generar Nueva Factura</h6>
                         {% if detalle_cancelacion_factura %}
                             <div class="alert alert-warning small p-2 mt-2" role="alert">
@@ -149,6 +174,7 @@
                 </div>
             </div>
 
+            <!-- TARJETA 4: Órdenes de Producción Asociadas -->
             {% if ov.ops_generadas.all %}
             <div class="card shadow-sm">
                 <div class="card-header bg-secondary text-white">
