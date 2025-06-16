@@ -1,7 +1,9 @@
+# TP_LUMINOVA-main/App_LUMINOVA/signals.py
+
 from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
-from django.db.models.signals import post_save, pre_save
-from .models import AuditoriaAcceso, HistorialOV, OrdenProduccion, OrdenVenta
+from django.db.models.signals import post_save
+from .models import AuditoriaAcceso, HistorialOV, OrdenProduccion, OrdenVenta, Reportes
 
 @receiver(user_logged_in)
 def registrar_acceso(sender, user, request, **kwargs):
@@ -10,67 +12,42 @@ def registrar_acceso(sender, user, request, **kwargs):
         accion="Inicio de sesión"
     )
 
+# Signal to log the creation of an OV.
 @receiver(post_save, sender=OrdenVenta)
-def registrar_creacion_y_cambio_estado_ov(sender, instance, created, **kwargs):
-    """
-    Registra la creación de una OV y los cambios en su estado.
-    """
+def registrar_creacion_ov(sender, instance, created, **kwargs):
     if created:
         HistorialOV.objects.create(
             orden_venta=instance,
             descripcion=f"Orden de Venta creada en estado '{instance.get_estado_display()}'."
         )
-    else:
-        # Para registrar cambios de estado, necesitamos el estado anterior.
-        # Esto se puede hacer en pre_save.
-        pass
 
-@receiver(pre_save, sender=OrdenVenta)
-def registrar_cambio_estado_ov_presave(sender, instance, **kwargs):
-    """
-    Compara el estado antiguo con el nuevo antes de guardar y registra el cambio.
-    """
-    if not instance.pk: # Si es un objeto nuevo, no hacer nada aquí.
-        return
-    try:
-        estado_anterior = OrdenVenta.objects.get(pk=instance.pk).estado
-        if estado_anterior != instance.estado:
-            HistorialOV.objects.create(
-                orden_venta=instance,
-                descripcion=f"Estado de la Orden de Venta cambió de '{OrdenVenta.objects.get(pk=instance.pk).get_estado_display()}' a '{instance.get_estado_display()}'."
-            )
-    except OrdenVenta.DoesNotExist:
-        pass # El objeto aún no existe en la DB
-
+# Signal to log the creation of an OP and link it to the OV history.
 @receiver(post_save, sender=OrdenProduccion)
-def registrar_cambio_estado_op(sender, instance, created, **kwargs):
-    """
-    Registra eventos en el historial de la OV cuando el estado de una OP asociada cambia.
-    """
-    if instance.orden_venta_origen:
-        if created:
-             HistorialOV.objects.create(
-                orden_venta=instance.orden_venta_origen,
-                descripcion=f"Se generó la Orden de Producción {instance.numero_op} para el producto '{instance.producto_a_producir.descripcion}'."
-            )
-        else:
-            # Similar a la OV, necesitamos el estado anterior.
-            pass
+def registrar_creacion_op(sender, instance, created, **kwargs):
+    if created and instance.orden_venta_origen:
+        HistorialOV.objects.create(
+            orden_venta=instance.orden_venta_origen,
+            descripcion=f"Se generó la Orden de Producción {instance.numero_op} para el producto '{instance.producto_a_producir.descripcion}'."
+        )
 
-@receiver(pre_save, sender=OrdenProduccion)
-def registrar_cambio_estado_op_presave(sender, instance, **kwargs):
+# NEW: Signal to log when a report is created for an OP.
+@receiver(post_save, sender=Reportes)
+def registrar_creacion_reporte_en_historial_ov(sender, instance, created, **kwargs):
     """
-    Compara el estado antiguo de la OP con el nuevo y registra el cambio en la OV.
+    Cuando se crea un nuevo reporte para una OP, registra un evento en el historial de la OV asociada.
     """
-    if not instance.pk or not instance.orden_venta_origen:
-        return
-    try:
-        op_anterior = OrdenProduccion.objects.get(pk=instance.pk)
-        if op_anterior.estado_op != instance.estado_op:
-            descripcion_evento = f"La OP {instance.numero_op} ('{instance.producto_a_producir.descripcion}') cambió su estado a '{instance.estado_op.nombre if instance.estado_op else 'N/A'}'."
-            HistorialOV.objects.create(
-                orden_venta=instance.orden_venta_origen,
-                descripcion=descripcion_evento
-            )
-    except OrdenProduccion.DoesNotExist:
-        pass
+    if created and instance.orden_produccion_asociada and instance.orden_produccion_asociada.orden_venta_origen:
+        orden_venta = instance.orden_produccion_asociada.orden_venta_origen
+        
+        descripcion = (
+            f"Se creó el reporte N° {instance.n_reporte} por '{instance.tipo_problema}' en la OP {instance.orden_produccion_asociada.numero_op}."
+        )
+        if instance.informe_reporte:
+             descripcion += f" Detalle: \"{instance.informe_reporte[:60]}...\""
+
+        HistorialOV.objects.create(
+            orden_venta=orden_venta,
+            descripcion=descripcion,
+            tipo_evento='Reporte de Incidencia',
+            realizado_por=instance.reportado_por
+        )

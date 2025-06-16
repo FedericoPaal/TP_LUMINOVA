@@ -1579,34 +1579,58 @@ def planificacion_produccion_view(request):
     }
     return render(request, 'produccion/planificacion.html', context)
 
+@login_required
+@require_POST
+@transaction.atomic
 def solicitar_insumos_op_view(request, op_id):
-    op = get_object_or_404(OrdenProduccion.objects.select_related('orden_venta_origen', 'estado_op'), id=op_id)
+    op = get_object_or_404(OrdenProduccion.objects.select_related('estado_op', 'orden_venta_origen', 'producto_a_producir'), id=op_id)
+    estado_op_anterior_obj = op.estado_op
 
-    # Validar que la OP esté en un estado desde el cual se pueden solicitar insumos (ej. Pendiente)
-    # Asumimos que tienes un estado 'Pendiente'
     estado_actual_op_nombre = op.estado_op.nombre.lower() if op.estado_op else ""
-    if estado_actual_op_nombre not in ['pendiente', 'planificada']: # Ajusta 'planificada' si tienes ese estado
-        messages.error(request, f"La OP {op.numero_op} no está en un estado válido para solicitar insumos (actual: {op.estado_op.nombre if op.estado_op else 'N/A'}).")
+    if estado_actual_op_nombre not in ['pendiente', 'planificada']:
+        messages.error(request, f"La OP {op.numero_op} no está en un estado válido para solicitar insumos (actual: {op.get_estado_op_display()}).")
         return redirect('App_LUMINOVA:produccion_detalle_op', op_id=op.id)
 
     try:
         estado_insumos_solicitados_op = EstadoOrden.objects.get(nombre__iexact="Insumos Solicitados")
+        
+        # Log de cambio de estado de OP antes de guardar
+        if op.orden_venta_origen and estado_op_anterior_obj != estado_insumos_solicitados_op:
+            descripcion_op = (f"La OP {op.numero_op} ('{op.producto_a_producir.descripcion}') cambió su estado "
+                              f"de '{estado_op_anterior_obj.nombre if estado_op_anterior_obj else 'N/A'}' "
+                              f"a '{estado_insumos_solicitados_op.nombre}'.")
+            HistorialOV.objects.create(
+                orden_venta=op.orden_venta_origen,
+                descripcion=descripcion_op,
+                tipo_evento='Cambio Estado OP',
+                realizado_por=request.user
+            )
+
         op.estado_op = estado_insumos_solicitados_op
         op.save(update_fields=['estado_op'])
         messages.success(request, f"Solicitud de insumos para OP {op.numero_op} enviada a Depósito.")
 
-        # Actualizar estado de la OV
+        # Actualizar estado de la OV si corresponde
         if op.orden_venta_origen:
             orden_venta_asociada = op.orden_venta_origen
-            # Solo cambiar a 'INSUMOS_SOLICITADOS' si la OV no está ya más avanzada o con problemas
-            estados_ov_no_modificables = ['PRODUCCION_INICIADA', 'PRODUCCION_CON_PROBLEMAS', 'LISTA_ENTREGA', 'COMPLETADA', 'CANCELADA']
-            if orden_venta_asociada.estado not in estados_ov_no_modificables:
+            if orden_venta_asociada.estado in ['PENDIENTE', 'CONFIRMADA']:
+                estado_ov_anterior_str = orden_venta_asociada.get_estado_display()
                 orden_venta_asociada.estado = 'INSUMOS_SOLICITADOS'
                 orden_venta_asociada.save(update_fields=['estado'])
-                messages.info(request, f"Estado de OV {orden_venta_asociada.numero_ov} actualizado a 'Insumos Solicitados'.")
+                
+                # Log de cambio de estado de OV
+                descripcion_ov = f"Estado de la OV cambió de '{estado_ov_anterior_str}' a 'Insumos Solicitados'."
+                HistorialOV.objects.create(
+                    orden_venta=orden_venta_asociada,
+                    descripcion=descripcion_ov,
+                    tipo_evento='Cambio Estado OV',
+                    realizado_por=request.user
+                )
+                
+                messages.info(request, f"Estado de OV {orden_venta_asociada.numero_ov} actualizado.")
 
     except EstadoOrden.DoesNotExist:
-        messages.error(request, "Error crítico: El estado 'Insumos Solicitados' para OP no está configurado.")
+        messages.error(request, "Error crítico: El estado 'Insumos Solicitados' no está configurado.")
     except Exception as e:
         messages.error(request, f"Error al solicitar insumos: {str(e)}")
 
@@ -1628,6 +1652,7 @@ def produccion_detalle_op_view(request, op_id):
         ),
         id=op_id
     )
+    estado_op_anterior_obj = op.estado_op
 
     insumos_necesarios_data = []
     todos_los_insumos_disponibles = True
@@ -1700,10 +1725,21 @@ def produccion_detalle_op_view(request, op_id):
     if request.method == 'POST':
         form_update = OrdenProduccionUpdateForm(request.POST, instance=op, estado_op_queryset=estado_op_queryset_para_form)
         if form_update.is_valid():
-            estado_op_anterior_obj = OrdenProduccion.objects.get(pk=op.pk).estado_op
-            op_actualizada = form_update.save(commit=False)
-            nuevo_estado_op_obj = op_actualizada.estado_op
+            nuevo_estado_op_obj = form_update.cleaned_data.get('estado_op')
+            
+            # Log de cambio de estado de OP
+            if op.orden_venta_origen and estado_op_anterior_obj != nuevo_estado_op_obj:
+                descripcion_op = (f"La OP {op.numero_op} ('{op.producto_a_producir.descripcion}') cambió su estado "
+                                  f"de '{estado_op_anterior_obj.nombre if estado_op_anterior_obj else 'N/A'}' "
+                                  f"a '{nuevo_estado_op_obj.nombre if nuevo_estado_op_obj else 'N/A'}'.")
+                HistorialOV.objects.create(
+                    orden_venta=op.orden_venta_origen,
+                    descripcion=descripcion_op,
+                    tipo_evento='Cambio Estado OP',
+                    realizado_por=request.user
+                )
 
+            op_actualizada = form_update.save(commit=False)
             se_esta_completando_op_ahora = False
             if nuevo_estado_op_obj and nuevo_estado_op_obj.nombre.lower() == ESTADO_OP_COMPLETADA_LOWER:
                 if not estado_op_anterior_obj or estado_op_anterior_obj.nombre.lower() != ESTADO_OP_COMPLETADA_LOWER:
@@ -1728,7 +1764,6 @@ def produccion_detalle_op_view(request, op_id):
             op_actualizada.save()
             messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.get_estado_op_display()}'.")
             
-            # --- INICIO DE LA LÓGICA CORREGIDA ---
             if op_actualizada.orden_venta_origen:
                 orden_venta_asociada = op_actualizada.orden_venta_origen
                 ops_de_la_ov = OrdenProduccion.objects.filter(orden_venta_origen=orden_venta_asociada)
@@ -1737,20 +1772,22 @@ def produccion_detalle_op_view(request, op_id):
                 count_completada = ops_de_la_ov.filter(estado_op__nombre__iexact=ESTADO_OP_COMPLETADA_LOWER).count()
                 count_cancelada = ops_de_la_ov.filter(estado_op__nombre__iexact=ESTADO_OP_CANCELADA_LOWER).count()
 
-                # Verificar si todas las OPs no canceladas están completadas
                 if total_ops_en_ov > 0 and (count_completada + count_cancelada == total_ops_en_ov):
-                    # Si todas las OPs relevantes están terminadas (completadas o canceladas), la OV está lista para entrega.
                     if orden_venta_asociada.estado != 'LISTA_ENTREGA':
+                        estado_ov_anterior_str = orden_venta_asociada.get_estado_display()
                         orden_venta_asociada.estado = 'LISTA_ENTREGA'
                         orden_venta_asociada.save(update_fields=['estado'])
+                        
+                        descripcion_ov = f"Estado de la OV cambió de '{estado_ov_anterior_str}' a 'Lista para Entrega'."
+                        HistorialOV.objects.create(
+                            orden_venta=orden_venta_asociada,
+                            descripcion=descripcion_ov,
+                            tipo_evento='Cambio Estado OV',
+                            realizado_por=request.user
+                        )
+                        
                         messages.info(request, f"Todos los ítems de la OV {orden_venta_asociada.numero_ov} están listos. El estado de la OV se ha actualizado a 'Lista para Entrega'.")
                         logger.info(f"OV {orden_venta_asociada.numero_ov} actualizada a 'LISTA_ENTREGA' porque todas sus OPs han finalizado.")
-                else:
-                    # Si no todas están terminadas, actualiza el estado de la OV basado en la lógica general
-                    # (Esto maneja casos como pasar a "Producción Iniciada" o "Producción con Problemas")
-                    # Esta lógica se puede refinar como se hizo antes. Por ahora, nos centramos en "Lista para Entrega".
-                    pass # Se puede añadir la lógica de estados intermedios aquí si es necesario
-            # --- FIN DE LA LÓGICA CORREGIDA ---
 
             return redirect('App_LUMINOVA:produccion_detalle_op', op_id=op_actualizada.id)
         else:
@@ -2119,8 +2156,8 @@ def deposito_detalle_solicitud_op_view(request, op_id):
     return render(request, 'deposito/deposito_detalle_solicitud_op.html', context)
 
 @login_required
-@require_POST # Asegura que esta vista solo se pueda llamar con un método POST
-@transaction.atomic # Garantiza que todas las operaciones de DB se completen o ninguna
+@require_POST
+@transaction.atomic
 def deposito_enviar_lote_pt_view(request, lote_id):
     """
     Procesa el envío de un lote de producto terminado.
@@ -2128,10 +2165,6 @@ def deposito_enviar_lote_pt_view(request, lote_id):
     - Marca el lote como enviado.
     - Actualiza el estado de la OV si corresponde.
     """
-    # if not es_admin_o_rol(request.user, ['deposito', 'administrador']):
-    #     messages.error(request, "Acción no permitida.")
-    #     return redirect('App_LUMINOVA:deposito_view')
-
     lote = get_object_or_404(LoteProductoTerminado.objects.select_related('producto', 'op_asociada__orden_venta_origen'), id=lote_id)
 
     if lote.enviado:
@@ -2141,38 +2174,45 @@ def deposito_enviar_lote_pt_view(request, lote_id):
     producto_terminado = lote.producto
     cantidad_a_enviar = lote.cantidad
 
-    # Sanity check: verificar si hay stock suficiente (aunque debería haberlo)
     if producto_terminado.stock < cantidad_a_enviar:
         messages.error(request, f"Error de consistencia de datos: No hay stock suficiente para '{producto_terminado.descripcion}' para enviar el lote. Stock actual: {producto_terminado.stock}, se necesita: {cantidad_a_enviar}.")
         return redirect('App_LUMINOVA:deposito_view')
 
-    # 1. Descontar el stock del producto terminado
     producto_terminado.stock -= cantidad_a_enviar
     producto_terminado.save(update_fields=['stock'])
-    logger.info(f"Stock de '{producto_terminado.descripcion}' descontado en {cantidad_a_enviar}. Nuevo stock: {producto_terminado.stock}")
+    logger.info(f"Stock de '{producto_terminado.descripcion}' descontado en {cantidad_a_enviar}.")
 
-    # 2. Marcar el lote como enviado
     lote.enviado = True
     lote.save(update_fields=['enviado'])
     logger.info(f"Lote ID {lote.id} (OP: {lote.op_asociada.numero_op}) marcado como enviado.")
 
-    HistorialOV.objects.create(
-        orden_venta=lote.op_asociada.orden_venta_origen,
-        descripcion=f"Lote de {lote.cantidad} x '{lote.producto.descripcion}' (de OP {lote.op_asociada.numero_op}) enviado al cliente.",
-        tipo_evento='Envío',
-        realizado_por=request.user
-    )
+    # Registro en el historial
+    if lote.op_asociada.orden_venta_origen:
+        HistorialOV.objects.create(
+            orden_venta=lote.op_asociada.orden_venta_origen,
+            descripcion=f"Lote de {lote.cantidad} x '{lote.producto.descripcion}' (de OP {lote.op_asociada.numero_op}) enviado al cliente.",
+            tipo_evento='Envío',
+            realizado_por=request.user
+        )
     
-    # 3. (Opcional pero recomendado) Actualizar estado de la Orden de Venta
     orden_venta = lote.op_asociada.orden_venta_origen
     if orden_venta:
-        # Verificar si todos los lotes de esta OV ya han sido enviados
         todos_los_lotes_de_la_ov = LoteProductoTerminado.objects.filter(op_asociada__orden_venta_origen=orden_venta)
         if not todos_los_lotes_de_la_ov.filter(enviado=False).exists():
-            # Si no queda ningún lote sin enviar, la OV está completada
+            estado_ov_anterior_str = orden_venta.get_estado_display()
             orden_venta.estado = 'COMPLETADA'
             orden_venta.save(update_fields=['estado'])
-            messages.info(request, f"Todos los lotes para la Orden de Venta '{orden_venta.numero_ov}' han sido enviados. La orden se ha marcado como 'Completada/Entregada'.")
+            
+            # Log de cambio de estado de OV
+            descripcion_ov = f"Estado de la Orden de Venta cambió de '{estado_ov_anterior_str}' a 'Completada/Entregada'."
+            HistorialOV.objects.create(
+                orden_venta=orden_venta,
+                descripcion=descripcion_ov,
+                tipo_evento='Cambio Estado OV',
+                realizado_por=request.user
+            )
+
+            messages.info(request, f"Todos los lotes para la OV '{orden_venta.numero_ov}' han sido enviados. La orden se ha marcado como 'Completada/Entregada'.")
             logger.info(f"OV {orden_venta.numero_ov} actualizada a COMPLETADA.")
 
     messages.success(request, f"Lote de {cantidad_a_enviar} x '{producto_terminado.descripcion}' enviado exitosamente.")
