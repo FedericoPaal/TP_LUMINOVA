@@ -699,10 +699,9 @@ def ventas_generar_factura_view(request, ov_id):
     orden_venta = get_object_or_404(OrdenVenta.objects.prefetch_related('items_ov__producto_terminado', 'ops_generadas__estado_op'), id=ov_id)
 
     if hasattr(orden_venta, 'factura_asociada') and orden_venta.factura_asociada:
-        # ... (mensaje de advertencia existente) ...
+        messages.warning(request, f"La factura para la OV {orden_venta.numero_ov} ya ha sido generada.")
         return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
 
-    # Re-evaluar la condición de facturación aquí también por seguridad
     puede_facturar_ahora = False
     total_a_facturar_calculado = 0
     items_a_facturar_desc = []
@@ -710,36 +709,24 @@ def ventas_generar_factura_view(request, ov_id):
     ops_asociadas = orden_venta.ops_generadas.all()
     items_ov = orden_venta.items_ov.all()
 
-    if not ops_asociadas.exists() and orden_venta.estado == 'CONFIRMADA': # Asumir stock para OV sin OPs
+    # Simplificamos la lógica: si está 'LISTA_ENTREGA', se puede facturar el total.
+    if orden_venta.estado == 'LISTA_ENTREGA':
         puede_facturar_ahora = True
         total_a_facturar_calculado = orden_venta.total_ov
-        for item_ov in items_ov:
-             items_a_facturar_desc.append(f"{item_ov.cantidad} x {item_ov.producto_terminado.descripcion}")
-
-    elif ops_asociadas.exists():
-        ops_completadas_ids = [op.producto_a_producir_id for op in ops_asociadas if op.estado_op and op.estado_op.nombre.lower() == "completada"]
-
-        if not ops_completadas_ids and orden_venta.estado not in ['LISTA_ENTREGA', 'COMPLETADA']: # Si no hay OPs completadas y no está lista/completada
-             messages.error(request, f"No hay ítems completados para facturar en la OV {orden_venta.numero_ov}.")
-             return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
-
-        for item_ov in items_ov:
-            # Si la OP asociada a este item_ov (basada en producto) está completada, se factura
-            # Esta lógica asume una OP por tipo de producto en la OV. Si un ítem de OV puede generar varias OPs, es más complejo.
-            op_correspondiente = ops_asociadas.filter(producto_a_producir=item_ov.producto_terminado).first()
-            if op_correspondiente and op_correspondiente.estado_op and op_correspondiente.estado_op.nombre.lower() == "completada":
-                total_a_facturar_calculado += item_ov.subtotal
-                items_a_facturar_desc.append(f"{item_ov.cantidad} x {item_ov.producto_terminado.descripcion}")
-                puede_facturar_ahora = True # Al menos un item se puede facturar
-            elif not op_correspondiente and orden_venta.estado in ['LISTA_ENTREGA', 'COMPLETADA']:
-                # Si no hay OP para este item pero la OV está lista (ej. producto de stock)
-                total_a_facturar_calculado += item_ov.subtotal
-                items_a_facturar_desc.append(f"{item_ov.cantidad} x {item_ov.producto_terminado.descripcion}")
+    else:
+        # Lógica de respaldo por si el estado no se actualizó bien
+        if not ops_asociadas.exists() and orden_venta.estado == 'CONFIRMADA':
+            puede_facturar_ahora = True
+            total_a_facturar_calculado = orden_venta.total_ov
+        elif ops_asociadas.exists():
+            ops_completadas = ops_asociadas.filter(estado_op__nombre__iexact="Completada").count()
+            ops_canceladas = ops_asociadas.filter(estado_op__nombre__iexact="Cancelada").count()
+            if ops_completadas > 0 and (ops_completadas + ops_canceladas == ops_asociadas.count()):
                 puede_facturar_ahora = True
-
-
+                total_a_facturar_calculado = orden_venta.total_ov
+    
     if not puede_facturar_ahora:
-        messages.error(request, f"La Orden de Venta {orden_venta.numero_ov} no cumple las condiciones para ser facturada en este momento.")
+        messages.error(request, f"La Orden de Venta {orden_venta.numero_ov} no cumple las condiciones para ser facturada.")
         return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
 
     if request.method == 'POST':
@@ -748,41 +735,32 @@ def ventas_generar_factura_view(request, ov_id):
             try:
                 factura = form.save(commit=False)
                 factura.orden_venta = orden_venta
-                factura.total_facturado = total_a_facturar_calculado # Usar el total calculado
-                factura.cliente = orden_venta.cliente
+                factura.total_facturado = total_a_facturar_calculado
                 factura.fecha_emision = timezone.now()
-
-                # Añadir notas sobre ítems cancelados o facturación parcial si es necesario
-                notas_adicionales_factura = []
-                ops_canceladas_nombres = [op.producto_a_producir.descripcion for op in ops_asociadas if op.estado_op and op.estado_op.nombre.lower() == "cancelada"]
-                if ops_canceladas_nombres:
-                    notas_adicionales_factura.append(f"Ítems no incluidos por cancelación de OP: {', '.join(ops_canceladas_nombres)}.")
-
-                # Si tienes un campo de notas en el modelo Factura:
-                # factura.notas = " ".join(notas_adicionales_factura) # o agrégalo a las notas de la OV
-
                 factura.save()
 
-                # Actualizar el estado de la OV a "COMPLETADA" (o un estado facturado) si es apropiado
-                if orden_venta.estado != 'COMPLETADA' and puede_facturar_ahora: # Solo si se facturó algo
-                    orden_venta.estado = 'COMPLETADA' # O 'FACTURADA' si tienes ese estado
-                    orden_venta.save(update_fields=['estado'])
-                    messages.info(request, f"Estado de OV {orden_venta.numero_ov} actualizado a 'Completada'.")
+                # --- INICIO DE LA CORRECCIÓN CLAVE ---
+                # YA NO CAMBIAMOS EL ESTADO DE LA OV A 'COMPLETADA' AQUÍ.
+                # Lo dejamos en 'LISTA_ENTREGA' o el estado que tuviera.
+                # Si en el futuro necesitas un estado 'FACTURADA', se cambiaría aquí.
+                
+                # Línea original comentada/eliminada:
+                # if orden_venta.estado != 'COMPLETADA':
+                #     orden_venta.estado = 'COMPLETADA'
+                #     orden_venta.save(update_fields=['estado'])
+                #     messages.info(request, f"Estado de OV {orden_venta.numero_ov} actualizado a 'Completada'.")
+                # --- FIN DE LA CORRECCIÓN CLAVE ---
 
                 messages.success(request, f"Factura N° {factura.numero_factura} generada por ${factura.total_facturado:.2f} para la OV {orden_venta.numero_ov}.")
-                if notas_adicionales_factura:
-                    messages.info(request, " ".join(notas_adicionales_factura))
                 return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
-            # ... (manejo de errores de integridad y otros) ...
+            
             except DjangoIntegrityError:
                  messages.error(request, f"Error: El número de factura '{form.cleaned_data.get('numero_factura')}' ya existe.")
             except Exception as e:
                 messages.error(request, f"Error al generar la factura: {e}")
         else:
-            # ... (manejo de formulario inválido) ...
-            pass
-
-    # Si es GET o el form no es válido, redirige
+            messages.error(request, "El formulario de la factura no es válido.")
+    
     return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
 
 @login_required
@@ -1669,45 +1647,49 @@ def produccion_detalle_op_view(request, op_id):
 
     puede_solicitar_insumos = False
     mostrar_boton_reportar = False
-    
-    # --- LÓGICA MEJORADA PARA TRANSICIÓN DE ESTADOS ---
-    estado_op_queryset_para_form = EstadoOrden.objects.none()
-    
+    estado_op_queryset_para_form = EstadoOrden.objects.all().order_by('nombre')
+
+    ESTADO_OP_PENDIENTE_LOWER = "pendiente"
+    ESTADO_OP_PLANIFICADA_LOWER = "planificada"
+    ESTADO_OP_INSUMOS_SOLICITADOS_LOWER = "insumos solicitados"
+    ESTADO_OP_INSUMOS_RECIBIDOS_LOWER = "insumos recibidos"
+    ESTADO_OP_PRODUCCION_INICIADA_LOWER = "producción iniciada"
+    ESTADO_OP_EN_PROCESO_LOWER = "en proceso"
+    ESTADO_OP_PAUSADA_LOWER = "pausada"
+    NOMBRE_ESTADO_OP_COMPLETADA_CONST = "Completada"
+    ESTADO_OP_COMPLETADA_LOWER = NOMBRE_ESTADO_OP_COMPLETADA_CONST.lower()
+    ESTADO_OP_CANCELADA_LOWER = "cancelada"
+
     if op.estado_op:
         estado_actual_nombre_lower = op.estado_op.nombre.lower()
-        
-        # Permitir reportar problemas en casi cualquier estado activo
-        if estado_actual_nombre_lower not in ["completada", "cancelada"]:
+        estado_actual_nombre_original = op.estado_op.nombre
+        nombres_permitidos_dropdown = [estado_actual_nombre_original]
+
+        if estado_actual_nombre_lower in [ESTADO_OP_PENDIENTE_LOWER, ESTADO_OP_PLANIFICADA_LOWER] and op.sector_asignado_op:
+            puede_solicitar_insumos = True
+        elif estado_actual_nombre_lower == ESTADO_OP_INSUMOS_SOLICITADOS_LOWER:
+            nombres_permitidos_dropdown.extend(["Pausada", "Cancelada"])
+        elif estado_actual_nombre_lower == ESTADO_OP_INSUMOS_RECIBIDOS_LOWER:
+            nombres_permitidos_dropdown.extend(["Producción Iniciada", "Pausada", "Cancelada"])
+        elif estado_actual_nombre_lower == ESTADO_OP_PRODUCCION_INICIADA_LOWER:
+            nombres_permitidos_dropdown.extend(["En Proceso", "Pausada", "Completada", "Cancelada"])
+        elif estado_actual_nombre_lower == ESTADO_OP_EN_PROCESO_LOWER:
+            nombres_permitidos_dropdown.extend(["Pausada", "Completada", "Cancelada"])
+        elif estado_actual_nombre_lower == ESTADO_OP_PAUSADA_LOWER:
+            nombres_permitidos_dropdown.extend(["Cancelada"])
+            if EstadoOrden.objects.filter(nombre__iexact=ESTADO_OP_INSUMOS_RECIBIDOS_LOWER).exists(): nombres_permitidos_dropdown.append("Insumos Recibidos")
+            if EstadoOrden.objects.filter(nombre__iexact=ESTADO_OP_PRODUCCION_INICIADA_LOWER).exists(): nombres_permitidos_dropdown.append("Producción Iniciada")
+            if EstadoOrden.objects.filter(nombre__iexact=ESTADO_OP_PENDIENTE_LOWER).exists(): nombres_permitidos_dropdown.append("Pendiente")
+
+        if estado_actual_nombre_lower not in [ESTADO_OP_COMPLETADA_LOWER, ESTADO_OP_CANCELADA_LOWER]:
             mostrar_boton_reportar = True
 
-        # Definir transiciones de estado permitidas
-        transiciones_posibles = []
-        if estado_actual_nombre_lower in ["pendiente", "planificada"]:
-            puede_solicitar_insumos = True
-        elif estado_actual_nombre_lower == "insumos recibidos":
-            transiciones_posibles = ["Producción Iniciada"]
-        elif estado_actual_nombre_lower == "producción iniciada":
-            transiciones_posibles = ["En Proceso", "Pausada", "Completada"]
-        elif estado_actual_nombre_lower == "en proceso":
-            transiciones_posibles = ["Pausada", "Completada"]
-        elif estado_actual_nombre_lower == "pausada":
-            # Esto es más complejo, podría necesitar saber el estado previo. Simplificamos:
-            transiciones_posibles = ["En Proceso"]
-        
-        # Siempre se puede cancelar una OP no completada
-        if estado_actual_nombre_lower not in ["completada", "cancelada"]:
-            transiciones_posibles.append("Cancelada")
-            
-        # Construir el queryset para el dropdown del formulario
-        if transiciones_posibles:
-            q_objects = Q(id=op.estado_op.id) # Siempre incluir el estado actual
-            for estado_nombre in transiciones_posibles:
-                q_objects |= Q(nombre__iexact=estado_nombre)
-            estado_op_queryset_para_form = EstadoOrden.objects.filter(q_objects).distinct().order_by('nombre')
-        else:
-            # Si no hay transiciones, solo mostrar el estado actual
-            estado_op_queryset_para_form = EstadoOrden.objects.filter(id=op.estado_op.id)
-
+        q_permitidos = Q()
+        for n in list(set(nombres_permitidos_dropdown)): q_permitidos |= Q(nombre__iexact=n)
+        if q_permitidos:
+            estado_op_queryset_para_form = EstadoOrden.objects.filter(q_permitidos).order_by('nombre')
+        elif op.estado_op:
+             estado_op_queryset_para_form = EstadoOrden.objects.filter(id=op.estado_op.id)
 
     if request.method == 'POST':
         form_update = OrdenProduccionUpdateForm(request.POST, instance=op, estado_op_queryset=estado_op_queryset_para_form)
@@ -1717,9 +1699,10 @@ def produccion_detalle_op_view(request, op_id):
             nuevo_estado_op_obj = op_actualizada.estado_op
 
             se_esta_completando_op_ahora = False
-            if nuevo_estado_op_obj and nuevo_estado_op_obj.nombre.lower() == "completada":
-                if not estado_op_anterior_obj or estado_op_anterior_obj.nombre.lower() != "completada":
+            if nuevo_estado_op_obj and nuevo_estado_op_obj.nombre.lower() == ESTADO_OP_COMPLETADA_LOWER:
+                if not estado_op_anterior_obj or estado_op_anterior_obj.nombre.lower() != ESTADO_OP_COMPLETADA_LOWER:
                     se_esta_completando_op_ahora = True
+                    op_actualizada.fecha_fin_real = timezone.now() if not op_actualizada.fecha_fin_real else op_actualizada.fecha_fin_real
 
             if se_esta_completando_op_ahora:
                 producto_terminado_obj = op_actualizada.producto_a_producir
@@ -1730,32 +1713,48 @@ def produccion_detalle_op_view(request, op_id):
                         op_asociada=op_actualizada,
                         cantidad=cantidad_producida
                     )
-                    messages.success(request, f"Lote de '{producto_terminado_obj.descripcion}' generado por OP {op_actualizada.numero_op} (cantidad: {cantidad_producida}).")
-                    if not op_actualizada.fecha_fin_real:
-                        op_actualizada.fecha_fin_real = timezone.now()
+                    messages.success(request, f"Lote de '{producto_terminado_obj.descripcion}' generado por OP {op_actualizada.numero_op}.")
+                    logger.info(f"OP {op_actualizada.numero_op} completada. Lote creado.")
                 else:
+                    logger.error(f"No se pudo crear lote para OP {op_actualizada.numero_op}: producto/cantidad inválidos.")
                     messages.error(request, "No se pudo crear lote: producto no asignado o cantidad cero.")
-
-            # Marcar fecha de inicio real si se pasa a un estado de producción
-            if nuevo_estado_op_obj and nuevo_estado_op_obj.nombre.lower() in ["producción iniciada", "en proceso"]:
-                if not op_actualizada.fecha_inicio_real:
-                     op_actualizada.fecha_inicio_real = timezone.now()
-
+            
             op_actualizada.save()
             messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.get_estado_op_display()}'.")
             
-            # ... (Toda la lógica de actualización de estado de la OV) ...
-            # Esta parte es compleja y parece estar funcionando, la mantenemos.
+            # --- INICIO DE LA LÓGICA CORREGIDA ---
             if op_actualizada.orden_venta_origen:
-                # (Lógica existente para actualizar estado de OV)
-                pass # Tu lógica actual aquí...
+                orden_venta_asociada = op_actualizada.orden_venta_origen
+                ops_de_la_ov = OrdenProduccion.objects.filter(orden_venta_origen=orden_venta_asociada)
+                
+                total_ops_en_ov = ops_de_la_ov.count()
+                count_completada = ops_de_la_ov.filter(estado_op__nombre__iexact=ESTADO_OP_COMPLETADA_LOWER).count()
+                count_cancelada = ops_de_la_ov.filter(estado_op__nombre__iexact=ESTADO_OP_CANCELADA_LOWER).count()
+
+                # Verificar si todas las OPs no canceladas están completadas
+                if total_ops_en_ov > 0 and (count_completada + count_cancelada == total_ops_en_ov):
+                    # Si todas las OPs relevantes están terminadas (completadas o canceladas), la OV está lista para entrega.
+                    if orden_venta_asociada.estado != 'LISTA_ENTREGA':
+                        orden_venta_asociada.estado = 'LISTA_ENTREGA'
+                        orden_venta_asociada.save(update_fields=['estado'])
+                        messages.info(request, f"Todos los ítems de la OV {orden_venta_asociada.numero_ov} están listos. El estado de la OV se ha actualizado a 'Lista para Entrega'.")
+                        logger.info(f"OV {orden_venta_asociada.numero_ov} actualizada a 'LISTA_ENTREGA' porque todas sus OPs han finalizado.")
+                else:
+                    # Si no todas están terminadas, actualiza el estado de la OV basado en la lógica general
+                    # (Esto maneja casos como pasar a "Producción Iniciada" o "Producción con Problemas")
+                    # Esta lógica se puede refinar como se hizo antes. Por ahora, nos centramos en "Lista para Entrega".
+                    pass # Se puede añadir la lógica de estados intermedios aquí si es necesario
+            # --- FIN DE LA LÓGICA CORREGIDA ---
 
             return redirect('App_LUMINOVA:produccion_detalle_op', op_id=op_actualizada.id)
         else:
             messages.error(request, "Error al actualizar la OP. Por favor, revise los datos del formulario.")
-    else:
-        form_update = OrdenProduccionUpdateForm(instance=op, estado_op_queryset=estado_op_queryset_para_form)
-    
+            logger.warning(f"Formulario OrdenProduccionUpdateForm inválido para OP {op.id}: {form_update.errors.as_json()}")
+            if op.estado_op and op.estado_op.nombre.lower() in [ESTADO_OP_PAUSADA_LOWER, ESTADO_OP_CANCELADA_LOWER]:
+                mostrar_boton_reportar = True
+
+    form_update = OrdenProduccionUpdateForm(instance=op, estado_op_queryset=estado_op_queryset_para_form)
+
     context = {
         'op': op,
         'insumos_necesarios_list': insumos_necesarios_data,
