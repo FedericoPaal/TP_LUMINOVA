@@ -2,7 +2,7 @@
 {% load static %}
 {% load django_bootstrap5 %}
 
-{% block title %}{{ titulo_seccion|default:"Planificación" }}{% endblock %}
+{% block title %}{{ titulo_seccion|default:"Planificación de Producción" }}{% endblock %}
 
 {% block sidebar_content %}
     {% include 'produccion/produccion_sidebar.html' %}
@@ -13,74 +13,66 @@
     <h1 class="h2">{{ titulo_seccion }}</h1>
 </div>
 
+{% regroup ops_para_planificar_list by get_estado_op_display as ops_por_estado %}
 
-
-{% if ops_para_planificar_list %}
-<form method="post"> {# Un solo form para manejar múltiples actualizaciones si es necesario, o forms individuales #}
-    {% csrf_token %} {# Solo necesario si vas a tener un botón de submit general para varias OPs #}
-    <div class="table-responsive">
-        <table class="table table-sm table-hover">
-            <thead class="table-light">
-                <tr>
-                    <th>N° OP</th>
-                    <th>Producto</th>
-                    <th class="text-center">Cant.</th>
-                    <th>Cliente</th>
-                    <th>Estado Actual</th>
-                    <th>Asignar Sector</th>
-                    <th>Cambiar Estado a</th>
-                    <th>Inicio Plan.</th>
-                    <th>Fin Plan.</th>
-                    <th class="text-center">Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for op in ops_para_planificar_list %}
-                <tr>
-                    <td>{{ op.numero_op }}</td>
-                    <td>{{ op.producto_a_producir.descripcion|truncatechars:25 }}</td>
-                    <td class="text-center">{{ op.cantidad_a_producir }}</td>
-                    <td>{{ op.orden_venta_origen.cliente.nombre|default_if_none:"N/A" }}</td>
-                    <td><span class="badge bg-warning text-dark">{{ op.estado_op.nombre|default:"Pendiente" }}</span></td>
-                    <form method="post" action="{% url 'App_LUMINOVA:planificacion_produccion' %}"> {# Form individual por OP #}
+{% if ops_por_estado %}
+    {% for estado_grupo in ops_por_estado %}
+        <h4 class="mt-4 mb-3">{{ estado_grupo.grouper }} ({{ estado_grupo.list|length }})</h4>
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>N° OP</th>
+                        <th>Producto</th>
+                        <th class="text-center">Cant.</th>
+                        <th>Cliente</th>
+                        <th>Asignar Sector</th>
+                        <th>Inicio Plan.</th>
+                        <th>Fin Plan.</th>
+                        <th class="text-center" style="width: 120px;">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for op in estado_grupo.list %}
+                    <form method="post" action="{% url 'App_LUMINOVA:planificacion_produccion' %}">
                         {% csrf_token %}
                         <input type="hidden" name="op_id" value="{{ op.id }}">
-                        <td>
-                            <select name="sector_asignado_op_{{ op.id }}" class="form-select form-select-sm">
-                                <option value="">----</option>
-                                {% for sector in sectores_list %}
-                                <option value="{{ sector.id }}" {% if op.sector_asignado_op == sector %}selected{% endif %}>
-                                    {{ sector.nombre }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </td>
-                        <td>
-                            <select name="estado_op_{{ op.id }}" class="form-select form-select-sm">
-                                {% for estado in estados_op_list %}
-                                <option value="{{ estado.id }}" {% if op.estado_op == estado %}selected{% endif %}>
-                                    {{ estado.nombre }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </td>
-                        <td>
-                            <input type="date" name="fecha_inicio_planificada_{{ op.id }}" value="{{ op.fecha_inicio_planificada|date:'Y-m-d'|default:'' }}" class="form-control form-control-sm">
-                        </td>
-                        <td>
-                            <input type="date" name="fecha_fin_planificada_{{ op.id }}" value="{{ op.fecha_fin_planificada|date:'Y-m-d'|default:'' }}" class="form-control form-control-sm">
-                        </td>
-                        <td class="text-center">
-                            <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
-                        </td>
+                        <tr>
+                            <td><a href="{% url 'App_LUMINOVA:produccion_detalle_op' op.id %}">{{ op.numero_op }}</a></td>
+                            <td>{{ op.producto_a_producir.descripcion|truncatechars:25 }}</td>
+                            <td class="text-center">{{ op.cantidad_a_producir }}</td>
+                            <td>{{ op.orden_venta_origen.cliente.nombre|default_if_none:"N/A" }}</td>
+                            <td>
+                                <select name="sector_asignado_op" class="form-select form-select-sm">
+                                    <option value="">----</option>
+                                    {% for sector in sectores_list %}
+                                    <option value="{{ sector.id }}" {% if op.sector_asignado_op == sector %}selected{% endif %}>
+                                        {{ sector.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td>
+                                <input type="date" name="fecha_inicio_planificada" value="{{ op.fecha_inicio_planificada|date:'Y-m-d'|default:'' }}" class="form-control form-control-sm">
+                            </td>
+                            <td>
+                                <input type="date" name="fecha_fin_planificada" value="{{ op.fecha_fin_planificada|date:'Y-m-d'|default:'' }}" class="form-control form-control-sm">
+                            </td>
+                            <td class="text-center">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="bi bi-save"></i> Guardar
+                                </button>
+                            </td>
+                        </tr>
                     </form>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</form>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endfor %}
 {% else %}
-<div class="alert alert-info mt-3">No hay órdenes de producción pendientes de planificación.</div>
+    <div class="alert alert-success mt-3" role="alert">
+        <i class="bi bi-check-circle-fill"></i> ¡Excelente! No hay órdenes de producción activas para planificar.
+    </div>
 {% endif %}
 {% endblock %}

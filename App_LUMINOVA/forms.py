@@ -85,6 +85,15 @@ ItemOrdenVentaFormSet = forms.inlineformset_factory(
     can_delete_extra=True # Permite eliminar forms "extra" añadidos por JS antes de guardar
 )
 
+# FormSet para la vista de CREACIÓN (con 1 formulario extra por defecto)
+ItemOrdenVentaFormSetCreacion = forms.inlineformset_factory(
+    OrdenVenta, ItemOrdenVenta, form=ItemOrdenVentaForm,
+    fields=['producto_terminado', 'cantidad', 'precio_unitario_venta'],
+    extra=1,
+    can_delete=True,
+    can_delete_extra=True
+)
+
 class OrdenVentaForm(forms.ModelForm):
     class Meta:
         model = OrdenVenta
@@ -161,55 +170,46 @@ class OrdenProduccionUpdateForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        # Pop el queryset personalizado antes de llamar a super()
         estado_op_queryset_personalizado = kwargs.pop('estado_op_queryset', None)
         super().__init__(*args, **kwargs)
         
         self.fields['sector_asignado_op'].queryset = SectorAsignado.objects.all().order_by('nombre')
         self.fields['sector_asignado_op'].empty_label = "Seleccionar Sector..."
         
-        # Aplicar el queryset personalizado si se proporcionó
         if estado_op_queryset_personalizado is not None:
             self.fields['estado_op'].queryset = estado_op_queryset_personalizado
         else:
-            # Fallback si no se pasa queryset (aunque la vista siempre debería pasarlo)
             self.fields['estado_op'].queryset = EstadoOrden.objects.all().order_by('nombre')
             logger.warning("OrdenProduccionUpdateForm recibió estado_op_queryset=None. Usando todos los estados.")
         
-        self.fields['estado_op'].empty_label = None # No mostrar "---------"
+        self.fields['estado_op'].empty_label = None
 
-        # Lógica para deshabilitar campos basada en el estado *inicial* de la instancia
-        # cuando el formulario se carga por primera vez.
+        # --- LÓGICA MEJORADA PARA DESHABILITAR CAMPOS ---
         instance = getattr(self, 'instance', None)
         campos_a_deshabilitar = []
         
         if instance and instance.pk and instance.estado_op:
             estado_actual_nombre_lower = instance.estado_op.nombre.lower()
             
-            # Estados donde la planificación/asignación no tiene sentido o ya pasó
+            # Lista de estados donde la planificación/asignación ya no tiene sentido o ya pasó
             estados_sin_planificacion_activa = [
-                "pendiente", 
-                "insumos solicitados", # Esperando a depósito
+                "insumos solicitados",
+                "insumos recibidos",
+                "producción iniciada",
+                "en proceso",
                 "completada", 
-                "cancelada"
+                "cancelada",
+                "pausada"  # Estando pausada, tampoco se debería cambiar la planificación.
             ]
-            # El estado "Pausada" es un caso especial, podría permitir edición de notas
-            # pero no necesariamente de fechas/sector si se espera reanudar tal cual.
-            # Si desde "Pausada" se permite volver a "Pendiente", entonces sí se deshabilitarían.
-            # Por ahora, si está Pausada, los campos de planificación no se deshabilitan explícitamente aquí,
-            # la lógica de qué estados permite la vista al reanudar es más importante.
 
             if estado_actual_nombre_lower in estados_sin_planificacion_activa:
+                # Deshabilitamos los campos de planificación
                 campos_a_deshabilitar = ['sector_asignado_op', 'fecha_inicio_planificada', 'fecha_fin_planificada']
-                # Notas podría seguir siendo editable en algunos de estos estados.
+                
+                # Para estados finales, deshabilitamos todo excepto (quizás) el estado si se puede revertir
                 if estado_actual_nombre_lower in ["completada", "cancelada"]:
-                    self.fields['estado_op'].disabled = True # No se puede cambiar el estado si ya está finalizado/cancelado
-                    self.fields['notas'].disabled = True # Tampoco las notas
-            
-            # Si está pausada, solo notas editables, el resto no.
-            elif estado_actual_nombre_lower == "pausada":
-                campos_a_deshabilitar = ['sector_asignado_op', 'fecha_inicio_planificada', 'fecha_fin_planificada']
-
+                    self.fields['estado_op'].disabled = True
+                    self.fields['notas'].disabled = True
 
         for field_name in campos_a_deshabilitar:
             if field_name in self.fields:
