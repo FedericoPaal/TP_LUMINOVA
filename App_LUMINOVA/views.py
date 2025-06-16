@@ -968,67 +968,77 @@ def compras_desglose_view(request):
     logger.info("--- compras_desglose_view: INICIO ---")
 
     UMBRAL_STOCK_BAJO_INSUMOS = 15000
-    # Consulta original de insumos críticos
     insumos_criticos_query = Insumo.objects.filter(
         stock__lt=UMBRAL_STOCK_BAJO_INSUMOS
-    ).select_related('categoria').order_by( # Quitamos 'proveedor' del select_related aquí
+    ).select_related('categoria').order_by(
         'categoria__nombre', 'stock', 'descripcion'
     )
 
-    insumos_criticos_list_con_estado_oc = []
-    for insumo_item in insumos_criticos_query: # Cambiado 'insumo' a 'insumo_item' para evitar conflicto de nombres si 'insumo' se usa más tarde
-        oc_pendiente_existe = Orden.objects.filter(
-            insumo_principal=insumo_item, # Usar insumo_item
+    # --- INICIO DE LA CORRECCIÓN ---
+    insumos_criticos_list_con_estado = []
+    for insumo_item in insumos_criticos_query:
+        # Busca la OC pendiente más reciente que no esté en un estado final
+        oc_pendiente = Orden.objects.filter(
+            insumo_principal=insumo_item,
             tipo='compra'
         ).exclude(
             Q(estado='COMPLETADA') | Q(estado='RECIBIDA_TOTAL') | Q(estado='CANCELADA')
-        ).exists()
+        ).order_by('-fecha_creacion').first() # Obtenemos el objeto OC o None
 
-        insumos_criticos_list_con_estado_oc.append({
-            'insumo': insumo_item, # Pasar el objeto insumo completo
-            'tiene_oc_pendiente': oc_pendiente_existe
+        insumos_criticos_list_con_estado.append({
+            'insumo': insumo_item,
+            'oc_pendiente': oc_pendiente # Pasamos el objeto OC completo (o None)
         })
 
-        if oc_pendiente_existe:
-            logger.info(f"Insumo crítico '{insumo_item.descripcion}' (ID: {insumo_item.id}) YA TIENE una OC pendiente.")
+        if oc_pendiente:
+            logger.info(f"Insumo '{insumo_item.descripcion}' tiene la OC pendiente: {oc_pendiente.numero_orden}")
         else:
-            logger.info(f"Insumo crítico '{insumo_item.descripcion}' (ID: {insumo_item.id}) NO tiene OC pendiente.")
+            logger.info(f"Insumo '{insumo_item.descripcion}' NO tiene OC pendiente.")
+    # --- FIN DE LA CORRECCIÓN ---
 
-    logger.info(f"Compras_desglose_view: Total insumos críticos para mostrar: {len(insumos_criticos_list_con_estado_oc)}")
+    logger.info(f"Compras_desglose_view: Total insumos críticos para mostrar: {len(insumos_criticos_list_con_estado)}")
 
     context = {
-        'insumos_criticos_list_con_estado': insumos_criticos_list_con_estado_oc,
+        'insumos_criticos_list_con_estado': insumos_criticos_list_con_estado, # Usamos la nueva lista
         'umbral_stock_bajo': UMBRAL_STOCK_BAJO_INSUMOS,
         'titulo_seccion': 'Gestionar Compra por Stock Bajo',
     }
     return render(request, 'compras/compras_desglose.html', context)
 
-
 @login_required
 def compras_seguimiento_view(request):
-    # Esta vista mostraría las OCs que ya fueron enviadas a proveedores y están en seguimiento
-    # estado_solicitada = EstadoOrden.objects.filter(nombre__iexact='Solicitada').first() # Necesitarías EstadoOrden para OC
-    # ordenes_en_seguimiento = []
-    # if estado_solicitada:
-    ordenes = Orden.objects.filter(tipo='compra', estado='estado_solicitada').order_by('-fecha_creacion')
+    """
+    Muestra las Órdenes de Compra que ya fueron gestionadas y están 
+    en proceso de envío o recepción.
+    """
+    estados_en_seguimiento = [
+        'ENVIADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL'
+    ]
+    ordenes = Orden.objects.filter(
+        tipo='compra', 
+        estado__in=estados_en_seguimiento
+    ).select_related('proveedor').order_by('-fecha_creacion')
 
     context = {
-        # 'ordenes_solicitadas_list': ordenes_en_seguimiento,
-        'ordenes_solicitadas_list': ordenes, # Placeholder por ahora
+        'ordenes_en_seguimiento': ordenes,
         'titulo_seccion': 'Seguimiento de Órdenes de Compra',
     }
     return render(request, 'compras/seguimiento.html', context)
 
 @login_required
-def compras_tracking_pedido_view(request, numero_orden_track):
-    # Aquí buscarías la OC por 'numero_orden_track' y mostrarías su info de tracking
-    # orden_compra = get_object_or_404(Orden, numero_orden=numero_orden_track, tipo='compra')
+def compras_tracking_pedido_view(request, oc_id): # Cambiado para usar ID, es más robusto
+    """
+    Muestra la página de tracking visual para una OC específica.
+    """
+    orden_compra = get_object_or_404(
+        Orden.objects.select_related('proveedor'),
+        id=oc_id, # Buscamos por ID
+        tipo='compra'
+    )
     context = {
-        # 'orden': orden_compra,
-        'numero_orden_track': numero_orden_track, # Pasar para mostrar en la plantilla
-        'titulo_seccion': f'Tracking OC: {numero_orden_track}',
+        'orden_compra': orden_compra,
     }
-    return render(request, 'compras/compras_tracking.html', context)
+    return render(request, 'compras/compras_tracking_pedido.html', context)
 
 @login_required
 def compras_desglose_detalle_oc_view(request, numero_orden_desglose):
@@ -1981,45 +1991,53 @@ def deposito_view(request):
                 estado_op=estado_sol
             ).select_related('producto_a_producir').order_by('fecha_solicitud')
             ops_pendientes_deposito_count = ops_pendientes_deposito_list.count()
-            logger.info(f"Deposito_view (OPs): Encontradas {ops_pendientes_deposito_count} OPs pendientes (estado: '{estado_sol.nombre}').")
-        else:
-            messages.warning(request, "Configuración: El estado 'Insumos Solicitados' para OP no se encontró en la base de datos. La lista de OPs pendientes no se poblará.")
-            logger.warning("Deposito_view (OPs): Estado 'Insumos Solicitados' NO encontrado.")
     except Exception as e_op:
-        messages.error(request, f"Error al cargar OPs pendientes para depósito: {e_op}")
         logger.error(f"Deposito_view (OPs): Excepción al cargar OPs: {e_op}")
 
-    # NUEVO: Mostrar lotes de productos terminados en stock (no enviados)
     lotes_en_stock = LoteProductoTerminado.objects.filter(enviado=False).select_related('producto', 'op_asociada').order_by('-fecha_creacion')
-    logger.info(f"Deposito_view (Lotes PTs): Lotes de productos terminados en stock (no enviados): {lotes_en_stock.count()}")
 
-    ESTADOS_OC_EN_ESPERA = ['APROBADA', 'ENVIADA_PROVEEDOR', 'CONFIRMADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL']
-
+    # --- INICIO DE LA CORRECCIÓN DE LÓGICA ---
     UMBRAL_STOCK_BAJO_INSUMOS = 15000
-    insumos_con_stock_bajo = Insumo.objects.filter(stock__lt=UMBRAL_STOCK_BAJO_INSUMOS).order_by('stock', 'descripcion')
+    ESTADOS_OC_ACTIVAS = ['APROBADA', 'ENVIADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL']
 
-    insumos_bajo_con_oc = []
+    # 1. Obtener todos los insumos con stock bajo
+    insumos_con_stock_bajo = Insumo.objects.filter(stock__lt=UMBRAL_STOCK_BAJO_INSUMOS)
+
+    # 2. Separar las listas
+    insumos_a_gestionar = []
+    insumos_en_pedido = []
+
     for insumo in insumos_con_stock_bajo:
-        oc = Orden.objects.filter(
+        # Buscar si existe una OC activa para este insumo
+        oc_activa = Orden.objects.filter(
             insumo_principal=insumo,
-            estado__in=ESTADOS_OC_EN_ESPERA
+            estado__in=ESTADOS_OC_ACTIVAS
         ).order_by('-fecha_creacion').first()
-        insumos_bajo_con_oc.append({
-            'insumo': insumo,
-            'oc': oc
-        })
+
+        if oc_activa:
+            # Si hay una OC activa, va a la lista de "En Pedido"
+            insumos_en_pedido.append({
+                'insumo': insumo,
+                'oc': oc_activa
+            })
+        else:
+            # Si NO hay OC activa, va a la lista de "A Gestionar"
+            insumos_a_gestionar.append({
+                'insumo': insumo
+            })
+    # --- FIN DE LA CORRECCIÓN DE LÓGICA ---
 
     context = {
         'categorias_I': categorias_I,
         'categorias_PT': categorias_PT,
         'ops_pendientes_deposito_list': ops_pendientes_deposito_list,
         'ops_pendientes_deposito_count': ops_pendientes_deposito_count,
-        'lotes_productos_terminados_en_stock': lotes_en_stock,  # Cambiado: ahora se pasan los lotes
-        'insumos_con_stock_bajo_list': insumos_bajo_con_oc,
+        'lotes_productos_terminados_en_stock': lotes_en_stock,
+        'insumos_a_gestionar_list': insumos_a_gestionar, # Nueva lista para la primera tabla
+        'insumos_en_pedido_list': insumos_en_pedido,   # Nueva lista para la segunda tabla
         'umbral_stock_bajo': UMBRAL_STOCK_BAJO_INSUMOS,
     }
 
-    logger.info(f"Deposito_view: Contexto final - lotes_pt_count={lotes_en_stock.count()}, insumos_bajos_count={insumos_con_stock_bajo.count()}")
     return render(request, 'deposito/deposito.html', context)
 
 

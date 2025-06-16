@@ -60,7 +60,15 @@
                         {{ oc.get_estado_display }}
                     </span>
                 </td>
-                <td class="text-center">{{ oc.numero_tracking|default_if_none:"N/A" }}</td>
+                <td class="text-center">
+                    {% if oc.numero_tracking %}
+                        <a href="{% url 'App_LUMINOVA:compras_tracking_pedido' oc.id %}" class="fw-bold" title="Ver seguimiento de {{ oc.numero_orden }}">
+                            {{ oc.numero_tracking }}
+                        </a>
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
                 <td class="text-center">
                     <a href="{% url 'App_LUMINOVA:compras_detalle_oc' oc.id %}" class="btn btn-sm btn-outline-info me-1" title="Ver Detalles de OC {{ oc.numero_orden }}">
                         <i class="bi bi-eye-fill"></i>

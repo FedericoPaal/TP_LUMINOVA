@@ -1,0 +1,127 @@
+{% extends 'padre.html' %}
+{% load static %}
+
+{% block title %}Tracking OC: {{ orden_compra.numero_orden }}{% endblock %}
+
+{% block sidebar_content %}
+    {% include 'compras/compras_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Seguimiento del Pedido: <span class="text-primary">{{ orden_compra.numero_orden }}</span></h1>
+        <a href="{% url 'App_LUMINOVA:compras_seguimiento' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left-circle"></i> Volver a Seguimiento
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>Proveedor:</strong> {{ orden_compra.proveedor.nombre }}
+                </div>
+                <div>
+                    <strong>N° Tracking:</strong> <span class="fw-bold">{{ orden_compra.numero_tracking }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-4">
+            
+            {# --- INICIO DEL STEPPER DE TRACKING --- #}
+            <div class="tracking-stepper">
+                <div class="step {% if orden_compra.estado in 'ENVIADA_PROVEEDOR,EN_TRANSITO,RECIBIDA_PARCIAL,RECIBIDA_TOTAL,COMPLETADA' %}active{% endif %}">
+                    <div class="step-icon-wrapper">
+                        <div class="step-icon"><i class="bi bi-box-arrow-up-right"></i></div>
+                    </div>
+                    <div class="step-title">Pedido Gestionado</div>
+                    <div class="step-text">Luminova envió el pedido al proveedor.</div>
+                </div>
+
+                <div class="step {% if orden_compra.estado in 'EN_TRANSITO,RECIBIDA_PARCIAL,RECIBIDA_TOTAL,COMPLETADA' %}active{% endif %}">
+                    <div class="step-icon-wrapper">
+                        <div class="step-icon"><i class="bi bi-truck"></i></div>
+                    </div>
+                    <div class="step-title">En Tránsito</div>
+                    <div class="step-text">El proveedor despachó el pedido.</div>
+                </div>
+
+                <div class="step {% if orden_compra.estado in 'RECIBIDA_PARCIAL' %}active{% endif %} {% if orden_compra.estado in 'RECIBIDA_TOTAL,COMPLETADA' %}completed{% endif %}">
+                    <div class="step-icon-wrapper">
+                        <div class="step-icon"><i class="bi bi-box-seam"></i></div>
+                    </div>
+                    <div class="step-title">Recibido Parcialmente</div>
+                    <div class="step-text">Se recibió una parte del pedido.</div>
+                </div>
+
+                <div class="step {% if orden_compra.estado in 'RECIBIDA_TOTAL,COMPLETADA' %}completed{% endif %}">
+                    <div class="step-icon-wrapper">
+                        <div class="step-icon"><i class="bi bi-check2-circle"></i></div>
+                    </div>
+                    <div class="step-title">Recibido Totalmente</div>
+                    <div class="step-text">Se completó la recepción del pedido.</div>
+                </div>
+            </div>
+            {# --- FIN DEL STEPPER DE TRACKING --- #}
+        </div>
+    </div>
+</div>
+
+<style>
+.tracking-stepper {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    padding: 20px 0;
+}
+.tracking-stepper::before {
+    content: '';
+    position: absolute;
+    top: 50px; /* Alineado con el centro de los iconos */
+    left: 10%;
+    right: 10%;
+    height: 4px;
+    background-color: #e9ecef;
+    z-index: 1;
+}
+.step {
+    text-align: center;
+    width: 25%;
+    position: relative;
+    z-index: 2;
+}
+.step-icon-wrapper {
+    margin-bottom: 10px;
+}
+.step-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    color: #adb5bd;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    border: 4px solid #fff;
+    transition: background-color 0.3s, color 0.3s;
+}
+.step.active .step-icon,
+.step.completed .step-icon {
+    background-color: #0d6efd; /* Azul para activo y completado */
+    color: #fff;
+}
+.step.completed .step-icon {
+    background-color: #198754; /* Verde para completado final */
+}
+.step-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.step-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}

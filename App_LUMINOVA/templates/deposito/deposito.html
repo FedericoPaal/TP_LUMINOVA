@@ -96,14 +96,14 @@
             <tbody class="bg-white text-dark">
                 <tr>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 25%;">N° OP</th>
-                    <th class="text-white" style="background-color: #014BAC; width: 50%;">Producto</th>
+                    <th class="text-white" style="background-color: #014BAC; width: 50%;" colspan="2">Producto</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Cantidad</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 30%;"></th>
                 </tr>
                 {% for op_solicitud in ops_pendientes_deposito_list %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
-                    <td class="text-white text-center">{{ op_solicitud.numero_op }}</td>
-                    <td class="text-white">{{ op_solicitud.producto_a_producir.descripcion|truncatechars:20 }}</td>
+                    <td class="text-white text-center" >{{ op_solicitud.numero_op }}</td>
+                    <td class="text-white" colspan="2">{{ op_solicitud.producto_a_producir.descripcion|truncatechars:20 }}</td>
                     <td class="text-white text-center">{{ op_solicitud.cantidad_a_producir }}</td>
                     <td class="text-white text-center"></td>
                 </tr>
@@ -165,58 +165,67 @@
             {# Tabla de Insumos con Stock Bajo - SIN BOTÓN POR FILA, SÓLO BOTÓN GENERAL ABAJO #}
             <thead>
                 <tr style="border-top: 3px solid white;">
-                    <th colspan="4" class="bg-primary text-white text-center pt-3   " style="padding-left: 0px;">
+                    <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;">
                         <h4>Insumos con Stock Bajo</h4>
                     </th>
                 </tr>
             </thead>
             <tbody class="bg-white text-dark">
                 <tr>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">N° OC</th>
-                    <th class="text-white" style="background-color: #014BAC; width: 45%;">Insumo</th>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">Stock Actual</th>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 15%;">Pedido</th>
+                    <th class="text-white" style="background-color: #014BAC; width: 60%;" colspan="2">Insumo</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 25%;" >Stock</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 15%;" >Acción</th>
                 </tr>
-                {% for item in insumos_con_stock_bajo_list %}
+                {% for item in insumos_a_gestionar_list %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
-                    <td class="text-white text-center">
-                        {% if item.oc and item.oc.estado != "CANCELADA" %}
-                        {{ item.oc.numero_orden }}
-                        {% else %}
-                        -
-                        {% endif %}
-                    </td>
-                    <td class="text-white">{{ item.insumo.descripcion|truncatechars:25 }}</td>
-                    <td
-                        class="text-white text-center fw-bold {% if item.insumo.stock < umbral_stock_bajo %}text-danger{% endif %}">
-                        {{ item.insumo.stock }}</td>
-                    <td class="text-white text-center">
-                        {% if item.oc %}
-                        <span title="En espera de recepción"><i class="bi bi-hourglass-split"></i></span>
-                        {% endif %}
+                    <td class="text-white" colspan="2">{{ item.insumo.descripcion|truncatechars:25 }}</td>
+                    <td class="text-white text-center fw-bold text-danger">{{ item.insumo.stock }}</td>
+                    <td class="text-white text-center" colspan="2">
+                        <a href="{% url 'App_LUMINOVA:compras_desglose' %}" title="Gestionar compra para {{ item.insumo.descripcion }}">
+                            <i class="bi bi-cart-plus-fill text-warning fs-5"></i>
+                        </a>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="4" class="text-center text-white" style="background-color: #A19898;">
-                        No hay insumos con stock bajo actualmente.
+                    <td colspan="3" class="text-center text-white" style="background-color: #A19898;">
+                        No hay insumos que requieran gestión.
                     </td>
                 </tr>
                 {% endfor %}
+            </tbody>
 
-                {# Botón general debajo de la tabla si hay insumos en falta #}
-                {% if insumos_con_stock_bajo_list %}
+            {# Tabla 2: Insumos que YA ESTÁN PEDIDOS #}
+            <thead>
+                <tr style="border-top: 3px solid white;">
+                    <th colspan="3" class="bg-primary text-white text-center pt-3" style="padding-left: 0px;">
+                        <h4>Insumos en Pedido</h4>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white text-dark">
                 <tr>
-                    <td colspan="4" class="bg-primary text-center pt-3" style="padding-left: 0px;">
-                        <a class="btn border-white text-primary text-white"
-                            style="background-color: #014BAC; width: 100%; max-width: 350px; height: 40px; border-radius: 15px;"
-                            href="{% url 'App_LUMINOVA:compras_desglose' %}">
-                            Gestionar Compras de Insumos en Falta
-                        </a>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 20%;">N° OC</th>
+                    <th class="text-white" style="background-color: #014BAC; width: 65%;" colspan="2">Insumo</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 15%;">Estado</th>
+                </tr>
+                {% for item in insumos_en_pedido_list %}
+                <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
+                    <td class="text-white text-center" >
+                        <a href="{% url 'App_LUMINOVA:compras_detalle_oc' item.oc.id %}" class="text-white">{{ item.oc.numero_orden }}</a>
+                    </td>
+                    <td class="text-white" colspan="2">{{ item.insumo.descripcion|truncatechars:25 }}</td>
+                    <td class="text-white text-center" >
+                         <span title="{{ item.oc.get_estado_display }}"><i class="bi bi-hourglass-split"></i></span>
                     </td>
                 </tr>
-                {% endif %}
-
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="text-center text-white" style="background-color: #A19898;">
+                        No hay insumos en pedido con stock bajo.
+                    </td>
+                </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>

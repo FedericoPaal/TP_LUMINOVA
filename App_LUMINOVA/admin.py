@@ -1,5 +1,7 @@
 # TP_LUMINOVA-main/App_LUMINOVA/admin.py
 
+
+from django.contrib import admin, messages 
 from django.contrib import admin
 from .models import (
     CategoriaProductoTerminado, ProductoTerminado, CategoriaInsumo, Insumo,
@@ -138,7 +140,42 @@ class OrdenAdmin(admin.ModelAdmin):
     list_filter = ('tipo', 'estado', 'proveedor', 'fecha_creacion')
     search_fields = ('numero_orden', 'proveedor__nombre', 'insumo_principal__descripcion', 'notas')
     autocomplete_fields = ['proveedor', 'insumo_principal']
-    readonly_fields = ('fecha_creacion', 'total_orden_compra') # El total se calcula en el save del modelo
+    readonly_fields = ('fecha_creacion', 'total_orden_compra')
+    
+    actions = ['marcar_como_enviada_a_proveedor', 'marcar_como_en_transito_y_notificar']
+
+    def get_readonly_fields(self, request, obj=None):
+        # Hacer que ciertos campos sean editables solo en estados específicos
+        readonly = list(self.readonly_fields)
+        if obj: # Si el objeto ya existe
+            # Los campos de tracking y fecha de entrega solo son editables cuando el pedido fue enviado al proveedor
+            if obj.estado != 'ENVIADA_PROVEEDOR':
+                readonly.extend(['numero_tracking', 'fecha_estimada_entrega'])
+            # Una vez que la OC está en tránsito o más allá, no se debería poder cambiar el proveedor, insumo, etc.
+            if obj.estado not in ['BORRADOR', 'APROBADA']:
+                readonly.extend(['proveedor', 'insumo_principal', 'cantidad_principal', 'precio_unitario_compra'])
+        return tuple(readonly)
+
+    @admin.action(description='Marcar seleccionadas como "Gestionada (Enviada a Proveedor)"')
+    def marcar_como_enviada_a_proveedor(self, request, queryset):
+        # Filtra solo las que están en estado 'Aprobada'
+        actualizadas = queryset.filter(estado='APROBADA').update(estado='ENVIADA_PROVEEDOR')
+        self.message_user(request, f'{actualizadas} órdenes de compra han sido marcadas como enviadas al proveedor.', messages.SUCCESS)
+
+    @admin.action(description='Marcar seleccionadas como "En Tránsito" (requiere tracking)')
+    def marcar_como_en_transito_y_notificar(self, request, queryset):
+        # Filtra las que están listas para pasar a tránsito y tienen un tracking asignado
+        listas_para_transito = queryset.filter(estado='ENVIADA_PROVEEDOR').exclude(numero_tracking__exact='').exclude(numero_tracking__isnull=True)
+        
+        actualizadas = listas_para_transito.update(estado='EN_TRANSITO')
+        
+        if actualizadas > 0:
+            self.message_user(request, f'{actualizadas} órdenes de compra han sido marcadas como "En Tránsito".', messages.SUCCESS)
+        
+        fallidas = queryset.count() - actualizadas
+        if fallidas > 0:
+            self.message_user(request, f'{fallidas} órdenes no se actualizaron. Asegúrese de que estén en estado "Gestionada" y tengan un número de tracking guardado antes de ejecutar esta acción.', messages.WARNING)
+
     fieldsets = (
         (None, {
             'fields': ('numero_orden', 'tipo', 'estado')
@@ -146,7 +183,7 @@ class OrdenAdmin(admin.ModelAdmin):
         ('Detalles del Proveedor y Pedido', {
             'fields': ('proveedor', 'insumo_principal', 'cantidad_principal', 'precio_unitario_compra')
         }),
-        ('Seguimiento y Entrega', {
+        ('Seguimiento y Entrega (Editable cuando la OC es "Gestionada")', {
             'fields': ('fecha_estimada_entrega', 'numero_tracking')
         }),
         ('Información Adicional', {
@@ -161,3 +198,5 @@ class LoteProductoTerminadoAdmin(admin.ModelAdmin):
     list_display = ('producto', 'op_asociada', 'cantidad', 'enviado', 'fecha_creacion')
     list_filter = ('enviado', 'producto')
     search_fields = ('producto__descripcion', 'op_asociada__numero_op')
+    
+
