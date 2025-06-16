@@ -185,9 +185,9 @@
                     <td class="text-white" colspan="2">{{ item.insumo.descripcion|truncatechars:25 }}</td>
                     <td class="text-white text-center fw-bold text-danger">{{ item.insumo.stock }}</td>
                     <td class="text-white text-center">
-                        <button class="btn btn-success btn-sm" title="Gestionar compra para {{ item.insumo.descripcion }}">
-                            Comprar
-                        </button>
+                        <a href="{% url 'App_LUMINOVA:compras_seleccionar_proveedor_para_insumo' item.insumo.id %}" class="btn btn-success btn-sm" title="Seleccionar proveedor para comprar {{ item.insumo.descripcion }}">
+                            <i class="bi bi-cart-plus-fill"></i> 
+                        </a>
                     </td>
                 </tr>
                 {% empty %}
