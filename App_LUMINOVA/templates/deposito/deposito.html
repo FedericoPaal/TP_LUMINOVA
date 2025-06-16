@@ -174,13 +174,13 @@
                 <tr>
                     <th class="text-white" style="background-color: #014BAC; width: 60%;" colspan="2">Insumo</th>
                     <th class="text-white text-center" style="background-color: #014BAC; width: 25%;" >Stock</th>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 15%;" >Acción</th>
+                    <th class="text-white text-center" style="background-color: #014BAC; width: 15%; color: white;">Acción</th>
                 </tr>
                 {% for item in insumos_a_gestionar_list %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
                     <td class="text-white" colspan="2">{{ item.insumo.descripcion|truncatechars:25 }}</td>
                     <td class="text-white text-center fw-bold text-danger">{{ item.insumo.stock }}</td>
-                    <td class="text-white text-center" colspan="2">
+                    <td class="text-white text-center">
                         <a href="{% url 'App_LUMINOVA:compras_desglose' %}" title="Gestionar compra para {{ item.insumo.descripcion }}">
                             <i class="bi bi-cart-plus-fill text-warning fs-5"></i>
                         </a>

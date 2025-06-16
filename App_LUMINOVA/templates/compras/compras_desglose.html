@@ -15,23 +15,24 @@
 </div>
 
 
-<h3 class="mt-4">Insumos con Stock Bajo (Menor a {{ umbral_stock_bajo }}) a Gestionar</h3>
+
 
 {# Comprobar la lista que realmente se pasa desde la vista #}
 {% if insumos_criticos_list_con_estado %} 
 <div class="table-responsive mt-3">
-    <table class="table table-hover table-sm">
+    <table class="table table-hover table-sm color-thead align-middle">
+        {# Encabezados de la tabla #}
         <thead class="color-thead">
             {# Encabezados de la tabla #}
             <tr>
-                <th class="color-thead">ID</th>
-                <th class="color-thead">Insumo</th>
-                <th class="color-thead">Categoría</th>
+                <th class="color-thead" style="background-color: #014BAC;">ID</th>
+                <th class="color-thead" style="background-color: #014BAC;">Insumo</th>
+                <th class="color-thead" style="background-color: #014BAC;">Categoría</th>
                 {# La columna "Prov. Principal" se elimina ya que la selección de proveedor es el siguiente paso #}
                 {# Si aún deseas mostrar el proveedor principal (si existe en el modelo Insumo directamente), puedes añadirlo #}
                 {# <th>Prov. Principal (del Insumo)</th> #}
-                <th class="text-center color-thead">Stock Actual</th>
-                <th class="text-center color-thead">Acción</th>
+                <th class="text-center color-thead" style="background-color: #014BAC;">Stock Actual</th>
+                <th class="text-center color-thead" style="background-color: #014BAC;">Acción</th>
             </tr>
         </thead>
         <tbody>
