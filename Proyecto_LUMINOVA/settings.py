@@ -130,9 +130,9 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_URL = 'login'  # Redirige a esta URL si el usuario no está autenticado
-LOGIN_REDIRECT_URL = 'inicio'  # Redirige aquí después de iniciar sesión
-LOGOUT_REDIRECT_URL = 'login'  # Redirige aquí después de cerrar sesión
+LOGIN_URL = 'App_LUMINOVA:login'
+LOGIN_REDIRECT_URL = 'App_LUMINOVA:dashboard'  # Es mejor redirigir al dashboard que a la raíz
+LOGOUT_REDIRECT_URL = 'App_LUMINOVA:login'
 
 MEDIA_URL = '/media/'
 
