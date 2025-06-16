@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST, require_GET
 from django.views.decorators.csrf import csrf_exempt # Usar con precaución
 from django.db import transaction, IntegrityError as DjangoIntegrityError
-from django.db.models import ProtectedError, Q, F, Prefetch
+from django.db.models import ProtectedError, Q, F, Prefetch, Sum, Exists, OuterRef
 
 # Django Contrib Imports
 from django.contrib.auth.models import User, Group, Permission
@@ -79,7 +79,70 @@ def login_view(request):
 
 @login_required
 def dashboard_view(request):
-    return render(request, 'admin/dashboard.html')
+    # --- 1. Tarjeta: Acciones Urgentes ---
+    
+    # <<< INICIO DE LA CORRECCIÓN >>>
+    # Un problema se considera "urgente" si la OP está en un estado que refleja el problema.
+    # Estados problemáticos: aquellos donde la producción está detenida por una incidencia.
+    estados_problematicos_op = ['Producción con Problemas', 'Pausada']
+    ops_con_problemas = OrdenProduccion.objects.filter(estado_op__nombre__in=estados_problematicos_op).count()
+    # <<< FIN DE LA CORRECCIÓN >>>
+
+    solicitudes_insumos_pendientes = OrdenProduccion.objects.filter(estado_op__nombre__iexact='Insumos Solicitados').count()
+    ocs_para_aprobar = Orden.objects.filter(tipo='compra', estado='BORRADOR').count()
+    
+    # --- 2. Tarjeta: Stock Crítico ---
+    UMBRAL_STOCK_BAJO = 15000
+    insumos_criticos_query = Insumo.objects.filter(stock__lt=UMBRAL_STOCK_BAJO).order_by('stock')[:5]
+    insumos_criticos_con_porcentaje = []
+    for insumo in insumos_criticos_query:
+        porcentaje_stock = int((insumo.stock / UMBRAL_STOCK_BAJO) * 100) if UMBRAL_STOCK_BAJO > 0 else 0
+        insumos_criticos_con_porcentaje.append({
+            'insumo': insumo,
+            'porcentaje_stock': min(100, porcentaje_stock)
+        })
+
+    # --- 3. Tarjeta: Rendimiento de Producción ---
+    hace_30_dias = timezone.now() - timedelta(days=30)
+    ops_completadas_recientemente = OrdenProduccion.objects.filter(
+        estado_op__nombre__iexact='Completada',
+        fecha_fin_real__gte=hace_30_dias
+    )
+    total_luminarias_ensambladas = ops_completadas_recientemente.aggregate(total=Sum('cantidad_a_producir'))['total'] or 0
+    total_ops_completadas = ops_completadas_recientemente.count()
+    ops_a_tiempo = ops_completadas_recientemente.filter(fecha_fin_real__date__lte=F('fecha_fin_planificada')).count()
+    ops_con_retraso = total_ops_completadas - ops_a_tiempo
+    tasa_cumplimiento = (ops_a_tiempo / total_ops_completadas * 100) if total_ops_completadas > 0 else 0
+
+    # --- 4. Tarjeta: Actividad Reciente ---
+    try:
+        ultima_ov = OrdenVenta.objects.latest('fecha_creacion')
+    except OrdenVenta.DoesNotExist:
+        ultima_ov = None
+    try:
+        ultima_op_completada = OrdenProduccion.objects.filter(estado_op__nombre__iexact='Completada').latest('fecha_fin_real')
+    except OrdenProduccion.DoesNotExist:
+        ultima_op_completada = None
+    try:
+        ultimo_reporte = Reportes.objects.latest('fecha')
+    except Reportes.DoesNotExist:
+        ultimo_reporte = None
+
+    context = {
+        'ops_con_problemas_count': ops_con_problemas,
+        'solicitudes_insumos_pendientes_count': solicitudes_insumos_pendientes,
+        'ocs_para_aprobar_count': ocs_para_aprobar,
+        'insumos_criticos_list': insumos_criticos_con_porcentaje,
+        'umbral_stock_bajo': UMBRAL_STOCK_BAJO,
+        'total_luminarias_ensambladas': total_luminarias_ensambladas,
+        'ops_a_tiempo': ops_a_tiempo,
+        'ops_con_retraso': ops_con_retraso,
+        'tasa_cumplimiento': tasa_cumplimiento,
+        'ultima_ov': ultima_ov,
+        'ultima_op_completada': ultima_op_completada,
+        'ultimo_reporte': ultimo_reporte,
+    }
+    return render(request, 'admin/dashboard.html', context)
 
 # --- ADMINISTRATOR VIEWS ---
 @login_required
