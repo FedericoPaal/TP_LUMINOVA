@@ -80,14 +80,10 @@ def login_view(request):
 @login_required
 def dashboard_view(request):
     # --- 1. Tarjeta: Acciones Urgentes ---
-    
-    # <<< INICIO DE LA CORRECCIÓN >>>
-    # Un problema se considera "urgente" si la OP está en un estado que refleja el problema.
-    # Estados problemáticos: aquellos donde la producción está detenida por una incidencia.
+    # Contamos OPs cuyo estado refleje un problema o pausa por incidencia
     estados_problematicos_op = ['Producción con Problemas', 'Pausada']
     ops_con_problemas = OrdenProduccion.objects.filter(estado_op__nombre__in=estados_problematicos_op).count()
-    # <<< FIN DE LA CORRECCIÓN >>>
-
+    
     solicitudes_insumos_pendientes = OrdenProduccion.objects.filter(estado_op__nombre__iexact='Insumos Solicitados').count()
     ocs_para_aprobar = Orden.objects.filter(tipo='compra', estado='BORRADOR').count()
     
@@ -1010,43 +1006,40 @@ def compras_lista_oc_view(request):
     # Necesitarás una plantilla para esto, ej. 'compras/compras_lista_oc.html'
     return render(request, 'compras/compras_lista_oc.html', context)
 
+
 @login_required
 def compras_desglose_view(request):
     logger.info("--- compras_desglose_view: INICIO ---")
 
     UMBRAL_STOCK_BAJO_INSUMOS = 15000
-    insumos_criticos_query = Insumo.objects.filter(
+    
+    # --- LÓGICA CORREGIDA ---
+    # Un insumo necesita gestión si su OC o no existe, o si está SOLAMENTE en estado 'BORRADOR'.
+    # Si ya está 'APROBADA' o más allá, el equipo de compras ya hizo su parte principal.
+    
+    # 1. Obtenemos los IDs de insumos que ya tienen una OC "en firme" (es decir, post-borrador)
+    ESTADOS_OC_POST_BORRADOR = ['APROBADA', 'ENVIADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL', 'RECIBIDA_TOTAL', 'COMPLETADA']
+    insumos_ya_gestionados_ids = Orden.objects.filter(
+        tipo='compra',
+        estado__in=ESTADOS_OC_POST_BORRADOR,
+        insumo_principal__isnull=False
+    ).values_list('insumo_principal_id', flat=True).distinct()
+
+    logger.info(f"IDs de insumos que ya tienen OC post-borrador: {list(insumos_ya_gestionados_ids)}")
+
+    # 2. Buscamos insumos críticos, EXCLUYENDO los que ya están gestionados.
+    #    La lista resultante solo contendrá insumos sin OC o con OC en 'BORRADOR'.
+    insumos_criticos_para_gestionar = Insumo.objects.filter(
         stock__lt=UMBRAL_STOCK_BAJO_INSUMOS
-    ).select_related('categoria').order_by(
-        'categoria__nombre', 'stock', 'descripcion'
-    )
+    ).exclude(
+        id__in=insumos_ya_gestionados_ids
+    ).select_related('categoria').order_by('categoria__nombre', 'stock', 'descripcion')
 
-    # --- INICIO DE LA CORRECCIÓN ---
-    insumos_criticos_list_con_estado = []
-    for insumo_item in insumos_criticos_query:
-        # Busca la OC pendiente más reciente que no esté en un estado final
-        oc_pendiente = Orden.objects.filter(
-            insumo_principal=insumo_item,
-            tipo='compra'
-        ).exclude(
-            Q(estado='COMPLETADA') | Q(estado='RECIBIDA_TOTAL') | Q(estado='CANCELADA')
-        ).order_by('-fecha_creacion').first() # Obtenemos el objeto OC o None
-
-        insumos_criticos_list_con_estado.append({
-            'insumo': insumo_item,
-            'oc_pendiente': oc_pendiente # Pasamos el objeto OC completo (o None)
-        })
-
-        if oc_pendiente:
-            logger.info(f"Insumo '{insumo_item.descripcion}' tiene la OC pendiente: {oc_pendiente.numero_orden}")
-        else:
-            logger.info(f"Insumo '{insumo_item.descripcion}' NO tiene OC pendiente.")
-    # --- FIN DE LA CORRECCIÓN ---
-
-    logger.info(f"Compras_desglose_view: Total insumos críticos para mostrar: {len(insumos_criticos_list_con_estado)}")
-
+    logger.info(f"Insumos críticos que requieren acción de Compras: {insumos_criticos_para_gestionar.count()}")
+    
+    # La variable pasada a la plantilla necesita un nombre consistente
     context = {
-        'insumos_criticos_list_con_estado': insumos_criticos_list_con_estado, # Usamos la nueva lista
+        'insumos_criticos_list_con_estado': insumos_criticos_para_gestionar,
         'umbral_stock_bajo': UMBRAL_STOCK_BAJO_INSUMOS,
         'titulo_seccion': 'Gestionar Compra por Stock Bajo',
     }
@@ -1873,19 +1866,39 @@ def produccion_detalle_op_view(request, op_id):
     return render(request, 'produccion/produccion_detalle_op.html', context)
 
 @login_required
-def reportes_produccion_view(request):
-    # if not es_admin_o_rol(request.user, ['produccion', 'administrador']):
-    #     messages.error(request, "Acceso denegado.")
-    #     return redirect('App_LUMINOVA:dashboard')
+def reportes_produccion_view(request, reporte_id=None, resolver=False):
+    # --- Lógica para resolver un reporte ---
+    if resolver and reporte_id and request.method == 'POST':
+        reporte_a_resolver = get_object_or_404(Reportes, id=reporte_id)
+        if not reporte_a_resolver.resuelto:
+            reporte_a_resolver.resuelto = True
+            reporte_a_resolver.fecha_resolucion = timezone.now()
+            reporte_a_resolver.save()
+            
+            # Cambiar estado de la OP asociada, si la tiene
+            op_asociada = reporte_a_resolver.orden_produccion_asociada
+            if op_asociada and op_asociada.estado_op and op_asociada.estado_op.nombre in ['Pausada', 'Producción con Problemas']:
+                try:
+                    # Intenta volver al estado 'En Proceso' que es lo más lógico.
+                    estado_reanudado = EstadoOrden.objects.get(nombre__iexact="En Proceso")
+                    op_asociada.estado_op = estado_reanudado
+                    op_asociada.save()
+                    messages.success(request, f"El problema del reporte {reporte_a_resolver.n_reporte} ha sido resuelto y la OP {op_asociada.numero_op} ha sido reanudada.")
+                except EstadoOrden.DoesNotExist:
+                    messages.warning(request, f"Reporte {reporte_a_resolver.n_reporte} resuelto, pero no se encontró el estado 'En Proceso' para reanudar la OP.")
+            else:
+                 messages.success(request, f"El reporte {reporte_a_resolver.n_reporte} ha sido marcado como resuelto.")
+        else:
+            messages.info(request, "Este reporte ya había sido resuelto anteriormente.")
+        return redirect('App_LUMINOVA:reportes_produccion')
 
-    lista_reportes = Reportes.objects.select_related(
-        'orden_produccion_asociada',
-        'reportado_por',
-        'sector_reporta'
-    ).order_by('-fecha')
-
+    # --- Lógica para mostrar las listas en pestañas (para peticiones GET) ---
+    reportes_abiertos = Reportes.objects.filter(resuelto=False).select_related('orden_produccion_asociada', 'reportado_por', 'sector_reporta').order_by('-fecha')
+    reportes_resueltos = Reportes.objects.filter(resuelto=True).select_related('orden_produccion_asociada', 'reportado_por', 'sector_reporta').order_by('-fecha_resolucion')
+    
     context = {
-        'reportes_list': lista_reportes,
+        'reportes_abiertos': reportes_abiertos,
+        'reportes_resueltos': reportes_resueltos,
         'titulo_seccion': 'Reportes de Producción',
     }
     return render(request, 'produccion/reportes.html', context)
@@ -2103,33 +2116,32 @@ def deposito_view(request):
 
     # --- INICIO DE LA CORRECCIÓN DE LÓGICA ---
     UMBRAL_STOCK_BAJO_INSUMOS = 15000
-    ESTADOS_OC_ACTIVAS = ['APROBADA', 'ENVIADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL']
-
-    # 1. Obtener todos los insumos con stock bajo
     insumos_con_stock_bajo = Insumo.objects.filter(stock__lt=UMBRAL_STOCK_BAJO_INSUMOS)
 
-    # 2. Separar las listas
+    # Estados que consideramos como "pedido en firme" (ya no es tarea del depósito)
+    UMBRAL_STOCK_BAJO_INSUMOS = 15000
+    insumos_con_stock_bajo = Insumo.objects.filter(stock__lt=UMBRAL_STOCK_BAJO_INSUMOS)
+
+    # Estados que consideramos como "pedido en firme" (ya no es tarea del depósito/compras iniciar)
+    ESTADOS_OC_EN_PROCESO = ['APROBADA', 'ENVIADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL']
+    
     insumos_a_gestionar = []
     insumos_en_pedido = []
 
     for insumo in insumos_con_stock_bajo:
-        # Buscar si existe una OC activa para este insumo
-        oc_activa = Orden.objects.filter(
+        # Buscamos si existe una OC que ya está aprobada y en proceso
+        oc_en_proceso = Orden.objects.filter(
             insumo_principal=insumo,
-            estado__in=ESTADOS_OC_ACTIVAS
+            estado__in=ESTADOS_OC_EN_PROCESO
         ).order_by('-fecha_creacion').first()
 
-        if oc_activa:
-            # Si hay una OC activa, va a la lista de "En Pedido"
-            insumos_en_pedido.append({
-                'insumo': insumo,
-                'oc': oc_activa
-            })
+        if oc_en_proceso:
+            # Si ya está en proceso, va a la tabla "En Pedido"
+            insumos_en_pedido.append({'insumo': insumo, 'oc': oc_en_proceso})
         else:
-            # Si NO hay OC activa, va a la lista de "A Gestionar"
-            insumos_a_gestionar.append({
-                'insumo': insumo
-            })
+            # Si no hay OC en proceso (puede no existir o estar solo en Borrador), 
+            # es una acción pendiente.
+            insumos_a_gestionar.append({'insumo': insumo})
     # --- FIN DE LA CORRECCIÓN DE LÓGICA ---
 
     context = {

@@ -334,7 +334,9 @@ class Reportes(models.Model):
     tipo_problema = models.CharField(max_length=100)
     informe_reporte = models.TextField(
         blank=True, null=True
-    )  # O descripcion_problema si lo renombraste aquí
+    )
+    resuelto = models.BooleanField(default=False, verbose_name="¿Problema Resuelto?")
+    fecha_resolucion = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Resolución")# O descripcion_problema si lo renombraste aquí
 
     # ESTOS SON LOS CAMPOS EN CUESTIÓN:
     reportado_por = models.ForeignKey(

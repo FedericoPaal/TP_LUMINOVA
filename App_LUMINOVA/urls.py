@@ -114,6 +114,7 @@ urlpatterns = [
     path('produccion/orden/<int:op_id>/solicitar-insumos/', solicitar_insumos_op_view, name='produccion_solicitar_insumos_op'),
     path('produccion/reportes/', reportes_produccion_view, name='reportes_produccion'),
     path('produccion/orden/<int:op_id>/crear-reporte/', crear_reporte_produccion_view, name='crear_reporte_produccion'),
+    path('produccion/reportes/resolver/<int:reporte_id>/', reportes_produccion_view, {'resolver': True}, name='produccion_resolver_reporte'),
 
     # --- Rutas de Depósito ---
     path('deposito/', deposito_view, name='deposito_view'),

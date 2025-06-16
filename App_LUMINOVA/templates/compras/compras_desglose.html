@@ -20,52 +20,39 @@
 {# Comprobar la lista que realmente se pasa desde la vista #}
 {% if insumos_criticos_list_con_estado %} 
 <div class="table-responsive mt-3">
-    <table class="table table-hover table-sm color-thead align-middle">
-        {# Encabezados de la tabla #}
+    <table class="table table-hover table-sm align-middle">
         <thead class="color-thead">
-            {# Encabezados de la tabla #}
             <tr>
-                <th class="color-thead" style="background-color: #014BAC;">ID</th>
                 <th class="color-thead" style="background-color: #014BAC;">Insumo</th>
                 <th class="color-thead" style="background-color: #014BAC;">Categoría</th>
-                {# La columna "Prov. Principal" se elimina ya que la selección de proveedor es el siguiente paso #}
-                {# Si aún deseas mostrar el proveedor principal (si existe en el modelo Insumo directamente), puedes añadirlo #}
-                {# <th>Prov. Principal (del Insumo)</th> #}
                 <th class="text-center color-thead" style="background-color: #014BAC;">Stock Actual</th>
                 <th class="text-center color-thead" style="background-color: #014BAC;">Acción</th>
             </tr>
         </thead>
         <tbody>
-            {# Iterar sobre la lista de diccionarios pasada por la vista #}
-            {% for item_data in insumos_criticos_list_con_estado %} 
+            {# --- INICIO DE LA CORRECCIÓN --- #}
+            {# El bucle ahora itera sobre `insumos_criticos_list_con_estado` y la variable se llama `insumo_item` #}
+            {% for insumo_item in insumos_criticos_list_con_estado %} 
             <tr>
-                <td>{{ item_data.insumo.id }}</td>
                 <td>
-                    {% if item_data.insumo.imagen %}
-                        <img src="{{ item_data.insumo.imagen.url }}" alt="{{ item_data.insumo.descripcion }}" style="width: 30px; height: 30px; object-fit: cover; border-radius: 3px; margin-right: 5px;">
+                    {% if insumo_item.imagen %}
+                        <img src="{{ insumo_item.imagen.url }}" alt="{{ insumo_item.descripcion }}" style="width: 30px; height: 30px; object-fit: cover; border-radius: 3px; margin-right: 5px;">
                     {% endif %}
-                    {{ item_data.insumo.descripcion|truncatechars:40 }}
+                    {{ insumo_item.descripcion|truncatechars:40 }}
                 </td>
-                <td>{{ item_data.insumo.categoria.nombre|default_if_none:"N/A" }}</td>
-                {# Si decidieras mostrar el proveedor principal del insumo (si el campo aún existe en el modelo Insumo): #}
-                {# <td>{{ item_data.insumo.proveedor.nombre|default_if_none:"No asignado" }}</td> #}
-                <td class="text-center fw-bold text-danger">{{ item_data.insumo.stock }}</td>
+                <td>{{ insumo_item.categoria.nombre|default_if_none:"N/A" }}</td>
+                <td class="text-center fw-bold text-danger">{{ insumo_item.stock }}</td>
                 <td class="text-center">
-                    {% if item_data.tiene_oc_pendiente %}
-                        <button class="btn btn-sm btn-secondary" disabled 
-                                title="Ya existe una Orden de Compra en proceso para este insumo. Revise el Listado de OC.">
-                            <i class="bi bi-hourglass-split"></i> OC Iniciada
-                        </button>
-                    {% else %}
-                        <a href="{% url 'App_LUMINOVA:compras_seleccionar_proveedor_para_insumo' item_data.insumo.id %}" 
-                           class="btn btn-sm btn-primary" 
-                           title="Seleccionar Proveedor para {{ item_data.insumo.descripcion }}">
-                            <i class="bi bi-people-fill"></i> Sel. Proveedor
-                        </a>
-                    {% endif %}
+                    {# La URL ahora usa `insumo_item.id`, que está garantizado que tiene un valor #}
+                    <a href="{% url 'App_LUMINOVA:compras_seleccionar_proveedor_para_insumo' insumo_item.id %}" 
+                       class="btn btn-sm btn-primary" 
+                       title="Seleccionar Proveedor para {{ insumo_item.descripcion }}">
+                        <i class="bi bi-people-fill"></i> Sel. Proveedor
+                    </a>
                 </td>
             </tr>
             {% endfor %}
+            {# --- FIN DE LA CORRECCIÓN --- #}
         </tbody>
     </table>
 </div>

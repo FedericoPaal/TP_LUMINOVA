@@ -11,7 +11,6 @@
 <table class="table table-striped">
     <thead>
         <tr>
-            <th class="align-middle color-thead">ID</th>
             <th class="align-middle color-thead">Usuario</th>
             <th class="align-middle color-thead">Acción</th>
             <th class="align-middle color-thead">Fecha y Hora</th>
@@ -20,7 +19,6 @@
     <tbody>
         {% for registro in auditorias %}
         <tr>
-            <td>{{ registro.id }}</td>
             <td>{{ registro.usuario.username }}</td>
             <td>{{ registro.accion }}</td>
             <td>{{ registro.fecha_hora }}</td>

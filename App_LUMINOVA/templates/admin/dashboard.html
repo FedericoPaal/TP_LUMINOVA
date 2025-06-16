@@ -184,8 +184,8 @@
                 
                 <div class="list-group list-group-flush">
                     {% if ops_con_problemas_count > 0 %}
-                        <a href="{% url 'App_LUMINOVA:produccion_lista_op' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0">
-                            OPs con Problemas
+                        <a href="{% url 'App_LUMINOVA:reportes_produccion' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0">
+                            OPs con Problemas Reportados
                             <span class="badge bg-danger rounded-pill">{{ ops_con_problemas_count }}</span>
                         </a>
                     {% endif %}
