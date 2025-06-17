@@ -633,11 +633,21 @@ def ventas_crear_ov_view(request):
                 else:
                     for item_ov_for_op in items_guardados_para_op:
                         try:
-                            op_count = OrdenProduccion.objects.count()
-                            next_op_number = f"OP-{str(op_count + 1).zfill(5)}"
+                            # Obtener el último número de OP existente
+                            last_op = OrdenProduccion.objects.order_by('-id').first()
+                            if last_op and last_op.numero_op:
+                                try:
+                                    last_number = int(last_op.numero_op.replace('OP-', ''))
+                                except ValueError:
+                                    last_number = OrdenProduccion.objects.count()
+                                next_op_number = f"OP-{str(last_number + 1).zfill(5)}"
+                            else:
+                                next_op_number = "OP-00001"
+
+                            # Si por alguna razón el número generado ya existe, buscar el siguiente disponible
                             while OrdenProduccion.objects.filter(numero_op=next_op_number).exists():
-                                op_count += 1
-                                next_op_number = f"OP-{str(op_count + 1).zfill(5)}"
+                                last_number += 1
+                                next_op_number = f"OP-{str(last_number + 1).zfill(5)}"
 
                             OrdenProduccion.objects.create(
                                 numero_op=next_op_number,
