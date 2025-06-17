@@ -412,11 +412,6 @@ class Orden(models.Model):
         blank=True,
         verbose_name="Insumo Principal",
     )
-    proveedor = models.ForeignKey(
-        Proveedor,
-        on_delete=models.PROTECT,
-        related_name="ordenes_de_compra_a_proveedor",
-    )
     cantidad_principal = models.PositiveIntegerField(
         null=True, blank=True, verbose_name="Cantidad Insumo Principal"
     )
