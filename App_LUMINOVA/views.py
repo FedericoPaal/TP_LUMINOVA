@@ -286,7 +286,6 @@ def auditoria_view(request):
 @login_required
 @user_passes_test(es_admin)
 @require_POST
-@csrf_exempt # Considera csrf_protect y enviar token con JS
 def crear_rol_ajax(request):
     form = RolForm(request.POST)
     if form.is_valid():
@@ -336,7 +335,6 @@ def get_rol_data_ajax(request):
 @login_required
 @user_passes_test(es_admin)
 @require_POST
-@csrf_exempt # Considera csrf_protect
 def editar_rol_ajax(request):
     rol_id = request.POST.get('rol_id') # rol_id viene del form
     try:
@@ -372,20 +370,18 @@ def editar_rol_ajax(request):
         return JsonResponse({'success': False, 'errors': form.errors})
 
 @login_required
-@require_POST # Debería ser POST para una acción de eliminación
-@csrf_exempt # Considera csrf_protect
+@require_POST
 def eliminar_rol_ajax(request):
-    import json # Para parsear el body si es JSON
+    import json
     try:
         data = json.loads(request.body)
         rol_id = data.get('rol_id')
         grupo = Group.objects.get(id=rol_id)
 
-        # Opcional: Verificar si hay usuarios en este grupo antes de eliminar
         if grupo.user_set.exists():
             return JsonResponse({'success': False, 'error': 'No se puede eliminar el rol porque tiene usuarios asignados.'}, status=400)
 
-        grupo.delete() # RolDescripcion se borrará en cascada
+        grupo.delete()
         return JsonResponse({'success': True})
     except Group.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Rol no encontrado.'}, status=404)
@@ -409,10 +405,10 @@ def get_permisos_rol_ajax(request):
         for perm in todos_los_permisos:
             permisos_data.append({
                 'id': perm.id,
-                'name': perm.name, # Nombre legible
-                'codename': perm.codename, # Codename (ej. add_user)
-                'content_type_app_label': perm.content_type.app_label, # Nombre de la app (ej. auth, App_Luminova)
-                'content_type_model': perm.content_type.model # Nombre del modelo (ej. user, insumo)
+                'name': perm.name, 
+                'codename': perm.codename,
+                'content_type_app_label': perm.content_type.app_label,
+                'content_type_model': perm.content_type.model
             })
 
         return JsonResponse({
@@ -428,7 +424,7 @@ def get_permisos_rol_ajax(request):
 @login_required
 @user_passes_test(es_admin)
 @require_POST
-@csrf_exempt # Considera csrf_protect
+
 def actualizar_permisos_rol_ajax(request):
     import json
     try:

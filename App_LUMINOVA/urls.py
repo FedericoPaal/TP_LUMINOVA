@@ -106,9 +106,8 @@ urlpatterns = [
     path('ajax/get-oferta-proveedor/', get_oferta_proveedor_ajax, name='ajax_get_oferta_proveedor'),
 
     # --- Rutas de Producción ---
-    path('produccion/', produccion_lista_op_view, name='produccion_principal'), # La lista de OPs es la vista principal
+    path('produccion/', produccion_lista_op_view, name='produccion_principal'),
     #path('produccion/vista-general/', produccion_view, name='produccion_vista_general'), # Si necesitas una página "marco" separada
-    path('produccion/ordenes/', produccion_lista_op_view, name='produccion_lista_op'), # Puede ser redundante si la de arriba ya es la lista
     path('produccion/orden/<int:op_id>/', produccion_detalle_op_view, name='produccion_detalle_op'),
     path('produccion/planificacion/', planificacion_produccion_view, name='planificacion_produccion'),
     path('produccion/orden/<int:op_id>/solicitar-insumos/', solicitar_insumos_op_view, name='produccion_solicitar_insumos_op'),

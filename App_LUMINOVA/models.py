@@ -45,7 +45,7 @@ class ProductoTerminado(models.Model):
 class CategoriaInsumo(models.Model):
     nombre = models.CharField(
         max_length=100, unique=True, verbose_name="Nombre Categoría Insumo"
-    )  # Aumentado max_length
+    ) 
     imagen = models.ImageField(upload_to="categorias_insumos/", null=True, blank=True)
 
     class Meta:
@@ -59,7 +59,7 @@ class CategoriaInsumo(models.Model):
 class Proveedor(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
     contacto = models.CharField(max_length=100, blank=True)
-    telefono = models.CharField(max_length=25, blank=True)  # Aumentado max_length
+    telefono = models.CharField(max_length=25, blank=True) 
     email = models.EmailField(blank=True, null=True)
 
     def __str__(self):
@@ -81,15 +81,11 @@ class Insumo(models.Model):
     categoria = models.ForeignKey(
         CategoriaInsumo, on_delete=models.PROTECT, related_name="insumos"
     )
-    fabricante = models.CharField(max_length=100, blank=True)
-    # ELIMINADOS: precio_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    # ELIMINADOS: tiempo_entrega = models.IntegerField(default=0, verbose_name="Tiempo Entrega (días)")
-    # ELIMINADOS: proveedor = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, blank=True, related_name="insumos_proveedor")
     fabricante = models.ForeignKey(
         Fabricante,
-        on_delete=models.SET_NULL,  # O models.PROTECT si no quieres que se borre el insumo si se borra el fabricante
+        on_delete=models.SET_NULL,  
         null=True,
-        blank=True,  # Permite insumos sin fabricante asignado o si es desconocido
+        blank=True, 
         related_name="insumos_fabricados",
     )
     imagen = models.ImageField(null=True, blank=True, upload_to="insumos/")
@@ -98,11 +94,8 @@ class Insumo(models.Model):
     default=0, 
     verbose_name="Cantidad en Pedido",
     blank=True,
-    null=True # PERMITIR NULL EN LA BASE DE DATOS
+    null=True 
 )
-    # Puedes añadir un campo para un precio de referencia o último costo si lo deseas aquí,
-    # pero el precio de compra específico vendrá de OfertaProveedor.
-    # ultimo_costo_compra = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
         return self.descripcion
@@ -125,17 +118,12 @@ class OfertaProveedor(models.Model):
     fecha_actualizacion_precio = models.DateTimeField(
         default=timezone.now, verbose_name="Última Actualización del Precio"
     )
-    # Puedes añadir más campos aquí:
-    # - codigo_producto_proveedor = models.CharField(max_length=50, blank=True, null=True)
-    # - cantidad_minima_pedido = models.PositiveIntegerField(default=1)
-    # - moneda = models.CharField(max_length=3, default='USD')
-    # - notas_oferta = models.TextField(blank=True, null=True)
 
     class Meta:
         unique_together = (
             "insumo",
             "proveedor",
-        )  # Un proveedor ofrece un insumo específico una sola vez (con un precio/plazo)
+        )
         verbose_name = "Oferta de Proveedor por Insumo"
         verbose_name_plural = "Ofertas de Proveedores por Insumos"
         ordering = ["insumo__descripcion", "proveedor__nombre"]
@@ -144,7 +132,7 @@ class OfertaProveedor(models.Model):
         return f"{self.insumo.descripcion} - {self.proveedor.nombre} (${self.precio_unitario_compra})"
 
 
-class ComponenteProducto(models.Model):  # NUEVO: Bill Of Materials (BOM)
+class ComponenteProducto(models.Model):  
     producto_terminado = models.ForeignKey(
         ProductoTerminado,
         on_delete=models.CASCADE,
@@ -152,7 +140,7 @@ class ComponenteProducto(models.Model):  # NUEVO: Bill Of Materials (BOM)
     )
     insumo = models.ForeignKey(
         Insumo, on_delete=models.PROTECT
-    )  # PROTECT para no borrar insumos si se borra el componente
+    )
     cantidad_necesaria = models.PositiveIntegerField(default=1)
 
     class Meta:
@@ -166,16 +154,16 @@ class ComponenteProducto(models.Model):  # NUEVO: Bill Of Materials (BOM)
 
 # --- MODELOS DE GESTIÓN ---
 class Cliente(models.Model):
-    nombre = models.CharField(max_length=150, unique=True)  # Aumentado max_length
+    nombre = models.CharField(max_length=150, unique=True)
     direccion = models.TextField(blank=True)
-    telefono = models.CharField(max_length=25, blank=True)  # Aumentado max_length
+    telefono = models.CharField(max_length=25, blank=True)
     email = models.EmailField(unique=True, null=True, blank=True)
 
     def __str__(self):
         return self.nombre
 
 
-class OrdenVenta(models.Model):  # NUEVO: Específico para Ventas
+class OrdenVenta(models.Model):
     ESTADO_CHOICES = [
         ("PENDIENTE", "Pendiente Confirmación"),
         ("CONFIRMADA", "Confirmada (Esperando Producción)"),
@@ -210,10 +198,10 @@ class OrdenVenta(models.Model):  # NUEVO: Específico para Ventas
             self.total_ov = nuevo_total
             self.save(
                 update_fields=["total_ov"]
-            )  # Solo guarda el campo total para evitar recursión
+            )
 
 
-class ItemOrdenVenta(models.Model):  # NUEVO: Detalle de la OV
+class ItemOrdenVenta(models.Model):
     orden_venta = models.ForeignKey(
         OrdenVenta, on_delete=models.CASCADE, related_name="items_ov"
     )
@@ -227,7 +215,6 @@ class ItemOrdenVenta(models.Model):  # NUEVO: Detalle de la OV
     def save(self, *args, **kwargs):
         self.subtotal = self.cantidad * self.precio_unitario_venta
         super().save(*args, **kwargs)
-        # La actualización del total de la OV se manejará en la vista o con una señal para evitar recursión infinita aquí.
 
     def __str__(self):
         return f"{self.cantidad} x {self.producto_terminado.descripcion} en OV {self.orden_venta.numero_ov}"
@@ -235,13 +222,10 @@ class ItemOrdenVenta(models.Model):  # NUEVO: Detalle de la OV
 
 class EstadoOrden(
     models.Model
-):  # Renombrar a EstadoOrdenProduccion o similar si es solo para OP
-    # Este modelo lo tenías, pero su nombre "EstadoOrden" es genérico.
-    # Si es específico para `OrdenProduccion`, sería mejor llamarlo `EstadoOrdenProduccion`.
-    # Por ahora lo dejo como `EstadoOrden` y asumimos que los valores que cargues serán para OP.
+):
     nombre = models.CharField(
         max_length=50, unique=True
-    )  # Ej: Pendiente, En Proceso, Terminado
+    )
 
     def __str__(self):
         return self.nombre
@@ -249,10 +233,10 @@ class EstadoOrden(
 
 class SectorAsignado(
     models.Model
-):  # También, si es para OP, `SectorProduccion` sería más claro.
+): 
     nombre = models.CharField(
         max_length=50, unique=True
-    )  # Ej: Grupo A, Taller Principal
+    )
 
     def __str__(self):
         return self.nombre
@@ -261,7 +245,7 @@ class SectorAsignado(
 class OrdenProduccion(models.Model):
     numero_op = models.CharField(
         max_length=20, unique=True, verbose_name="N° Orden de Producción"
-    )  # Cambiado de numero_orden
+    )
     orden_venta_origen = models.ForeignKey(
         OrdenVenta,
         on_delete=models.SET_NULL,
@@ -272,8 +256,8 @@ class OrdenProduccion(models.Model):
 
     producto_a_producir = models.ForeignKey(
         ProductoTerminado, on_delete=models.PROTECT, related_name="ordenes_produccion"
-    )  # Cambiado related_name
-    cantidad_a_producir = models.PositiveIntegerField()  # Cambiado de cantidad_prod
+    )
+    cantidad_a_producir = models.PositiveIntegerField() 
     estado_op = models.ForeignKey(
         EstadoOrden,
         on_delete=models.SET_NULL,
@@ -282,37 +266,30 @@ class OrdenProduccion(models.Model):
         related_name="ops_estado",
     )
 
-    # El campo 'cliente' en OrdenProduccion es redundante si ya está en OrdenVenta.
-    # Se puede acceder a través de orden_venta_origen.cliente. Lo quitamos para normalizar.
-    # cliente_op = models.CharField(max_length=100, blank=True, null=True, verbose_name="Cliente (Referencia)")
-
     estado_op = models.ForeignKey(
         EstadoOrden,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="ops_estado",
-    )  # Cambiado related_name
-    fecha_solicitud = models.DateTimeField(default=timezone.now)  # Añadido
+    ) 
+    fecha_solicitud = models.DateTimeField(default=timezone.now)
     fecha_inicio_real = models.DateTimeField(null=True, blank=True)
     fecha_inicio_planificada = models.DateField(
         null=True, blank=True
-    )  # Cambiado de fecha_inicio
+    ) 
     fecha_fin_real = models.DateTimeField(null=True, blank=True)
-    fecha_fin_planificada = models.DateField(null=True, blank=True)  # Añadido
+    fecha_fin_planificada = models.DateField(null=True, blank=True)
     sector_asignado_op = models.ForeignKey(
         SectorAsignado,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="ops_sector",
-    )  # Cambiado related_name
-    notas = models.TextField(null=True, blank=True, verbose_name="Notas")  # Añadido
+    ) 
+    notas = models.TextField(null=True, blank=True, verbose_name="Notas")
 
-    # Eliminado 'insumos_req' como ForeignKey a un solo Insumo. Se usará ComponenteProducto.
-    # Eliminado 'nombre_categoria' y 'nombre_prod' ya que se accede vía producto_a_producir.
-
-    def get_estado_op_display(self):  # Nombre del método que estás intentando llamar
+    def get_estado_op_display(self):
         if self.estado_op:
             return self.estado_op.nombre
         return "Sin Estado Asignado"
@@ -336,19 +313,19 @@ class Reportes(models.Model):
         blank=True, null=True
     )
     resuelto = models.BooleanField(default=False, verbose_name="¿Problema Resuelto?")
-    fecha_resolucion = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Resolución")# O descripcion_problema si lo renombraste aquí
+    fecha_resolucion = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Resolución")
 
     # ESTOS SON LOS CAMPOS EN CUESTIÓN:
     reportado_por = models.ForeignKey(
         User,
-        on_delete=models.SET_NULL,  # Decide qué hacer si el usuario se elimina
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="reportes_creados",
     )
     sector_reporta = models.ForeignKey(
         SectorAsignado,
-        on_delete=models.SET_NULL,  # Decide qué hacer si el sector se elimina
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="reportes_originados_aqui",
@@ -405,10 +382,9 @@ class AuditoriaAcceso(models.Model):
         return f"{user_display} - {self.accion} @ {self.fecha_hora.strftime('%Y-%m-%d %H:%M')}"
 
 
-class Orden(models.Model):  # Este será para Órdenes de Compra
+class Orden(models.Model): 
     TIPO_ORDEN_CHOICES = [
         ("compra", "Orden de Compra"),
-        # Podrías añadir otros tipos si este modelo se vuelve más genérico en el futuro
     ]
     ESTADO_ORDEN_COMPRA_CHOICES = [
         ("BORRADOR", "Borrador"),
@@ -419,7 +395,7 @@ class Orden(models.Model):  # Este será para Órdenes de Compra
         ("EN_TRANSITO", "En Tránsito"),
         ("RECIBIDA_PARCIAL", "Recibida Parcialmente"),
         ("RECIBIDA_TOTAL", "Recibida Totalmente"),
-        ("COMPLETADA", "Completada"),  # Si hay un paso post-recepción
+        ("COMPLETADA", "Completada"), 
         ("CANCELADA", "Cancelada"),
     ]
 
@@ -436,10 +412,6 @@ class Orden(models.Model):  # Este será para Órdenes de Compra
     estado = models.CharField(
         max_length=30, choices=ESTADO_ORDEN_COMPRA_CHOICES, default="BORRADOR"
     )
-
-    # Para el total de la OC, necesitaríamos items. Similar a OrdenVenta e ItemOrdenVenta.
-    # Por ahora, lo dejamos simple o asumimos un solo insumo por OC.
-    # Si es un solo insumo:
     insumo_principal = models.ForeignKey(
         Insumo,
         on_delete=models.SET_NULL,
@@ -447,7 +419,6 @@ class Orden(models.Model):  # Este será para Órdenes de Compra
         blank=True,
         verbose_name="Insumo Principal",
     )
-    # El campo 'proveedor' en Orden se refiere al proveedor AL QUE SE LE HACE LA ORDEN.
     proveedor = models.ForeignKey(
         Proveedor,
         on_delete=models.PROTECT,
@@ -476,8 +447,6 @@ class Orden(models.Model):  # Este será para Órdenes de Compra
         return f"OC: {self.numero_orden} - Proveedor: {self.proveedor.nombre}"
 
     def get_estado_display_custom(self):
-        # Esto es idéntico a get_estado_display(), pero puedes personalizarlo si es necesario.
-        # Por ejemplo, podrías añadir lógica extra aquí.
         return dict(self.ESTADO_ORDEN_COMPRA_CHOICES).get(self.estado, self.estado)
 
     def save(self, *args, **kwargs):
@@ -489,7 +458,6 @@ class Orden(models.Model):  # Este será para Órdenes de Compra
             self.total_orden_compra = (
                 self.cantidad_principal * self.precio_unitario_compra
             )
-        # Si vas a tener múltiples items, el total se calcularía iterando los items.
         super().save(*args, **kwargs)
 
 class LoteProductoTerminado(models.Model):
