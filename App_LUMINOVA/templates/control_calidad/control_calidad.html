@@ -7,7 +7,6 @@
 
 {% block sidebar_content %}
     {% include 'control_calidad/control_calidad_sidebar.html' %}
-{% load static %}
 {% endblock %}
 
 {% block content %}
@@ -25,5 +24,6 @@
         <i class="bi bi-info-circle-fill"></i>
         Bienvenido al módulo de Control de Calidad. Este Módulo se desarrollará en futuras versiones.
     </div>
+    <div><img src="{% static 'img/back_to_the_future_qc.webp' %}" alt="Control de Calidad" class="img-fluid" style="height: 500px;"></div>
 
 {% endblock %}
