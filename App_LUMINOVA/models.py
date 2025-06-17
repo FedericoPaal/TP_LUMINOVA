@@ -266,13 +266,6 @@ class OrdenProduccion(models.Model):
         related_name="ops_estado",
     )
 
-    estado_op = models.ForeignKey(
-        EstadoOrden,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="ops_estado",
-    ) 
     fecha_solicitud = models.DateTimeField(default=timezone.now)
     fecha_inicio_real = models.DateTimeField(null=True, blank=True)
     fecha_inicio_planificada = models.DateField(
