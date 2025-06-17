@@ -413,17 +413,13 @@ class ReporteProduccionForm(forms.ModelForm):
 
     class Meta:
         model = Reportes
-        # USA EL NOMBRE CORRECTO DEL CAMPO DEL MODELO AQUÍ:
-        fields = ['tipo_problema', 'informe_reporte', 'sector_reporta'] # Cambiado 'descripcion_problema' a 'informe_reporte'
+        fields = ['tipo_problema', 'informe_reporte', 'sector_reporta'] 
         widgets = {
-            # Y AQUÍ TAMBIÉN:
             'informe_reporte': forms.Textarea(attrs={'class': 'form-control', 'rows': 5, 'placeholder': 'Describa detalladamente el problema...'}),
         }
         labels = {
             'tipo_problema': 'Tipo de Problema Reportado',
-            # Y AQUÍ:
             'informe_reporte': 'Descripción Detallada del Problema',
-            # 'sector_reporta' ya está definido arriba
         }
 
     def __init__(self, *args, **kwargs):
