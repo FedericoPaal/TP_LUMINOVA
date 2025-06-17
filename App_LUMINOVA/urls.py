@@ -108,6 +108,7 @@ urlpatterns = [
     # --- Rutas de Producción ---
     path('produccion/', produccion_lista_op_view, name='produccion_principal'),
     #path('produccion/vista-general/', produccion_view, name='produccion_vista_general'), # Si necesitas una página "marco" separada
+    path('produccion/lista-op/', produccion_lista_op_view, name='produccion_lista_op'),
     path('produccion/orden/<int:op_id>/', produccion_detalle_op_view, name='produccion_detalle_op'),
     path('produccion/planificacion/', planificacion_produccion_view, name='planificacion_produccion'),
     path('produccion/orden/<int:op_id>/solicitar-insumos/', solicitar_insumos_op_view, name='produccion_solicitar_insumos_op'),
