@@ -130,16 +130,16 @@
                 <h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Stock Crítico</h5>
                 <p class="card-text small text-muted">Stock < {{ umbral_stock_bajo|intcomma }}</p>
                 <ul class="list-group list-group-flush">
-                    {% for item in insumos_criticos_list %}
+                    {% for item_data in insumos_criticos_list %}
                     <li class="list-group-item px-0 py-2">
-                        <a href="{% url 'App_LUMINOVA:compras_seleccionar_proveedor_para_insumo' item.insumo.id %}" class="text-decoration-none d-block" title="Iniciar compra para {{ item.insumo.descripcion }}">
+                        <a href="{% url 'App_LUMINOVA:compras_seleccionar_proveedor_para_insumo' item_data.insumo.id %}" class="text-decoration-none d-block" title="Iniciar compra para {{ item.insumo.descripcion }}">
                             <div class="d-flex justify-content-between">
-                                <span>{{ item.insumo.descripcion|truncatechars:25 }}</span>
-                                <span class="fw-bold text-danger">{{ item.insumo.stock|intcomma }}</span>
+                                <span>{{ item_data.insumo.descripcion|truncatechars:25 }}</span>
+                                <span class="fw-bold text-danger">{{ item_data.insumo.stock|intcomma }}</span>
                             </div>
                             <div class="stock-progress-bar mt-1">
                                 {# --- CORRECCIÓN FINAL PARA LA BARRA DE PROGRESO --- #}
-                                <div class="stock-progress" style="--stock-percent: {{ item.porcentaje_stock }}%;"></div>
+                                <div class="stock-progress" style="--stock-percent: {{ item_data.porcentaje_stock }}%;"></div>
                             </div>
                         </a>
                     </li>
