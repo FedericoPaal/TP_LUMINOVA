@@ -1,3 +1,4 @@
+{# App_LUMINOVA/templates/ventas/ventas_clientes.html #}
 {% extends 'padre.html' %}
 {% load static %}
 {% load django_bootstrap5 %}
@@ -17,8 +18,6 @@
         </button>
     </div>
 </div>
-
-
 
 <div class="table-responsive">
     <table class="table table-striped table-hover">
@@ -67,7 +66,6 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    {% comment %} El 'cliente_form' aquí es la instancia vacía pasada desde la vista lista_clientes_view {% endcomment %}
                     {% bootstrap_form cliente_form_crear layout='vertical' %}
                 </div>
                 <div class="modal-footer">
@@ -81,10 +79,9 @@
 
 <!-- Modales Editar Cliente -->
 {% for cliente_obj in clientes_list %}
-<div class="modal fade" id="editarClienteModal{{ cliente_obj.id }}" ...>
+<div class="modal fade" id="editarClienteModal{{ cliente_obj.id }}" tabindex="-1" aria-labelledby="editarClienteModalLabel{{ cliente_obj.id }}" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            {% with form_edit=ClienteFormClass instance=cliente_obj %} {# <--- USA LA CLASE DEL CONTEXTO #}
             <form method="post" action="{% url 'App_LUMINOVA:editar_cliente' cliente_obj.id %}" novalidate>
                 {% csrf_token %}
                 <div class="modal-header">
@@ -92,21 +89,33 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    {% bootstrap_form form_edit layout='vertical' %}
+                    <div class="mb-3">
+                        <label for="nombre-{{ cliente_obj.id }}" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" name="nombre" id="nombre-{{ cliente_obj.id }}" value="{{ cliente_obj.nombre }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="direccion-{{ cliente_obj.id }}" class="form-label">Dirección</label>
+                        <textarea class="form-control" name="direccion" id="direccion-{{ cliente_obj.id }}" rows="2">{{ cliente_obj.direccion }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="telefono-{{ cliente_obj.id }}" class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" name="telefono" id="telefono-{{ cliente_obj.id }}" value="{{ cliente_obj.telefono }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="email-{{ cliente_obj.id }}" class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" id="email-{{ cliente_obj.id }}" value="{{ cliente_obj.email }}">
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar Cambios</button>
                 </div>
             </form>
-            {% endwith %}
         </div>
     </div>
 </div>
-{% endfor %}
 
-<!-- Modal Eliminar Cliente (sin cambios) -->
-{% for cliente_obj in clientes_list %}
+<!-- Modal Eliminar Cliente -->
 <div class="modal fade" id="eliminarClienteModal{{ cliente_obj.id }}" tabindex="-1" aria-labelledby="eliminarClienteModalLabel{{ cliente_obj.id }}" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
