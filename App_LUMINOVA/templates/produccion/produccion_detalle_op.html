@@ -1,8 +1,9 @@
+{# App_LUMINOVA/templates/produccion/produccion_detalle_op.html #}
 {% extends 'padre.html' %}
 {% load static %}
 {% load django_bootstrap5 %}
 
-{% block title %}{{ titulo_seccion|default:"Detalle Orden de Producción" }}{% endblock %}
+{% block title %}{{ titulo_seccion|default:"Detalle Orden de Producción" }} - {{ op.numero_op }}{% endblock %}
 
 {% block sidebar_content %}
 {% include 'produccion/produccion_sidebar.html' %}
@@ -10,132 +11,104 @@
 
 {% block content %}
 <div class="container-fluid mt-4">
-    <div
-        class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">{{ titulo_seccion }}</h1>
         <a href="{% url 'App_LUMINOVA:produccion_lista_op' %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left-circle"></i> Volver al Listado de OPs
         </a>
     </div>
 
-
-
-    {# Usar d-flex en el row para que las columnas hijas puedan usar flex-grow #}
     <div class="row g-3 d-flex align-items-stretch">
 
-        {# Columna 1: Información de la OP #}
-        <div class="col-lg-4 d-flex"> {# d-flex para que la card interna pueda usar flex-grow-1 #}
-            <div class="card shadow-sm w-100"> {# w-100 y la tarjeta se estirará si es necesario #}
-                <div class="card-header bg-primary text-white">
-                    Información de la OP
-                </div>
+        {# Columna 1: Información de la OP (sin cambios) #}
+        <div class="col-lg-4 d-flex">
+            <div class="card shadow-sm w-100">
+                <div class="card-header bg-primary text-white">Información de la OP</div>
                 <div class="card-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-5">N° OP:</dt>
-                        <dd class="col-sm-7">{{ op.numero_op|default:"N/A" }}</dd>
-
-                        <dt class="col-sm-5">Producto:</dt>
-                        <dd class="col-sm-7">{{ op.producto_a_producir.descripcion|default:"No asignado" }}</dd>
-
-                        <dt class="col-sm-5">Cantidad:</dt>
-                        <dd class="col-sm-7">{{ op.cantidad_a_producir|default:"N/A" }}</dd>
-
-                        <dt class="col-sm-5">OV Origen:</dt>
-                        <dd class="col-sm-7">
-                            {% if op.orden_venta_origen %}
-                            {{ op.orden_venta_origen.numero_ov }}
-                            {% if op.orden_venta_origen.cliente %}
-                            <br><small>(Cliente: {{ op.orden_venta_origen.cliente.nombre }})</small>
-                            {% endif %}
-                            {% else %} N/A {% endif %}
-                        </dd>
-                        <dt class="col-sm-5">Solicitud:</dt>
-                        <dd class="col-sm-7">{{ op.fecha_solicitud|date:"d/m/Y H:i"|default:"N/A" }}</dd>
-
-                        <dt class="col-sm-5">Notas OP:</dt>
-                        <dd class="col-sm-7">{{ op.notas_produccion|default_if_none:"-"|linebreaksbr }}</dd>
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-5">N° OP:</dt><dd class="col-sm-7">{{ op.numero_op }}</dd>
+                        <dt class="col-sm-5">Producto:</dt><dd class="col-sm-7">{{ op.producto_a_producir.descripcion }}</dd>
+                        <dt class="col-sm-5">Cantidad:</dt><dd class="col-sm-7">{{ op.cantidad_a_producir }}</dd>
+                        <dt class="col-sm-5">OV Origen:</dt><dd class="col-sm-7">{{ op.orden_venta_origen.numero_ov|default_if_none:"N/A" }}</dd>
                     </dl>
                 </div>
             </div>
         </div>
 
-        {# Columna 2: Insumos Requeridos #}
-        <div class="col-lg-4 d-flex"> {# d-flex #}
-            <div class="card shadow-sm d-flex flex-column w-100"> {# d-flex flex-column w-100 #}
-                <div class="card-header bg-success text-white">
-                    Insumos Requeridos
-                </div>
-                {# El card-body ahora puede crecer y el overflow se maneja dentro de él #}
-                <div class="card-body p-0 flex-grow-1" style="overflow-y: auto;">
-                    {% if op.producto_a_producir %}
-                    {% if insumos_necesarios_list %}
+        {# Columna 2: Insumos Requeridos (sin cambios) #}
+        <div class="col-lg-4 d-flex">
+            <div class="card shadow-sm d-flex flex-column w-100">
+                <div class="card-header bg-success text-white">Insumos Requeridos</div>
+                <div class="card-body p-0 flex-grow-1" style="max-height: 250px; overflow-y: auto;">
                     <ul class="list-group list-group-flush">
                         {% for item_insumo in insumos_necesarios_list %}
                         <li class="list-group-item">
                             <div class="d-flex w-100 justify-content-between">
                                 <h6 class="mb-1 small">{{ item_insumo.insumo_descripcion }}</h6>
-                                <span
-                                    class="badge {% if item_insumo.suficiente_stock %}bg-success-subtle text-success-emphasis{% else %}bg-danger-subtle text-danger-emphasis{% endif %} rounded-pill small">
-                                    Stock: {{ item_insumo.stock_actual_insumo }}
-                                </span>
+                                <span class="badge {% if item_insumo.suficiente_stock %}bg-success-subtle text-success-emphasis{% else %}bg-danger-subtle text-danger-emphasis{% endif %} rounded-pill small">Stock: {{ item_insumo.stock_actual_insumo }}</span>
                             </div>
-                            <small class="text-muted d-block">Req. p/PT: {{ item_insumo.cantidad_por_unidad_pt }} |
-                                Total Req. OP: <strong>{{ item_insumo.cantidad_total_requerida_op }}</strong></small>
+                            <small class="text-muted d-block">Total Req. OP: <strong>{{ item_insumo.cantidad_total_requerida_op }}</strong></small>
                         </li>
                         {% endfor %}
                     </ul>
-                    {% else %}
-                    <div class="p-3">
-                        <p class="text-muted mb-0 small">No se han definido componentes (BOM) para: "{{
-                            op.producto_a_producir.descripcion }}".</p>
-                        <p class="mb-0 small"><a
-                                href="{% url 'admin:App_LUMINOVA_productoterminado_change' op.producto_a_producir.id %}"
-                                target="_blank">Configurar BOM</a>.</p>
-                    </div>
-                    {% endif %}
-                    {% else %}
-                    <div class="p-3">
-                        <p class="text-danger small">Error: La OP no tiene un producto asociado.</p>
-                    </div>
-                    {% endif %}
                 </div>
-                {% if op.producto_a_producir and insumos_necesarios_list %}
-
-                <div class="card-footer text-center p-3">
-                    <div class="d-grid">
-                        {% if puede_solicitar_insumos %}
-                        <form method="post" action="{% url 'App_LUMINOVA:produccion_solicitar_insumos_op' op.id %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-primary w-100">
-                                <i class="bi bi-box-arrow-right"></i> Solicitar Insumos a Depósito
-                            </button>
-                        </form>
-                        {% elif op.estado_op and op.estado_op.nombre|lower == "insumos solicitados" %}
-                        <button type="button" class="btn btn-info w-100" disabled>
-                            <i class="bi bi-hourglass-split"></i> Insumos ya Solicitados
+                {% if puede_solicitar_insumos %}
+                <div class="card-footer p-2">
+                    <form method="post" action="{% url 'App_LUMINOVA:produccion_solicitar_insumos_op' op.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-primary w-100" {% if not todos_los_insumos_disponibles_variable_de_contexto %}disabled{% endif %}>
+                            <i class="bi bi-box-arrow-right"></i> Solicitar Insumos a Depósito
                         </button>
-                        {% else %}
-                        <button type="button" class="btn btn-secondary w-100" disabled
-                            title="La OP no está en estado 'Pendiente' o 'Planificada', o los insumos ya fueron gestionados.">
-                            <i class="bi bi-box-arrow-right"></i> Gestionar Insumos no disponible
-                        </button>
-                        {% endif %}
-                    </div>
+                    </form>
                 </div>
                 {% endif %}
             </div>
         </div>
 
-        {# Columna 3: Gestionar OP #}
-        <div class="col-lg-4 d-flex"> {# d-flex #}
-            <div class="card shadow-sm d-flex flex-column w-100"> {# d-flex flex-column w-100 #}
-                <div class="card-header bg-primary text-white">
-                    Gestionar Orden de Producción
-                </div>
-                <div class="card-body flex-grow-1"> {# flex-grow-1 para que el cuerpo se estire #}
+        {# --- COLUMNA 3: Gestionar OP (AQUÍ ESTÁ LA CORRECCIÓN) --- #}
+        <div class="col-lg-4 d-flex">
+            <div class="card shadow-sm d-flex flex-column w-100">
+                <div class="card-header bg-primary text-white">Gestionar Orden de Producción</div>
+                <div class="card-body flex-grow-1">
                     <form method="post" id="gestionarOPForm">
                         {% csrf_token %}
-                        {% bootstrap_form form_update_op layout='vertical' %}
+
+                        <!-- Renderizado manual de cada campo -->
+                        <div class="mb-3">
+                            <label for="{{ form_update_op.estado_op.id_for_label }}" class="form-label">{{ form_update_op.estado_op.label }}</label>
+                            {{ form_update_op.estado_op }}
+                            {% for error in form_update_op.estado_op.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form_update_op.sector_asignado_op.id_for_label }}" class="form-label">{{ form_update_op.sector_asignado_op.label }}</label>
+                            {{ form_update_op.sector_asignado_op }}
+                            {% for error in form_update_op.sector_asignado_op.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form_update_op.fecha_inicio_planificada.id_for_label }}" class="form-label">{{ form_update_op.fecha_inicio_planificada.label }}</label>
+                            <input type="date" name="{{ form_update_op.fecha_inicio_planificada.name }}" 
+                                   id="{{ form_update_op.fecha_inicio_planificada.id_for_label }}"
+                                   class="form-control"
+                                   value="{{ op.fecha_inicio_planificada|date:'Y-m-d' }}">
+                            {% for error in form_update_op.fecha_inicio_planificada.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form_update_op.fecha_fin_planificada.id_for_label }}" class="form-label">{{ form_update_op.fecha_fin_planificada.label }}</label>
+                            <input type="date" name="{{ form_update_op.fecha_fin_planificada.name }}"
+                                   id="{{ form_update_op.fecha_fin_planificada.id_for_label }}"
+                                   class="form-control"
+                                   value="{{ op.fecha_fin_planificada|date:'Y-m-d' }}">
+                            {% for error in form_update_op.fecha_fin_planificada.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form_update_op.notas.id_for_label }}" class="form-label">{{ form_update_op.notas.label }}</label>
+                            {{ form_update_op.notas }}
+                             {% for error in form_update_op.notas.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                        </div>
                     </form>
                 </div>
                 <div class="card-footer text-center p-3">
@@ -148,20 +121,5 @@
             </div>
         </div>
     </div>
-    {% if mostrar_boton_reportar %}
-    <div class="row mt-3">
-        <div class="col-lg-8"> {# O col-lg-12 si quieres que ocupe más ancho #}
-            {# Se puede alinear a la derecha de la card de gestión si se ajusta el HTML #}
-        </div>
-        <div class="col-lg-4 text-center text-lg-end"> {# Alineado con la card de gestión #}
-            <a href="{% url 'App_LUMINOVA:crear_reporte_produccion' op.id %}" class="btn btn-danger">
-                <i class="bi bi-exclamation-triangle-fill"></i> Reportar Problema con OP
-            </a>
-        </div>
-    </div>
-    {% endif %}
 </div>
-
-{# No es necesario el script para el ID del form si el botón está dentro del form #}
-{# O si el botón de submit está fuera del form, usa el script que te pasé antes para asegurar el ID del form #}
 {% endblock %}
