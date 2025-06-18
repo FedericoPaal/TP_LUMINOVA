@@ -14,7 +14,7 @@ from django.db.models import ProtectedError, Q, F, Prefetch, Sum, Exists, OuterR
 # Django Contrib Imports
 from django.contrib.auth.models import User, Group, Permission
 from django.contrib.auth.decorators import user_passes_test, login_required
-from django.contrib.auth import authenticate, login, logout as auth_logout
+from django.contrib.auth import authenticate, login, logout as auth_logout_function
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.forms import PasswordChangeForm
@@ -43,6 +43,7 @@ from .forms import (
     FacturaForm, OrdenCompraForm, RolForm, PermisosRolForm, ClienteForm, ProveedorForm,
     OrdenVentaForm, ItemOrdenVentaFormSet, OrdenProduccionUpdateForm, ReporteProduccionForm, ItemOrdenVentaFormSet, ItemOrdenVentaFormSetCreacion,
 )
+from .signals import get_client_ip
 
 logger = logging.getLogger(__name__)
 
@@ -65,21 +66,66 @@ def inicio(request): # Esta vista es la que se muestra si el usuario no está au
 
 def login_view(request):
     if request.user.is_authenticated:
-        return redirect('App_LUMINOVA:admin/dashboard')
+        return redirect('App_LUMINOVA:dashboard') # Redirige si ya está logueado
 
     if request.method == 'POST':
+        # Obtener los datos del formulario de login
+        username_from_form = request.POST.get('username')
+        password_from_form = request.POST.get('password')
+        
+        # Autenticar al usuario
         user = authenticate(
             request,
-            username=request.POST.get('username'),
-            password=request.POST.get('password'),
+            username=username_from_form,
+            password=password_from_form,
         )
-        if user:
+
+        if user is not None:
+            # Si la autenticación es exitosa, iniciar la sesión
             login(request, user)
-            return redirect('App_LUMINOVA:admin/dashboard')
+            
+            # --- LÓGICA CLAVE DE AUDITORÍA ---
+            # Ahora que el usuario está logueado y tenemos el 'request' completo,
+            # registramos el evento.
+            AuditoriaAcceso.objects.create(
+                usuario=user,
+                accion="Inicio de sesión",
+                ip_address=get_client_ip(request), # Obtendrá la IP
+                user_agent=request.META.get('HTTP_USER_AGENT', '') # Obtendrá el navegador
+            )
+            
+            # Redirigir al dashboard (o a la página de cambio de contraseña si es necesario, el middleware se encargará)
+            return redirect('App_LUMINOVA:dashboard')
         else:
+            # Si las credenciales son inválidas, mostrar un error
             messages.error(request, 'Usuario o contraseña incorrectos.')
-    # El template 'login.html' está en App_LUMINOVA/templates/login.html
+    
+    # Si es una petición GET, simplemente mostrar la página de login
     return render(request, 'login.html')
+
+
+def custom_logout_view(request):
+    """
+    Gestiona el cierre de sesión y registra el evento en la auditoría ANTES de desloguear.
+    """
+    user = request.user
+    
+    # Registrar el evento de cierre de sesión con toda la información disponible
+    AuditoriaAcceso.objects.create(
+        usuario=user,
+        accion="Cierre de sesión",
+        ip_address=get_client_ip(request),
+        user_agent=request.META.get('HTTP_USER_AGENT', '')
+    )
+    
+    # Llamar a la función de logout de Django para limpiar la sesión
+    auth_logout_function(request)
+    
+    # Opcional: mostrar un mensaje de que cerró sesión correctamente
+    messages.info(request, "Has cerrado sesión exitosamente.")
+    
+    # Redirigir a la página de login
+    return redirect('App_LUMINOVA:login')
 
 @login_required
 def dashboard_view(request):
@@ -309,8 +355,14 @@ def roles_permisos_view(request):
 @login_required
 def auditoria_view(request):
     auditorias = AuditoriaAcceso.objects.select_related('usuario').order_by('-fecha_hora')
+    
+    from django.core.paginator import Paginator
+    paginator = Paginator(auditorias, 25) # 25 registros por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
     context = {
-        'auditorias': auditorias,
+        'auditorias': auditorias, # O 'page_obj': page_obj si usas paginación
         'titulo_seccion': "Auditoría de Acceso"
     }
     return render(request, 'admin/auditoria.html', context)

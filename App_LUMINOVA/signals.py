@@ -1,16 +1,25 @@
 # TP_LUMINOVA-main/App_LUMINOVA/signals.py
 
-from django.contrib.auth.signals import user_logged_in
+from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from .models import AuditoriaAcceso, HistorialOV, OrdenProduccion, OrdenVenta, Reportes
 
-@receiver(user_logged_in)
-def registrar_acceso(sender, user, request, **kwargs):
-    AuditoriaAcceso.objects.create(
-        usuario=user,
-        accion="Inicio de sesión"
-    )
+def get_client_ip(request):
+    """Obtiene la IP real del cliente, incluso si está detrás de un proxy."""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+# @receiver(user_logged_in)
+# def registrar_acceso(sender, user, request, **kwargs):
+#     AuditoriaAcceso.objects.create(
+#         usuario=user,
+#         accion="Inicio de sesión"
+#     )
 
 # Signal to log the creation of an OV.
 @receiver(post_save, sender=OrdenVenta)

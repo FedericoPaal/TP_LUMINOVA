@@ -1,33 +1,89 @@
 {% extends "padre.html" %}
+{% load humanize %}
 
 {% block title %}Auditoría de Accesos{% endblock %}
 
+{% block head_extra %}
+<style>
+    .icon-success {
+        color: var(--bs-success);
+    }
+    .icon-danger {
+        color: var(--bs-danger);
+    }
+    .user-agent-text {
+        font-size: 0.8em;
+        color: #6c757d;
+        cursor: help;
+    }
+</style>
+{% endblock %}
+
+
 {% block content %}
-<h1 class="text-center">Auditoría de Accesos</h1>
+<h1 class="h2 text-center mb-3">Auditoría de Accesos</h1>
 <div class="alert alert-info text-center" role="alert">
-    <p>Esta sección muestra los registros de auditoría de accesos al sistema.</p>
+    <p class="mb-0">Esta sección muestra los registros de auditoría de inicio y cierre de sesión en el sistema.</p>
 </div>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th class="align-middle color-thead">Usuario</th>
-            <th class="align-middle color-thead">Acción</th>
-            <th class="align-middle color-thead">Fecha y Hora</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for registro in auditorias %}
-        <tr>
-            <td>{{ registro.usuario.username }}</td>
-            <td>{{ registro.accion }}</td>
-            <td>{{ registro.fecha_hora }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="4" class="text-center">No hay registros de auditoría.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="color-thead">
+            <tr>
+                <th style="width: 5%;"></th>
+                <th style="background-color: #014BAC; color: white;">Usuario</th>
+                <th style="background-color: #014BAC; color: white;">Acción</th>
+                <th style="background-color: #014BAC; color: white;">Fecha y Hora</th>
+                <th style="background-color: #014BAC; color: white;">Dirección IP</th>
+                <th style="background-color: #014BAC; color: white;">Dispositivo/Navegador</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for registro in auditorias %}
+            <tr class="{% if registro.accion == 'Cierre de sesión' %}table-secondary opacity-75{% endif %}">
+                <td class="text-center">
+                    {% if registro.accion == 'Inicio de sesión' %}
+                        <i class="bi bi-box-arrow-in-right fs-4 icon-success" title="Inicio de sesión"></i>
+                    {% else %}
+                        <i class="bi bi-box-arrow-left fs-4 icon-danger" title="Cierre de sesión"></i>
+                    {% endif %}
+                </td>
+                <td><strong>{{ registro.usuario.username|default:"Usuario eliminado" }}</strong></td>
+                <td>{{ registro.accion }}</td>
+                <td>{{ registro.fecha_hora|naturaltime }} <br><small class="text-muted">{{ registro.fecha_hora|date:"d/m/Y H:i:s" }}</small></td>
+                <td>{{ registro.ip_address|default:"No registrada" }}</td>
+                <td>
+                    {% if registro.user_agent %}
+                    <span class="user-agent-text" title="{{ registro.user_agent }}">
+                        {{ registro.user_agent|truncatechars:50 }}
+                    </span>
+                    {% else %}
+                    <span class="text-muted">No registrado</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center p-4">No hay registros de auditoría.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<nav aria-label="Navegación de auditoría">
+    <ul class="pagination justify-content-center">
+        {% if auditorias.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page=1">« Primera</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ auditorias.previous_page_number }}">Anterior</a></li>
+        {% endif %}
+
+        <li class="page-item disabled"><span class="page-link">Página {{ auditorias.number }} de {{ auditorias.paginator.num_pages }}</span></li>
+
+        {% if auditorias.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ auditorias.next_page_number }}">Siguiente</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ auditorias.paginator.num_pages }}">Última »</a></li>
+        {% endif %}
+    </ul>
+</nav> 
 {% endblock %}
