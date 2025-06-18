@@ -4,11 +4,11 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 from .views import (
     # Vistas Principales y Autenticación
-    inicio, login_view, dashboard_view, # Asumiendo que login_view es tu vista personalizada
+    inicio, login_view, dashboard_view, 
 
     # Admin
     roles_permisos_view, auditoria_view,
-    lista_usuarios, crear_usuario, editar_usuario, eliminar_usuario, solicitar_insumos_op_view, ventas_cancelar_ov_view, ventas_detalle_ov_view, ventas_editar_ov_view, ventas_generar_factura_view,
+    lista_usuarios, crear_usuario, editar_usuario, eliminar_usuario, solicitar_insumos_op_view, ventas_cancelar_ov_view, ventas_detalle_ov_view, ventas_editar_ov_view, ventas_generar_factura_view, change_password_view,
 
     # Ventas
     ventas_lista_ov_view, ventas_crear_ov_view,
@@ -63,7 +63,7 @@ urlpatterns = [
     # --- Rutas Principales y Autenticación ---
     path("", inicio, name="inicio"),
     path('login/', auth_views.LoginView.as_view(template_name='login.html', next_page='App_LUMINOVA:dashboard'), name='login'),
-    # path('login/', login_view, name='login'), # Descomenta si usas tu vista login_view personalizada
+    path('change-password/', change_password_view, name='change_password'),
     path('logout/', auth_views.LogoutView.as_view(next_page='App_LUMINOVA:login'), name='logout'),
     path('dashboard/', dashboard_view, name='dashboard'),
 

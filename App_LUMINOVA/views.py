@@ -17,6 +17,8 @@ from django.contrib.auth.decorators import user_passes_test, login_required
 from django.contrib.auth import authenticate, login, logout as auth_logout
 from django.contrib import messages
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
 
 # ReportLab (Third-party for PDF generation)
 from reportlab.pdfgen import canvas
@@ -26,9 +28,11 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, Table, TableStyle, Spacer
 from reportlab.lib import colors
 
+from Proyecto_LUMINOVA import settings
+
 # Local Application Imports (Models)
 from .models import (
-    AuditoriaAcceso, CategoriaProductoTerminado, HistorialOV, LoteProductoTerminado, OfertaProveedor, ProductoTerminado,
+    AuditoriaAcceso, CategoriaProductoTerminado, HistorialOV, LoteProductoTerminado, OfertaProveedor, PasswordChangeRequired, ProductoTerminado,
     CategoriaInsumo, Insumo, ComponenteProducto, Proveedor, Cliente, Orden,
     OrdenVenta, ItemOrdenVenta, EstadoOrden, SectorAsignado, OrdenProduccion,
     Reportes, Factura, RolDescripcion, Fabricante,
@@ -159,21 +163,23 @@ def crear_usuario(request):
         email = request.POST.get('email')
         rol_name = request.POST.get('rol')
         estado_str = request.POST.get('estado')
-        password = request.POST.get('password', 'temporal')
+        
+        # --- Se utiliza la contraseña por defecto definida en settings.py ---
+        password = settings.DEFAULT_PASSWORD_FOR_NEW_USERS
 
-        errors = {}
-        if not username: errors['username'] = 'Este campo es requerido.'
-        if User.objects.filter(username=username).exists(): errors['username'] = 'Este nombre de usuario ya existe.'
-        if not email: errors['email'] = 'Este campo es requerido.'
-        if errors:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'errors': errors})
-            else:
-                for field, error_list in errors.items():
-                    for err in error_list if isinstance(error_list, list) else [error_list]:
-                         messages.error(request, f"Error en {field}: {err}")
-                return redirect('App_LUMINOVA:lista_usuarios')
+        # --- Validaciones básicas ---
+        if User.objects.filter(username=username).exists():
+            messages.error(request, f"El nombre de usuario '{username}' ya está en uso.")
+            return redirect('App_LUMINOVA:lista_usuarios')
+        
+        if not username or not email or not rol_name or not estado_str:
+            messages.error(request, "Todos los campos son obligatorios.")
+            return redirect('App_LUMINOVA:lista_usuarios')
+
         try:
+            # La creación del usuario y la asignación de grupo ocurren dentro de una transacción
+            # para asegurar que todo se complete correctamente o no se haga nada.
+            
             user = User.objects.create_user(
                 username=username,
                 email=email,
@@ -181,42 +187,69 @@ def crear_usuario(request):
             )
             user.is_active = (estado_str == 'Activo')
 
-            if rol_name:
-                try:
-                    group = Group.objects.get(name=rol_name)
-                    user.groups.add(group)
-                except Group.DoesNotExist:
-                    user.delete()
-                    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                        return JsonResponse({'success': False, 'errors': {'rol': [f"El rol '{rol_name}' no existe."]}})
-                    else:
-                        messages.error(request, f"El rol '{rol_name}' no existe.")
-                        return redirect('App_LUMINOVA:lista_usuarios')
+            # Asignar el rol (grupo)
+            try:
+                group = Group.objects.get(name=rol_name)
+                user.groups.add(group)
+            except Group.DoesNotExist:
+                # Si el grupo no existe, la transacción hará rollback y el usuario no se creará.
+                messages.error(request, f"El rol '{rol_name}' no existe. No se pudo crear el usuario.")
+                raise Exception("Rol no existente") # Forzar rollback de la transacción
 
             user.save()
 
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'user': {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'rol': rol_name if rol_name else "Sin Rol",
-                        'estado': "Activo" if user.is_active else "Inactivo"
-                    }
-                })
-            else:
-                messages.success(request, f"Usuario '{user.username}' creado exitosamente.")
-                return redirect('App_LUMINOVA:lista_usuarios')
+            # --- Marcar al usuario para que cambie su contraseña en el primer login ---
+            PasswordChangeRequired.objects.create(user=user)
 
+            messages.success(request, f"Usuario '{user.username}' creado exitosamente. La contraseña por defecto es: '{password}'")
+
+        except DjangoIntegrityError as e:
+            # Captura errores de unicidad (por ejemplo, email duplicado si es unique)
+            messages.error(request, f"Error de integridad al crear el usuario. Es posible que el email ya esté en uso. Detalle: {e}")
         except Exception as e:
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'errors': {'__all__': [str(e)]}})
-            else:
-                messages.error(request, f"Error al crear usuario: {str(e)}")
-                return redirect('App_LUMINOVA:lista_usuarios')
+            # Captura cualquier otro error, como el de "Rol no existente"
+            if "Rol no existente" not in str(e):
+                messages.error(request, f"Error inesperado al crear usuario: {e}")
+    
+    # Redirige a la lista de usuarios en cualquier caso (éxito, error, o si no es POST)
     return redirect('App_LUMINOVA:lista_usuarios')
+
+@login_required
+def change_password_view(request):
+    """
+    Vista para que el usuario cambie su contraseña.
+    Es forzado por el middleware si es su primer login.
+    """
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            
+            PasswordChangeRequired.objects.filter(user=request.user).delete()
+
+            messages.success(request, '¡Tu contraseña ha sido actualizada exitosamente! Ya puedes navegar por el sitio.')
+            return redirect('App_LUMINOVA:dashboard')
+        else:
+            # --- CAMBIO AQUÍ: También modificar el form con errores ---
+            form.fields['old_password'].widget.attrs['autocomplete'] = 'current-password'
+            form.fields['new_password1'].widget.attrs['autocomplete'] = 'new-password'
+            form.fields['new_password2'].widget.attrs['autocomplete'] = 'new-password'
+            messages.error(request, 'Por favor, corrige los errores a continuación.')
+    else:
+        if not PasswordChangeRequired.objects.filter(user=request.user).exists():
+             return redirect('App_LUMINOVA:dashboard')
+        
+        form = PasswordChangeForm(request.user)
+        # --- CAMBIO AQUÍ: Modificar el form antes de renderizarlo ---
+        form.fields['old_password'].widget.attrs['autocomplete'] = 'current-password'
+        form.fields['new_password1'].widget.attrs['autocomplete'] = 'new-password'
+        form.fields['new_password2'].widget.attrs['autocomplete'] = 'new-password'
+
+    context = {
+        'form': form
+    }
+    return render(request, 'change_password.html', context)
 
 @login_required
 @user_passes_test(es_admin)

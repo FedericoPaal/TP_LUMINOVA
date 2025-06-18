@@ -472,3 +472,15 @@ class HistorialOV(models.Model):
 
     def __str__(self):
         return f"{self.fecha_evento.strftime('%d/%m/%Y %H:%M')} - {self.orden_venta.numero_ov}: {self.descripcion}"
+
+
+class PasswordChangeRequired(models.Model):
+    """
+    Un modelo simple para marcar a los usuarios que deben cambiar
+    su contraseña por defecto en el primer inicio de sesión.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="password_change_required")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"El usuario {self.user.username} debe cambiar su contraseña."
