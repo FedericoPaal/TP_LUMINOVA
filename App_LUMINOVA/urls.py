@@ -20,7 +20,7 @@ from .views import (
     compras_lista_oc_view, # Vista para el listado principal de Órdenes de Compra
     compras_desglose_detalle_oc_view, compras_desglose_view,
     compras_seguimiento_view, compras_tracking_pedido_view,
-    desglose3, compras_crear_oc_view,
+    compras_crear_oc_view,
     compras_seleccionar_proveedor_para_insumo_view,
     compras_detalle_oc_view, compras_editar_oc_view, compras_aprobar_oc_directamente_view,
     get_oferta_proveedor_ajax,
@@ -39,7 +39,6 @@ from .views import (
     deposito_enviar_insumos_op_view,
     deposito_enviar_lote_pt_view,
 
-    depo_seleccion,# (Eliminar si ya no se usan directamente por el nuevo flujo)
 
     # CRUDs para Categorías, Insumos, Productos Terminados (Class-Based Views)
     Categoria_IDetailView, Categoria_ICreateView, Categoria_IUpdateView, Categoria_IDeleteView,
@@ -93,7 +92,7 @@ urlpatterns = [
     # --- Rutas de Compras ---
     path('compras/', compras_lista_oc_view, name='compras_lista_oc'), # Vista principal de compras
     path('compras/desglose/', compras_desglose_view, name='compras_desglose'),
-    path("desglose3/<int:producto_id>/", desglose3, name="desglose3"),
+    
     path('compras/seguimiento/', compras_seguimiento_view, name='compras_seguimiento'),
     path('compras/tracking/<int:oc_id>/', compras_tracking_pedido_view, name='compras_tracking_pedido'),    
     path('compras/desglose-oc/<str:numero_orden_desglose>/', compras_desglose_detalle_oc_view, name='compras_desglose_detalle_oc'),
@@ -121,7 +120,7 @@ urlpatterns = [
     path('deposito/solicitudes-insumos/', deposito_solicitudes_insumos_view, name='deposito_solicitudes_insumos'),
     path('deposito/solicitud-op/<int:op_id>/', deposito_detalle_solicitud_op_view, name='deposito_detalle_solicitud_op'),
     path('deposito/enviar-insumos-op/<int:op_id>/', deposito_enviar_insumos_op_view, name='deposito_enviar_insumos_op'),
-    path('deposito/seleccion/', depo_seleccion, name='depo_seleccion'), 
+    
     path('deposito/enviar-lote-pt/<int:lote_id>/', deposito_enviar_lote_pt_view, name='deposito_enviar_lote_pt'),
 
     # CRUDs para Fabricantes, Proveedores (Class-Based Views)
