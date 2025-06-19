@@ -140,6 +140,18 @@
     {% endif %}
 {% endfor %}
 
+<div class="mt-4 p-3 bg-light border rounded small text-muted">
+    <h6 class="mb-2">Glosario de Iconos</h6>
+    <div class="d-flex align-items-center mb-1">
+        <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>
+        <span>Indica que la Orden de Producción tiene uno o más problemas reportados y abiertos. Haga clic en el icono para ver los detalles.</span>
+    </div>
+    <div class="d-flex align-items-center">
+        <i class="bi bi-box-seam-fill text-success me-2"></i>
+        <span>Indica que los insumos han sido recibidos de depósito y la orden está lista para iniciar la producción.</span>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts_extra %}
