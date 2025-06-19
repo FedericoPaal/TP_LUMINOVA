@@ -1664,7 +1664,17 @@ def proveedor_create_view(request):
 
 @login_required
 def produccion_lista_op_view(request):
-    ordenes_prod = OrdenProduccion.objects.select_related(
+    """
+    Muestra el listado de Órdenes de Producción, separadas en pestañas
+    para "Activas" y "Finalizadas" (Completadas/Canceladas).
+    """
+    
+    # Estados que consideramos "finalizados" y que irán a la pestaña de historial.
+    ESTADOS_FINALIZADOS = ["Completada", "Cancelada"]
+
+    # Creamos una consulta base para no repetir el código.
+    # Esta consulta ya incluye las optimizaciones de select_related y prefetch_related.
+    base_query = OrdenProduccion.objects.select_related(
         'producto_a_producir__categoria',
         'orden_venta_origen__cliente',
         'estado_op',
@@ -1675,13 +1685,27 @@ def produccion_lista_op_view(request):
             queryset=Reportes.objects.filter(resuelto=False).select_related('reportado_por', 'sector_reporta'),
             to_attr='reportes_abiertos' # El resultado se guardará en op.reportes_abiertos
         )
+    )
+
+    # 1. Lista de OPs "Activas": todas aquellas cuyo estado NO está en la lista de finalizados.
+    #    Se ordenan por las más antiguas primero para darles prioridad.
+    ops_activas = base_query.exclude(
+        estado_op__nombre__in=ESTADOS_FINALIZADOS
+    ).order_by('fecha_solicitud')
+
+    # 2. Lista de OPs "Finalizadas": todas aquellas cuyo estado SÍ está en la lista.
+    #    Se ordenan por las más recientes primero para ver lo último que se terminó.
+    ops_finalizadas = base_query.filter(
+        estado_op__nombre__in=ESTADOS_FINALIZADOS
     ).order_by('-fecha_solicitud')
 
     context = {
-        'ordenes_produccion_list': ordenes_prod,
+        'ops_activas_list': ops_activas,
+        'ops_finalizadas_list': ops_finalizadas,
         'titulo_seccion': 'Listado de Órdenes de Producción',
-        'form_update_op': OrdenProduccionUpdateForm(),
+        # No es necesario pasar el form_update_op aquí, ya que no se usa en la vista de lista.
     }
+    
     return render(request, 'produccion/produccion_lista_op.html', context)
 
 @login_required
