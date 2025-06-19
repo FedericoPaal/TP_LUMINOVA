@@ -233,10 +233,10 @@ class ProveedorForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control mb-2', 'placeholder': 'correo@proveedor.com'}),
         }
 # Formulario para crear Factura
-class FacturaForm(forms.ModelForm): # Formulario básico para la factura
+class FacturaForm(forms.ModelForm): 
     class Meta:
         model = Factura
-        fields = ['numero_factura'] # El total se podría calcular, la fecha es auto, la orden_venta se asigna en la vista
+        fields = ['numero_factura'] 
         widgets = {
             'numero_factura': forms.TextInput(attrs={'class': 'form-control'}),
         }
@@ -247,6 +247,10 @@ class FacturaForm(forms.ModelForm): # Formulario básico para la factura
         last_factura = Factura.objects.order_by('id').last()
         next_factura_number = f"FACT-{str(last_factura.id + 1).zfill(5)}" if last_factura else "FACT-00001"
         self.fields['numero_factura'].initial = next_factura_number
+
+        # Hacer que el campo sea de solo lectura para el usuario
+        self.fields['numero_factura'].widget.attrs['readonly'] = True
+        self.fields['numero_factura'].widget.attrs['class'] = 'form-control-plaintext text-muted'
 
 class OrdenCompraForm(forms.ModelForm):
     class Meta:
