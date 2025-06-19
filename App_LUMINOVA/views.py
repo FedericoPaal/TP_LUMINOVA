@@ -1906,16 +1906,19 @@ def produccion_detalle_op_view(request, op_id):
                 producto_terminado_obj = op_actualizada.producto_a_producir
                 cantidad_producida = op_actualizada.cantidad_a_producir
                 if producto_terminado_obj and cantidad_producida > 0:
+                    
+                    # 1. Actualizar el stock principal del ProductoTerminado
+                    producto_terminado_obj.stock = F('stock') + cantidad_producida
+                    producto_terminado_obj.save(update_fields=['stock'])
+                    logger.info(f"Stock de '{producto_terminado_obj.descripcion}' incrementado en {cantidad_producida}.")
+
+                    # 2. Crear el lote para registro y envío
                     LoteProductoTerminado.objects.create(
                         producto=producto_terminado_obj,
                         op_asociada=op_actualizada,
                         cantidad=cantidad_producida
                     )
-                    messages.success(request, f"Lote de '{producto_terminado_obj.descripcion}' generado por OP {op_actualizada.numero_op}.")
-                    logger.info(f"OP {op_actualizada.numero_op} completada. Lote creado.")
-                else:
-                    logger.error(f"No se pudo crear lote para OP {op_actualizada.numero_op}: producto/cantidad inválidos.")
-                    messages.error(request, "No se pudo crear lote: producto no asignado o cantidad cero.")
+                    messages.info(request, f"Lote de {cantidad_producida} x '{producto_terminado_obj.descripcion}' generado y stock actualizado.")
             
             op_actualizada.save()
             messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.get_estado_op_display()}'.")
