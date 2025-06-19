@@ -131,8 +131,11 @@ def custom_logout_view(request):
 def dashboard_view(request):
     # --- 1. Tarjeta: Acciones Urgentes ---
     # Contamos OPs cuyo estado refleje un problema o pausa por incidencia
-    estados_problematicos_op = ['Producción con Problemas', 'Pausada']
-    ops_con_problemas = OrdenProduccion.objects.filter(estado_op__nombre__in=estados_problematicos_op).count()
+    #estados_problematicos_op = ['Producción con Problemas', 'Pausada']
+    ops_con_problemas_reportados_count = Reportes.objects.filter(
+        resuelto=False, 
+        orden_produccion_asociada__isnull=False
+    ).values('orden_produccion_asociada_id').distinct().count()
     
     solicitudes_insumos_pendientes = OrdenProduccion.objects.filter(estado_op__nombre__iexact='Insumos Solicitados').count()
     ocs_para_aprobar = Orden.objects.filter(tipo='compra', estado='BORRADOR').count()
@@ -175,7 +178,7 @@ def dashboard_view(request):
         ultimo_reporte = None
 
     context = {
-        'ops_con_problemas_count': ops_con_problemas,
+        'ops_con_problemas_count': ops_con_problemas_reportados_count,
         'solicitudes_insumos_pendientes_count': solicitudes_insumos_pendientes,
         'ocs_para_aprobar_count': ocs_para_aprobar,
         'insumos_criticos_list': insumos_criticos_con_porcentaje,
@@ -1661,17 +1664,23 @@ def proveedor_create_view(request):
 
 @login_required
 def produccion_lista_op_view(request):
+    # --- INICIO DE LA CORRECCIÓN ---
+    # Optimizamos la consulta usando Prefetch para traer los reportes de una sola vez
     ordenes_prod = OrdenProduccion.objects.select_related(
         'producto_a_producir__categoria',
-        'orden_venta_origen__cliente', # Para obtener el cliente
-        'estado_op', # Nombre del campo en tu modelo OP
-        'sector_asignado_op'  # Nombre del campo en tu modelo OP
+        'orden_venta_origen__cliente',
+        'estado_op',
+        'sector_asignado_op'
+    ).prefetch_related(
+        # Prefetch para saber si existe al menos un reporte para cada OP
+        Prefetch('reportes_incidencia', queryset=Reportes.objects.filter(resuelto=False), to_attr='reportes_abiertos')
     ).order_by('-fecha_solicitud')
+    # --- FIN DE LA CORRECCIÓN ---
 
     context = {
         'ordenes_produccion_list': ordenes_prod,
         'titulo_seccion': 'Listado de Órdenes de Producción',
-        'form_update_op': OrdenProduccionUpdateForm(), # Para el modal de edición
+        'form_update_op': OrdenProduccionUpdateForm(),
     }
     return render(request, 'produccion/produccion_lista_op.html', context)
 
@@ -1942,9 +1951,11 @@ def produccion_detalle_op_view(request, op_id):
             logger.warning(f"Formulario OrdenProduccionUpdateForm inválido para OP {op.id}: {form_update.errors.as_json()}")
             if op.estado_op and op.estado_op.nombre.lower() in [ESTADO_OP_PAUSADA_LOWER, ESTADO_OP_CANCELADA_LOWER]:
                 mostrar_boton_reportar = True
-
-    form_update = OrdenProduccionUpdateForm(instance=op, estado_op_queryset=estado_op_queryset_para_form)
-
+    else:
+        form_update = OrdenProduccionUpdateForm(instance=op, estado_op_queryset=estado_op_queryset_para_form)
+    estados_activos_para_reportar = ["insumos solicitados", "producción iniciada", "en proceso", "pausada", "producción con problemas"]
+    mostrar_boton_reportar = op.estado_op and op.estado_op.nombre.lower() in estados_activos_para_reportar
+    
     context = {
         'op': op,
         'insumos_necesarios_list': insumos_necesarios_data,
