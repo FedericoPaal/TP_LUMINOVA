@@ -1664,18 +1664,18 @@ def proveedor_create_view(request):
 
 @login_required
 def produccion_lista_op_view(request):
-    # --- INICIO DE LA CORRECCIÓN ---
-    # Optimizamos la consulta usando Prefetch para traer los reportes de una sola vez
     ordenes_prod = OrdenProduccion.objects.select_related(
         'producto_a_producir__categoria',
         'orden_venta_origen__cliente',
         'estado_op',
         'sector_asignado_op'
     ).prefetch_related(
-        # Prefetch para saber si existe al menos un reporte para cada OP
-        Prefetch('reportes_incidencia', queryset=Reportes.objects.filter(resuelto=False), to_attr='reportes_abiertos')
+        Prefetch(
+            'reportes_incidencia',
+            queryset=Reportes.objects.filter(resuelto=False).select_related('reportado_por', 'sector_reporta'),
+            to_attr='reportes_abiertos' # El resultado se guardará en op.reportes_abiertos
+        )
     ).order_by('-fecha_solicitud')
-    # --- FIN DE LA CORRECCIÓN ---
 
     context = {
         'ordenes_produccion_list': ordenes_prod,
