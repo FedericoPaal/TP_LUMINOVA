@@ -240,10 +240,10 @@ class ProveedorForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'class': 'form-control mb-2', 'placeholder': 'correo@proveedor.com'}),
         }
 # Formulario para crear Factura
-class FacturaForm(forms.ModelForm): # Formulario básico para la factura
+class FacturaForm(forms.ModelForm): 
     class Meta:
         model = Factura
-        fields = ['numero_factura'] # El total se podría calcular, la fecha es auto, la orden_venta se asigna en la vista
+        fields = ['numero_factura'] 
         widgets = {
             'numero_factura': forms.TextInput(attrs={'class': 'form-control'}),
         }
@@ -254,6 +254,10 @@ class FacturaForm(forms.ModelForm): # Formulario básico para la factura
         last_factura = Factura.objects.order_by('id').last()
         next_factura_number = f"FACT-{str(last_factura.id + 1).zfill(5)}" if last_factura else "FACT-00001"
         self.fields['numero_factura'].initial = next_factura_number
+
+        # Hacer que el campo sea de solo lectura para el usuario
+        self.fields['numero_factura'].widget.attrs['readonly'] = True
+        self.fields['numero_factura'].widget.attrs['class'] = 'form-control-plaintext text-muted'
 
 class OrdenCompraForm(forms.ModelForm):
     class Meta:
@@ -270,7 +274,7 @@ class OrdenCompraForm(forms.ModelForm):
             'cantidad_principal': forms.NumberInput(attrs={'class': 'form-control mb-3', 'min': '1'}),
             'precio_unitario_compra': forms.NumberInput(attrs={'class': 'form-control mb-3', 'step': '0.01'}), # Se hará readonly
             'fecha_estimada_entrega': forms.DateInput(attrs={'class': 'form-control mb-3', 'type': 'date'}), # Se hará readonly
-            'numero_tracking': forms.TextInput(attrs={'class': 'form-control mb-3', 'placeholder': 'Opcional'}),
+            'numero_tracking': forms.TextInput(attrs={'class': 'form-control mb-3', 'placeholder': 'Gestionado por LUMINOVA'}), # Placeholder actualizado
             'notas': forms.Textarea(attrs={'class': 'form-control mb-3', 'rows': 3, 'placeholder': 'Notas adicionales...'}),
         }
         labels = {
@@ -305,47 +309,49 @@ class OrdenCompraForm(forms.ModelForm):
             next_oc_number = f"OC-{str(next_id).zfill(5)}"
             while Orden.objects.filter(numero_orden=next_oc_number).exists():
                 next_id += 1; next_oc_number = f"OC-{str(next_id).zfill(5)}"
-            self.initial['numero_orden'] = next_oc_number # Para que se muestre
-            # En el clean_numero_orden se asegurará que el valor de la instancia se mantenga si es readonly
+            self.initial['numero_orden'] = next_oc_number
 
         # --- Configuración de Insumo Principal ---
-        if self.insumo_fijo: # Si el insumo es fijo (ej. creación desde alerta stock)
+        if self.insumo_fijo:
             self.fields['insumo_principal'].queryset = Insumo.objects.filter(pk=self.insumo_fijo.pk)
             self.fields['insumo_principal'].initial = self.insumo_fijo
             self.fields['insumo_principal'].widget.attrs['disabled'] = True
             self.fields['insumo_principal'].empty_label = None
-        elif instance and instance.insumo_principal and instance.estado != 'BORRADOR': # Editando y no es borrador
+        elif instance and instance.insumo_principal and instance.estado != 'BORRADOR':
              self.fields['insumo_principal'].queryset = Insumo.objects.filter(pk=instance.insumo_principal.pk)
              self.fields['insumo_principal'].initial = instance.insumo_principal
              self.fields['insumo_principal'].widget.attrs['disabled'] = True
              self.fields['insumo_principal'].empty_label = None
-        else: # Creación manual general o edición de borrador (insumo editable)
+        else:
             self.fields['insumo_principal'].queryset = Insumo.objects.all().order_by('descripcion')
             self.fields['insumo_principal'].empty_label = "Seleccionar Insumo..."
 
         # --- Configuración de Proveedor ---
-        # Si se está editando y NO es borrador, el proveedor también es fijo
         if instance and instance.pk and instance.proveedor and instance.estado != 'BORRADOR':
             self.fields['proveedor'].queryset = Proveedor.objects.filter(pk=instance.proveedor.pk)
             self.fields['proveedor'].initial = instance.proveedor
             self.fields['proveedor'].widget.attrs['disabled'] = True
             self.fields['proveedor'].empty_label = None
-        else: # Creación o edición de borrador (proveedor editable, se actualiza por JS)
-            self.fields['proveedor'].queryset = Proveedor.objects.all().order_by('nombre') # O filtrar por ofertas si hay insumo inicial
+        else:
+            self.fields['proveedor'].queryset = Proveedor.objects.all().order_by('nombre')
             self.fields['proveedor'].empty_label = "Seleccionar Proveedor..."
 
-        # --- Configuración de Precio y Fecha (readonly, actualizados por JS) ---
+        # --- Configuración de Precio y Fecha ---
         self.fields['precio_unitario_compra'].widget.attrs['readonly'] = True
         self.fields['precio_unitario_compra'].widget.attrs['class'] = 'form-control-plaintext mb-3 text-muted'
         self.fields['fecha_estimada_entrega'].widget.attrs['readonly'] = True
         self.fields['fecha_estimada_entrega'].widget.attrs['class'] = 'form-control-plaintext mb-3 text-muted'
 
+        self.fields['numero_tracking'].widget.attrs['readonly'] = True
+        self.fields['numero_tracking'].widget.attrs['class'] = 'form-control-plaintext mb-3 text-muted'
+        #self.fields['numero_tracking'].help_text = "gestionado por LUMINOVA."
+
         # --- Campos Requeridos ---
-        self.fields['fecha_estimada_entrega'].required = False # La vista JS lo podría llenar
-        self.fields['numero_tracking'].required = False
+        self.fields['fecha_estimada_entrega'].required = False 
+        self.fields['numero_tracking'].required = False 
         self.fields['notas'].required = False
-        self.fields['cantidad_principal'].required = True # Cantidad siempre requerida si hay insumo
-        self.fields['precio_unitario_compra'].required = True # Precio siempre requerido si hay insumo (lo llenará JS)
+        self.fields['cantidad_principal'].required = True
+        self.fields['precio_unitario_compra'].required = True
 
     def clean_numero_orden(self):
         numero_orden = self.cleaned_data.get('numero_orden')
@@ -359,8 +365,6 @@ class OrdenCompraForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         instance = getattr(self, 'instance', None)
-        
-        # Restaurar valores de campos readonly/disabled si no vinieron del POST
         fields_to_restore = {
             'numero_orden': 'readonly', 'insumo_principal': 'disabled', 
             'proveedor': 'disabled', 'precio_unitario_compra': 'readonly', 
@@ -368,34 +372,26 @@ class OrdenCompraForm(forms.ModelForm):
         }
         if instance and instance.pk and instance.estado != 'BORRADOR':
             fields_to_restore['cantidad_principal'] = 'readonly'
-
-
         for field_name, attr_type in fields_to_restore.items():
             if field_name in self.fields:
                 is_locked = self.fields[field_name].widget.attrs.get(attr_type, False)
                 if is_locked and (cleaned_data.get(field_name) is None or field_name not in cleaned_data):
                     value_to_restore = None
-                    # Para campos que vienen de 'initial' y fueron deshabilitados
                     if field_name in self.initial and self.initial[field_name] is not None:
                         value_to_restore = self.initial[field_name]
-                    # Para campos de una instancia existente que fueron deshabilitados/readonly
                     elif instance and instance.pk and hasattr(instance, field_name):
                         value_to_restore = getattr(instance, field_name)
-                    
                     if value_to_restore is not None:
                         if field_name == 'insumo_principal' and isinstance(value_to_restore, int):
-                            # Si es un ID, conviértelo en instancia
                             from .models import Insumo
                             value_to_restore = Insumo.objects.get(pk=value_to_restore)
                         cleaned_data[field_name] = value_to_restore
-        
         insumo = cleaned_data.get("insumo_principal")
         if insumo:
             if not cleaned_data.get("cantidad_principal") and self.fields['cantidad_principal'].required:
                 self.add_error('cantidad_principal', 'La cantidad es requerida.')
             if cleaned_data.get("precio_unitario_compra") is None and self.fields['precio_unitario_compra'].required:
                 self.add_error('precio_unitario_compra', 'El precio unitario es requerido (se espera de la oferta del proveedor).')
-        
         return cleaned_data
     
 class ReporteProduccionForm(forms.ModelForm):

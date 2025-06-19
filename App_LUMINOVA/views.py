@@ -73,7 +73,7 @@ def login_view(request):
         # Obtener los datos del formulario de login
         username_from_form = request.POST.get('username')
         password_from_form = request.POST.get('password')
-        
+
         # Autenticar al usuario
         user = authenticate(
             request,
@@ -84,7 +84,7 @@ def login_view(request):
         if user is not None:
             # Si la autenticación es exitosa, iniciar la sesión
             login(request, user)
-            
+
             # --- LÓGICA CLAVE DE AUDITORÍA ---
             # Ahora que el usuario está logueado y tenemos el 'request' completo,
             # registramos el evento.
@@ -94,13 +94,13 @@ def login_view(request):
                 ip_address=get_client_ip(request), # Obtendrá la IP
                 user_agent=request.META.get('HTTP_USER_AGENT', '') # Obtendrá el navegador
             )
-            
+
             # Redirigir al dashboard (o a la página de cambio de contraseña si es necesario, el middleware se encargará)
             return redirect('App_LUMINOVA:dashboard')
         else:
             # Si las credenciales son inválidas, mostrar un error
             messages.error(request, 'Usuario o contraseña incorrectos.')
-    
+
     # Si es una petición GET, simplemente mostrar la página de login
     return render(request, 'login.html')
 
@@ -110,7 +110,7 @@ def custom_logout_view(request):
     Gestiona el cierre de sesión y registra el evento en la auditoría ANTES de desloguear.
     """
     user = request.user
-    
+
     # Registrar el evento de cierre de sesión con toda la información disponible
     AuditoriaAcceso.objects.create(
         usuario=user,
@@ -118,13 +118,13 @@ def custom_logout_view(request):
         ip_address=get_client_ip(request),
         user_agent=request.META.get('HTTP_USER_AGENT', '')
     )
-    
+
     # Llamar a la función de logout de Django para limpiar la sesión
     auth_logout_function(request)
-    
+
     # Opcional: mostrar un mensaje de que cerró sesión correctamente
     messages.info(request, "Has cerrado sesión exitosamente.")
-    
+
     # Redirigir a la página de login
     return redirect('App_LUMINOVA:login')
 
@@ -132,12 +132,15 @@ def custom_logout_view(request):
 def dashboard_view(request):
     # --- 1. Tarjeta: Acciones Urgentes ---
     # Contamos OPs cuyo estado refleje un problema o pausa por incidencia
-    estados_problematicos_op = ['Producción con Problemas', 'Pausada']
-    ops_con_problemas = OrdenProduccion.objects.filter(estado_op__nombre__in=estados_problematicos_op).count()
-    
+    #estados_problematicos_op = ['Producción con Problemas', 'Pausada']
+    ops_con_problemas_reportados_count = Reportes.objects.filter(
+        resuelto=False,
+        orden_produccion_asociada__isnull=False
+    ).values('orden_produccion_asociada_id').distinct().count()
+
     solicitudes_insumos_pendientes = OrdenProduccion.objects.filter(estado_op__nombre__iexact='Insumos Solicitados').count()
     ocs_para_aprobar = Orden.objects.filter(tipo='compra', estado='BORRADOR').count()
-    
+
     # --- 2. Tarjeta: Stock Crítico ---
     UMBRAL_STOCK_BAJO = 15000
     insumos_criticos_query = Insumo.objects.filter(stock__lt=UMBRAL_STOCK_BAJO).order_by('stock')[:5]
@@ -176,7 +179,7 @@ def dashboard_view(request):
         ultimo_reporte = None
 
     context = {
-        'ops_con_problemas_count': ops_con_problemas,
+        'ops_con_problemas_count': ops_con_problemas_reportados_count,
         'solicitudes_insumos_pendientes_count': solicitudes_insumos_pendientes,
         'ocs_para_aprobar_count': ocs_para_aprobar,
         'insumos_criticos_list': insumos_criticos_con_porcentaje,
@@ -210,7 +213,7 @@ def crear_usuario(request):
         email = request.POST.get('email')
         rol_name = request.POST.get('rol')
         estado_str = request.POST.get('estado')
-        
+
         # --- Se utiliza la contraseña por defecto definida en settings.py ---
         password = settings.DEFAULT_PASSWORD_FOR_NEW_USERS
 
@@ -218,7 +221,7 @@ def crear_usuario(request):
         if User.objects.filter(username=username).exists():
             messages.error(request, f"El nombre de usuario '{username}' ya está en uso.")
             return redirect('App_LUMINOVA:lista_usuarios')
-        
+
         if not username or not email or not rol_name or not estado_str:
             messages.error(request, "Todos los campos son obligatorios.")
             return redirect('App_LUMINOVA:lista_usuarios')
@@ -226,7 +229,7 @@ def crear_usuario(request):
         try:
             # La creación del usuario y la asignación de grupo ocurren dentro de una transacción
             # para asegurar que todo se complete correctamente o no se haga nada.
-            
+
             user = User.objects.create_user(
                 username=username,
                 email=email,
@@ -257,7 +260,7 @@ def crear_usuario(request):
             # Captura cualquier otro error, como el de "Rol no existente"
             if "Rol no existente" not in str(e):
                 messages.error(request, f"Error inesperado al crear usuario: {e}")
-    
+
     # Redirige a la lista de usuarios en cualquier caso (éxito, error, o si no es POST)
     return redirect('App_LUMINOVA:lista_usuarios')
 
@@ -272,7 +275,7 @@ def change_password_view(request):
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)
-            
+
             PasswordChangeRequired.objects.filter(user=request.user).delete()
 
             messages.success(request, '¡Tu contraseña ha sido actualizada exitosamente! Ya puedes navegar por el sitio.')
@@ -286,7 +289,7 @@ def change_password_view(request):
     else:
         if not PasswordChangeRequired.objects.filter(user=request.user).exists():
              return redirect('App_LUMINOVA:dashboard')
-        
+
         form = PasswordChangeForm(request.user)
         # --- CAMBIO AQUÍ: Modificar el form antes de renderizarlo ---
         form.fields['old_password'].widget.attrs['autocomplete'] = 'current-password'
@@ -356,12 +359,12 @@ def roles_permisos_view(request):
 @login_required
 def auditoria_view(request):
     auditorias = AuditoriaAcceso.objects.select_related('usuario').order_by('-fecha_hora')
-    
+
     from django.core.paginator import Paginator
     paginator = Paginator(auditorias, 25) # 25 registros por página
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
+
     context = {
         'auditorias': auditorias, # O 'page_obj': page_obj si usas paginación
         'titulo_seccion': "Auditoría de Acceso"
@@ -491,7 +494,7 @@ def get_permisos_rol_ajax(request):
         for perm in todos_los_permisos:
             permisos_data.append({
                 'id': perm.id,
-                'name': perm.name, 
+                'name': perm.name,
                 'codename': perm.codename,
                 'content_type_app_label': perm.content_type.app_label,
                 'content_type_model': perm.content_type.model
@@ -901,14 +904,14 @@ def ventas_generar_factura_view(request, ov_id):
                     tipo_evento='Facturado',
                     realizado_por=request.user
                 )
-                
+
                 # --- CORRECCIÓN CLAVE ---
                 # YA NO CAMBIAMOS EL ESTADO DE LA OV A 'COMPLETADA' AQUÍ.
                 # La OV permanece en 'LISTA_ENTREGA' hasta que se confirme el envío desde depósito.
-                
+
                 messages.success(request, f"Factura N° {factura.numero_factura} generada exitosamente para la OV {orden_venta.numero_ov}.")
                 return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
-            
+
             except DjangoIntegrityError:
                  messages.error(request, f"Error: El número de factura '{form.cleaned_data.get('numero_factura')}' ya existe.")
             except Exception as e:
@@ -916,7 +919,7 @@ def ventas_generar_factura_view(request, ov_id):
                 logger.exception(f"Error generando factura para OV {ov_id}")
         else:
             messages.error(request, "El formulario de la factura contiene errores. Por favor, inténtelo de nuevo.")
-    
+
     # Si la petición es GET o el formulario es inválido, redirigir de vuelta a la página de detalle.
     return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta.id)
 
@@ -952,14 +955,14 @@ def ventas_editar_ov_view(request, ov_id):
 
     if request.method == 'POST':
         form_ov = OrdenVentaForm(request.POST, instance=orden_venta, prefix='ov')
-        
+
         if form_ov.is_valid():
             if puede_editar_items_y_ops:
                 formset_items = ItemOrdenVentaFormSet(request.POST, instance=orden_venta, prefix='items')
                 if formset_items.is_valid():
                     try:
                         ov_actualizada = form_ov.save(commit=False)
-                        
+
                         ops_a_revisar_o_eliminar = orden_venta.ops_generadas.filter(
                             Q(estado_op__nombre__iexact='Pendiente') | Q(estado_op__nombre__iexact='Insumos Solicitados')
                         )
@@ -984,7 +987,7 @@ def ventas_editar_ov_view(request, ov_id):
                                 while OrdenProduccion.objects.filter(numero_op=next_op_number).exists():
                                     op_count += 1
                                     next_op_number = f"OP-{str(op_count + 1).zfill(5)}"
-                                
+
                                 OrdenProduccion.objects.create(
                                     numero_op=next_op_number,
                                     orden_venta_origen=ov_actualizada,
@@ -994,7 +997,7 @@ def ventas_editar_ov_view(request, ov_id):
                                 )
                                 messages.info(request, f'Nueva OP "{next_op_number}" generada para "{item_guardado.producto_terminado.descripcion}".')
                             # --- FIN DE LA CORRECCIÓN ---
-                        
+
                         messages.success(request, f"Orden de Venta '{ov_actualizada.numero_ov}' actualizada exitosamente.")
                         return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=ov_actualizada.id)
 
@@ -1104,11 +1107,11 @@ def compras_desglose_view(request):
     logger.info("--- compras_desglose_view: INICIO ---")
 
     UMBRAL_STOCK_BAJO_INSUMOS = 15000
-    
+
     # --- LÓGICA CORREGIDA ---
     # Un insumo necesita gestión si su OC o no existe, o si está SOLAMENTE en estado 'BORRADOR'.
     # Si ya está 'APROBADA' o más allá, el equipo de compras ya hizo su parte principal.
-    
+
     # 1. Obtenemos los IDs de insumos que ya tienen una OC "en firme" (es decir, post-borrador)
     ESTADOS_OC_POST_BORRADOR = ['APROBADA', 'ENVIADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL', 'RECIBIDA_TOTAL', 'COMPLETADA']
     insumos_ya_gestionados_ids = Orden.objects.filter(
@@ -1128,7 +1131,7 @@ def compras_desglose_view(request):
     ).select_related('categoria').order_by('categoria__nombre', 'stock', 'descripcion')
 
     logger.info(f"Insumos críticos que requieren acción de Compras: {insumos_criticos_para_gestionar.count()}")
-    
+
     # La variable pasada a la plantilla necesita un nombre consistente
     context = {
         'insumos_criticos_list_con_estado': insumos_criticos_para_gestionar,
@@ -1140,14 +1143,14 @@ def compras_desglose_view(request):
 @login_required
 def compras_seguimiento_view(request):
     """
-    Muestra las Órdenes de Compra que ya fueron gestionadas y están 
+    Muestra las Órdenes de Compra que ya fueron gestionadas y están
     en proceso de envío o recepción.
     """
     estados_en_seguimiento = [
         'ENVIADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL'
     ]
     ordenes = Orden.objects.filter(
-        tipo='compra', 
+        tipo='compra',
         estado__in=estados_en_seguimiento
     ).select_related('proveedor').order_by('-fecha_creacion')
 
@@ -1404,10 +1407,10 @@ def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None):
             # form_kwargs['proveedor_fijado'] = proveedor_preseleccionado_obj # Ya no es necesario si el form lo toma de initial
 
             oferta_seleccionada = OfertaProveedor.objects.filter(
-                insumo=insumo_preseleccionado_obj, 
+                insumo=insumo_preseleccionado_obj,
                 proveedor=proveedor_preseleccionado_obj
             ).first()
-            
+
             if oferta_seleccionada:
                 initial_data['precio_unitario_compra'] = oferta_seleccionada.precio_unitario_compra
                 if oferta_seleccionada.tiempo_entrega_estimado_dias is not None:
@@ -1416,8 +1419,8 @@ def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None):
                         fecha_estimada = timezone.now().date() + timedelta(days=dias)
                         initial_data['fecha_estimada_entrega'] = fecha_estimada.strftime('%Y-%m-%d')
                     except ValueError: pass
-        
-        UMBRAL_STOCK_BAJO_INSUMOS = 15000 
+
+        UMBRAL_STOCK_BAJO_INSUMOS = 15000
         cantidad_necesaria = UMBRAL_STOCK_BAJO_INSUMOS - insumo_preseleccionado_obj.stock
         initial_data['cantidad_principal'] = max(1, cantidad_necesaria if cantidad_necesaria > 0 else 10)
 
@@ -1435,9 +1438,9 @@ def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None):
         if form.is_valid():
             try:
                 orden_compra = form.save(commit=False)
-                orden_compra.tipo = 'compra' 
+                orden_compra.tipo = 'compra'
                 orden_compra.estado = 'BORRADOR'
-                
+
                 # Los valores de los campos deshabilitados/readonly son restaurados por form.clean()
                 # a partir de 'initial' o 'instance'.
                 # No es necesario reasignarlos aquí si clean() es correcto.
@@ -1447,7 +1450,7 @@ def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None):
                 if orden_compra.insumo_principal and orden_compra.cantidad_principal > 0:
                      Insumo.objects.filter(id=orden_compra.insumo_principal.id).update(
                         cantidad_en_pedido=F('cantidad_en_pedido') + orden_compra.cantidad_principal)
-                
+
                 messages.success(request, f"OC '{orden_compra.numero_orden}' creada en Borrador. Total: ${orden_compra.total_orden_compra or 0:.2f}")
                 return redirect('App_LUMINOVA:compras_lista_oc')
             # ... (manejo de errores) ...
@@ -1474,8 +1477,8 @@ def compras_editar_oc_view(request, oc_id):
     logger.info(f"Editando OC: {orden_compra_instance.numero_orden} (ID: {oc_id}), Estado actual: {orden_compra_instance.estado}")
 
     estados_no_editables_campos_principales = [
-        'APROBADA', 'ENVIADA_PROVEEDOR', 'CONFIRMADA_PROVEEDOR', 
-        'EN_TRANSITO', 'RECIBIDA_PARCIAL', 'RECIBIDA_TOTAL', 
+        'APROBADA', 'ENVIADA_PROVEEDOR', 'CONFIRMADA_PROVEEDOR',
+        'EN_TRANSITO', 'RECIBIDA_PARCIAL', 'RECIBIDA_TOTAL',
         'COMPLETADA', 'CANCELADA'
     ]
 
@@ -1487,7 +1490,7 @@ def compras_editar_oc_view(request, oc_id):
     cantidad_original_guardada = orden_compra_instance.cantidad_principal or 0
 
     # Preparar kwargs para el formulario, sin incluir 'instance' aquí si se pasa explícitamente
-    form_init_kwargs = {} 
+    form_init_kwargs = {}
     if insumo_original_obj_al_cargar:
         form_init_kwargs['insumo_fijado'] = insumo_original_obj_al_cargar
     if orden_compra_instance.proveedor and orden_compra_instance.estado != 'BORRADOR':
@@ -1499,8 +1502,8 @@ def compras_editar_oc_view(request, oc_id):
         form = OrdenCompraForm(request.POST, instance=orden_compra_instance, **form_init_kwargs)
         if form.is_valid():
             try:
-                oc_actualizada = form.save(commit=False) 
-                
+                oc_actualizada = form.save(commit=False)
+
                 insumo_nuevo_obj_form = form.cleaned_data.get('insumo_principal')
                 cantidad_nueva_form = form.cleaned_data.get('cantidad_principal') or 0
 
@@ -1533,13 +1536,13 @@ def compras_editar_oc_view(request, oc_id):
                          Insumo.objects.filter(id=insumo_original_en_db.id).update(
                             cantidad_en_pedido=F('cantidad_en_pedido') - cantidad_original_en_db
                         )
-                
+
                 oc_actualizada.save()
                 messages.success(request, f"Orden de Compra '{oc_actualizada.numero_orden}' actualizada exitosamente.")
                 return redirect('App_LUMINOVA:compras_detalle_oc', oc_id=oc_actualizada.id)
-            
+
             except DjangoIntegrityError as e_int:
-                if 'UNIQUE constraint' in str(e_int).lower() and 'numero_orden' in str(e_int).lower(): 
+                if 'UNIQUE constraint' in str(e_int).lower() and 'numero_orden' in str(e_int).lower():
                     messages.error(request, f"Error: El N° de OC '{form.cleaned_data.get('numero_orden', '')}' ya existe.")
                 else: messages.error(request, f"Error de base de datos: {e_int}")
             except Exception as e:
@@ -1548,7 +1551,7 @@ def compras_editar_oc_view(request, oc_id):
         else: # Formulario no es válido
             logger.warning(f"Formulario OC (edición) inválido: {form.errors.as_json()}")
             messages.error(request, "Por favor, corrija los errores en el formulario.")
-            # El form con errores (ya instanciado con request.POST, instance y form_init_kwargs) 
+            # El form con errores (ya instanciado con request.POST, instance y form_init_kwargs)
             # se pasará al contexto
     else: # GET request
         # Al instanciar para GET, pasamos instance explícitamente y el resto en form_init_kwargs
@@ -1662,18 +1665,48 @@ def proveedor_create_view(request):
 
 @login_required
 def produccion_lista_op_view(request):
-    ordenes_prod = OrdenProduccion.objects.select_related(
+    """
+    Muestra el listado de Órdenes de Producción, separadas en pestañas
+    para "Activas" y "Finalizadas" (Completadas/Canceladas).
+    """
+
+    # Estados que consideramos "finalizados" y que irán a la pestaña de historial.
+    ESTADOS_FINALIZADOS = ["Completada", "Cancelada"]
+
+    # Creamos una consulta base para no repetir el código.
+    # Esta consulta ya incluye las optimizaciones de select_related y prefetch_related.
+    base_query = OrdenProduccion.objects.select_related(
         'producto_a_producir__categoria',
-        'orden_venta_origen__cliente', # Para obtener el cliente
-        'estado_op', # Nombre del campo en tu modelo OP
-        'sector_asignado_op'  # Nombre del campo en tu modelo OP
+        'orden_venta_origen__cliente',
+        'estado_op',
+        'sector_asignado_op'
+    ).prefetch_related(
+        Prefetch(
+            'reportes_incidencia',
+            queryset=Reportes.objects.filter(resuelto=False).select_related('reportado_por', 'sector_reporta'),
+            to_attr='reportes_abiertos' # El resultado se guardará en op.reportes_abiertos
+        )
+    )
+
+    # 1. Lista de OPs "Activas": todas aquellas cuyo estado NO está en la lista de finalizados.
+    #    Se ordenan por las más antiguas primero para darles prioridad.
+    ops_activas = base_query.exclude(
+        estado_op__nombre__in=ESTADOS_FINALIZADOS
+    ).order_by('fecha_solicitud')
+
+    # 2. Lista de OPs "Finalizadas": todas aquellas cuyo estado SÍ está en la lista.
+    #    Se ordenan por las más recientes primero para ver lo último que se terminó.
+    ops_finalizadas = base_query.filter(
+        estado_op__nombre__in=ESTADOS_FINALIZADOS
     ).order_by('-fecha_solicitud')
 
     context = {
-        'ordenes_produccion_list': ordenes_prod,
+        'ops_activas_list': ops_activas,
+        'ops_finalizadas_list': ops_finalizadas,
         'titulo_seccion': 'Listado de Órdenes de Producción',
-        'form_update_op': OrdenProduccionUpdateForm(), # Para el modal de edición
+        # No es necesario pasar el form_update_op aquí, ya que no se usa en la vista de lista.
     }
+
     return render(request, 'produccion/produccion_lista_op.html', context)
 
 @login_required
@@ -1682,37 +1715,41 @@ def planificacion_produccion_view(request):
     Gestiona la asignación de sector y fechas, y cambia el estado a 'Planificada'.
     """
     if request.method == 'POST':
-        op_id = request.POST.get('op_id')
-        op_a_planificar = get_object_or_404(OrdenProduccion, id=op_id)
-
+        op_id_a_actualizar = request.POST.get('op_id')
         try:
-            # Obtenemos el estado "Planificada". Es CRUCIAL que este estado exista.
-            estado_planificada = EstadoOrden.objects.get(nombre__iexact="Planificada")
-            
-            # Asignamos los valores del formulario directamente
-            op_a_planificar.sector_asignado_op_id = request.POST.get('sector_asignado_op')
-            op_a_planificar.fecha_inicio_planificada = request.POST.get('fecha_inicio_planificada') or None
-            op_a_planificar.fecha_fin_planificada = request.POST.get('fecha_fin_planificada') or None
-            
-            # --- CAMBIO CLAVE: Se actualiza el estado de la OP ---
-            op_a_planificar.estado_op = estado_planificada
-            
-            op_a_planificar.save()
-            
-            messages.success(request, f"La OP {op_a_planificar.numero_op} ha sido planificada exitosamente.")
+            op_a_actualizar = get_object_or_404(OrdenProduccion, id=op_id_a_actualizar)
 
-        except EstadoOrden.DoesNotExist:
-            messages.error(request, "Error de configuración: El estado 'Planificada' no existe en la base de datos.")
+            # Usamos un formulario para validar y limpiar los datos
+            form = OrdenProduccionUpdateForm(request.POST, instance=op_a_actualizar)
+
+            # Solo nos interesan ciertos campos del formulario en esta vista
+            sector_id = request.POST.get('sector_asignado_op')
+            fecha_inicio_p = request.POST.get('fecha_inicio_planificada')
+            fecha_fin_p = request.POST.get('fecha_fin_planificada')
+
+            if sector_id:
+                op_a_actualizar.sector_asignado_op_id = sector_id
+            if fecha_inicio_p:
+                op_a_actualizar.fecha_inicio_planificada = fecha_inicio_p
+            if fecha_fin_p:
+                op_a_actualizar.fecha_fin_planificada = fecha_fin_p
+
+            op_a_actualizar.save()
+            messages.success(request, f"Planificación para OP {op_a_actualizar.numero_op} actualizada.")
         except Exception as e:
-            messages.error(request, f"Ocurrió un error al planificar la orden: {e}")
-        
+            messages.error(request, f"Error al actualizar la planificación: {e}")
+
         return redirect('App_LUMINOVA:planificacion_produccion')
 
-    # Lógica GET: Mostrar solo OPs que están 'Pendientes' o no tienen estado asignado.
-    ops_para_planificar = OrdenProduccion.objects.filter(
-        Q(estado_op__isnull=True) | Q(estado_op__nombre__iexact="Pendiente")
-    ).select_related('producto_a_producir', 'orden_venta_origen__cliente').order_by('fecha_solicitud')
-    
+    # --- LÓGICA GET MEJORADA ---
+    # Obtener todas las OPs que no estén en un estado final
+    estados_finales = ['Completada', 'Cancelada']
+    ops_para_planificar = OrdenProduccion.objects.exclude(
+        estado_op__nombre__in=estados_finales
+    ).select_related(
+        'producto_a_producir', 'orden_venta_origen__cliente', 'estado_op', 'sector_asignado_op'
+    ).order_by('estado_op__id', 'fecha_solicitud') # Ordenar por estado y luego por fecha
+
     sectores = SectorAsignado.objects.all().order_by('nombre')
 
     context = {
@@ -1736,7 +1773,7 @@ def solicitar_insumos_op_view(request, op_id):
 
     try:
         estado_insumos_solicitados_op = EstadoOrden.objects.get(nombre__iexact="Insumos Solicitados")
-        
+
         # Log de cambio de estado de OP antes de guardar
         if op.orden_venta_origen and estado_op_anterior_obj != estado_insumos_solicitados_op:
             descripcion_op = (f"La OP {op.numero_op} ('{op.producto_a_producir.descripcion}') cambió su estado "
@@ -1760,7 +1797,7 @@ def solicitar_insumos_op_view(request, op_id):
                 estado_ov_anterior_str = orden_venta_asociada.get_estado_display()
                 orden_venta_asociada.estado = 'INSUMOS_SOLICITADOS'
                 orden_venta_asociada.save(update_fields=['estado'])
-                
+
                 # Log de cambio de estado de OV
                 descripcion_ov = f"Estado de la OV cambió de '{estado_ov_anterior_str}' a 'Insumos Solicitados'."
                 HistorialOV.objects.create(
@@ -1769,7 +1806,7 @@ def solicitar_insumos_op_view(request, op_id):
                     tipo_evento='Cambio Estado OV',
                     realizado_por=request.user
                 )
-                
+
                 messages.info(request, f"Estado de OV {orden_venta_asociada.numero_ov} actualizado.")
 
     except EstadoOrden.DoesNotExist:
@@ -1805,20 +1842,48 @@ def produccion_detalle_op_view(request, op_id):
     if request.method == 'POST':
         form_update = OrdenProduccionUpdateForm(request.POST, instance=op)
         if form_update.is_valid():
-            op_actualizada = form_update.save()
-            messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada.")
-            
-            # Lógica para crear el lote si el estado es "Completada"
-            if op_actualizada.estado_op and op_actualizada.estado_op.nombre.lower() == 'completada':
-                LoteProductoTerminado.objects.get_or_create(
-                    op_asociada=op_actualizada,
-                    defaults={
-                        'producto': op_actualizada.producto_a_producir,
-                        'cantidad': op_actualizada.cantidad_a_producir,
-                    }
+            nuevo_estado_op_obj = form_update.cleaned_data.get('estado_op')
+
+            # Log de cambio de estado de OP
+            if op.orden_venta_origen and estado_op_anterior_obj != nuevo_estado_op_obj:
+                descripcion_op = (f"La OP {op.numero_op} ('{op.producto_a_producir.descripcion}') cambió su estado "
+                                  f"de '{estado_op_anterior_obj.nombre if estado_op_anterior_obj else 'N/A'}' "
+                                  f"a '{nuevo_estado_op_obj.nombre if nuevo_estado_op_obj else 'N/A'}'.")
+                HistorialOV.objects.create(
+                    orden_venta=op.orden_venta_origen,
+                    descripcion=descripcion_op,
+                    tipo_evento='Cambio Estado OP',
+                    realizado_por=request.user
                 )
 
-            # Lógica para actualizar el estado de la OV
+            op_actualizada = form_update.save(commit=False)
+            se_esta_completando_op_ahora = False
+            if nuevo_estado_op_obj and nuevo_estado_op_obj.nombre.lower() == ESTADO_OP_COMPLETADA_LOWER:
+                if not estado_op_anterior_obj or estado_op_anterior_obj.nombre.lower() != ESTADO_OP_COMPLETADA_LOWER:
+                    se_esta_completando_op_ahora = True
+                    op_actualizada.fecha_fin_real = timezone.now() if not op_actualizada.fecha_fin_real else op_actualizada.fecha_fin_real
+
+            if se_esta_completando_op_ahora:
+                producto_terminado_obj = op_actualizada.producto_a_producir
+                cantidad_producida = op_actualizada.cantidad_a_producir
+                if producto_terminado_obj and cantidad_producida > 0:
+
+                    # 1. Actualizar el stock principal del ProductoTerminado
+                    producto_terminado_obj.stock = F('stock') + cantidad_producida
+                    producto_terminado_obj.save(update_fields=['stock'])
+                    logger.info(f"Stock de '{producto_terminado_obj.descripcion}' incrementado en {cantidad_producida}.")
+
+                    # 2. Crear el lote para registro y envío
+                    LoteProductoTerminado.objects.create(
+                        producto=producto_terminado_obj,
+                        op_asociada=op_actualizada,
+                        cantidad=cantidad_producida
+                    )
+                    messages.info(request, f"Lote de {cantidad_producida} x '{producto_terminado_obj.descripcion}' generado y stock actualizado.")
+
+            op_actualizada.save()
+            messages.success(request, f"Orden de Producción {op_actualizada.numero_op} actualizada a '{op_actualizada.get_estado_op_display()}'.")
+
             if op_actualizada.orden_venta_origen:
                 orden_venta = op_actualizada.orden_venta_origen
                 ops_de_ov = orden_venta.ops_generadas.all()
@@ -1830,12 +1895,14 @@ def produccion_detalle_op_view(request, op_id):
 
             return redirect('App_LUMINOVA:produccion_detalle_op', op_id=op.id)
         else:
-            messages.error(request, "Error al actualizar. Por favor, revise el formulario.")
+            messages.error(request, "Error al actualizar la OP. Por favor, revise los datos del formulario.")
+            logger.warning(f"Formulario OrdenProduccionUpdateForm inválido para OP {op.id}: {form_update.errors.as_json()}")
+            if op.estado_op and op.estado_op.nombre.lower() in [ESTADO_OP_PAUSADA_LOWER, ESTADO_OP_CANCELADA_LOWER]:
+                mostrar_boton_reportar = True
     else:
-        # --- CORRECCIÓN CLAVE PARA GET REQUEST ---
-        # Se instancia el formulario CON la 'instance'. Esto rellena los campos del
-        # formulario con los datos actuales de la OP guardados en la base de datos.
-        form_update = OrdenProduccionUpdateForm(instance=op)
+        form_update = OrdenProduccionUpdateForm(instance=op, estado_op_queryset=estado_op_queryset_para_form)
+    estados_activos_para_reportar = ["insumos solicitados", "producción iniciada", "en proceso", "pausada", "producción con problemas"]
+    mostrar_boton_reportar = op.estado_op and op.estado_op.nombre.lower() in estados_activos_para_reportar
 
     context = {
         'op': op,
@@ -1856,7 +1923,7 @@ def reportes_produccion_view(request, reporte_id=None, resolver=False):
             reporte_a_resolver.resuelto = True
             reporte_a_resolver.fecha_resolucion = timezone.now()
             reporte_a_resolver.save()
-            
+
             # Cambiar estado de la OP asociada, si la tiene
             op_asociada = reporte_a_resolver.orden_produccion_asociada
             if op_asociada and op_asociada.estado_op and op_asociada.estado_op.nombre in ['Pausada', 'Producción con Problemas']:
@@ -1877,7 +1944,7 @@ def reportes_produccion_view(request, reporte_id=None, resolver=False):
     # --- Lógica para mostrar las listas en pestañas (para peticiones GET) ---
     reportes_abiertos = Reportes.objects.filter(resuelto=False).select_related('orden_produccion_asociada', 'reportado_por', 'sector_reporta').order_by('-fecha')
     reportes_resueltos = Reportes.objects.filter(resuelto=True).select_related('orden_produccion_asociada', 'reportado_por', 'sector_reporta').order_by('-fecha_resolucion')
-    
+
     context = {
         'reportes_abiertos': reportes_abiertos,
         'reportes_resueltos': reportes_resueltos,
@@ -2106,7 +2173,7 @@ def deposito_view(request):
 
     # Estados que consideramos como "pedido en firme" (ya no es tarea del depósito/compras iniciar)
     ESTADOS_OC_EN_PROCESO = ['APROBADA', 'ENVIADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL']
-    
+
     insumos_a_gestionar = []
     insumos_en_pedido = []
 
@@ -2121,7 +2188,7 @@ def deposito_view(request):
             # Si ya está en proceso, va a la tabla "En Pedido"
             insumos_en_pedido.append({'insumo': insumo, 'oc': oc_en_proceso})
         else:
-            # Si no hay OC en proceso (puede no existir o estar solo en Borrador), 
+            # Si no hay OC en proceso (puede no existir o estar solo en Borrador),
             # es una acción pendiente.
             insumos_a_gestionar.append({'insumo': insumo})
     # --- FIN DE LA CORRECCIÓN DE LÓGICA ---
@@ -2251,7 +2318,7 @@ def deposito_enviar_lote_pt_view(request, lote_id):
             tipo_evento='Envío',
             realizado_por=request.user
         )
-    
+
     orden_venta = lote.op_asociada.orden_venta_origen
     if orden_venta:
         todos_los_lotes_de_la_ov = LoteProductoTerminado.objects.filter(op_asociada__orden_venta_origen=orden_venta)
@@ -2259,7 +2326,7 @@ def deposito_enviar_lote_pt_view(request, lote_id):
             estado_ov_anterior_str = orden_venta.get_estado_display()
             orden_venta.estado = 'COMPLETADA'
             orden_venta.save(update_fields=['estado'])
-            
+
             # Log de cambio de estado de OV
             descripcion_ov = f"Estado de la Orden de Venta cambió de '{estado_ov_anterior_str}' a 'Completada/Entregada'."
             HistorialOV.objects.create(
@@ -2337,7 +2404,7 @@ class Categoria_IDeleteView(DeleteView):
             messages.error(request, mensaje_error)
             logger.warning(f"Intento fallido de eliminar CategoriaInsumo ID {self.object.id} debido a ProtectedError: {e}")
             # Redirigir de vuelta a la página de detalle de la categoría o a la confirmación de borrado
-            return redirect('App_LUMINOVA:categoria_i_detail', pk=self.object.pk) 
+            return redirect('App_LUMINOVA:categoria_i_detail', pk=self.object.pk)
             # O a: return self.get(request, *args, **kwargs) para volver a mostrar la página de confirmación con el mensaje
 
 
@@ -2405,7 +2472,7 @@ class Categoria_PTDeleteView(DeleteView):
             )
             messages.error(request, mensaje_error)
             logger.warning(f"Intento fallido de eliminar CategoriaProductoTerminado ID {self.object.id} ('{nombre_categoria}') debido a ProtectedError: {e}")
-            
+
             # Redirigir de vuelta a la página de detalle de la categoría
             # o a la confirmación de borrado para que el usuario vea el mensaje.
             # En este caso, volvemos a la página de detalle donde el usuario puede ver los productos.
@@ -2430,7 +2497,7 @@ class InsumoCreateView(CreateView):
     model = Insumo
     template_name = 'deposito/insumo_crear.html'
     # Define los campos que SÍ están en el modelo Insumo y quieres en el formulario de creación
-    fields = ['descripcion', 'categoria', 'fabricante', 'stock', 'imagen'] 
+    fields = ['descripcion', 'categoria', 'fabricante', 'stock', 'imagen']
     # success_url = reverse_lazy('App_LUMINOVA:deposito_view') # Redirige a la vista principal de depósito
 
     def form_valid(self, form):
@@ -2452,7 +2519,7 @@ class InsumoCreateView(CreateView):
             except CategoriaInsumo.DoesNotExist:
                 messages.warning(self.request, "La categoría preseleccionada para el insumo no es válida.")
         return initial
-    
+
     def get_success_url(self):
         # Redirigir al detalle de la categoría del insumo creado, o a la vista principal de depósito
         if hasattr(self.object, 'categoria') and self.object.categoria:
