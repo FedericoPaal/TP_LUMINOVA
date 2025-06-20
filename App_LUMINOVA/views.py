@@ -2223,6 +2223,62 @@ def deposito_solicitudes_insumos_view(request):
     return render(request, 'deposito/deposito_solicitudes_insumos.html', context)
 
 @login_required
+def recepcion_pedidos_view(request):
+    """
+    Muestra una lista de Órdenes de Compra que están "En Tránsito" y listas para ser recibidas.
+    """
+    # if not es_admin_o_rol(request.user, ['deposito', 'administrador']):
+    #     messages.error(request, "Acceso no permitido.")
+    #     return redirect('App_LUMINOVA:dashboard')
+
+    ocs_en_transito = Orden.objects.filter(
+        tipo='compra',
+        estado='EN_TRANSITO'
+    ).select_related('proveedor', 'insumo_principal').order_by('fecha_estimada_entrega')
+
+    context = {
+        'ordenes_a_recibir': ocs_en_transito,
+        'titulo_seccion': 'Recepción de Pedidos de Compra'
+    }
+    return render(request, 'deposito/deposito_recepcion.html', context)
+
+@login_required
+@require_POST
+@transaction.atomic
+def recibir_pedido_oc_view(request, oc_id):
+    """
+    Procesa la recepción de una Orden de Compra.
+    """
+    # if not es_admin_o_rol(request.user, ['deposito', 'administrador']):
+    #     messages.error(request, "Acción no permitida.")
+    #     return redirect('App_LUMINOVA:deposito_recepcion_pedidos')
+
+    orden_a_recibir = get_object_or_404(Orden, id=oc_id, estado='EN_TRANSITO')
+    
+    insumo_recibido = orden_a_recibir.insumo_principal
+    cantidad_recibida = orden_a_recibir.cantidad_principal
+
+    if insumo_recibido and cantidad_recibida:
+        # 1. Incrementar el stock del insumo
+        insumo_recibido.stock = F('stock') + cantidad_recibida
+        
+        # 2. Decrementar la cantidad en pedido
+        insumo_recibido.cantidad_en_pedido = F('cantidad_en_pedido') - cantidad_recibida
+        
+        insumo_recibido.save(update_fields=['stock', 'cantidad_en_pedido'])
+        logger.info(f"Stock de '{insumo_recibido.descripcion}' actualizado (+{cantidad_recibida}) y 'en pedido' actualizado (-{cantidad_recibida}).")
+
+        # 3. Actualizar el estado de la OC a "Completada" (o "Recibida Totalmente")
+        orden_a_recibir.estado = 'COMPLETADA' 
+        orden_a_recibir.save(update_fields=['estado'])
+        
+        messages.success(request, f"Pedido {orden_a_recibir.numero_orden} recibido exitosamente. Se agregaron {cantidad_recibida} unidades de '{insumo_recibido.descripcion}' al stock.")
+    else:
+        messages.error(request, f"Error: La OC {orden_a_recibir.numero_orden} no tiene un insumo o cantidad principal válidos.")
+
+    return redirect('App_LUMINOVA:deposito_recepcion_pedidos')
+
+@login_required
 def deposito_view(request):
     logger.info("--- deposito_view: INICIO ---")
 
