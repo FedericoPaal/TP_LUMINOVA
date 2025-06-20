@@ -6,6 +6,8 @@
 {% url 'App_LUMINOVA:categoria_i_create' as url_cat_i_create %}
 {% url 'App_LUMINOVA:categoria_pt_create' as url_cat_pt_create %}
 {% url 'App_LUMINOVA:deposito_solicitudes_insumos' as url_deposito_solicitudes %}
+{% url 'App_LUMINOVA:deposito_recepcion_pedidos' as url_deposito_recepcion %}
+
 
 
 <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-primary sidebar collapse border-end vh-100" style="border-top-left-radius: 25px; border-top-right-radius: 25px;">
@@ -15,6 +17,16 @@
         </h6>
         <hr class="text-white">
         <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_deposito_recepcion %}active{% endif %}" href="{{ url_deposito_recepcion }}">
+                    <i class="bi bi-truck me-2"></i> <span class="ms-2">Recepción de Pedidos</span>
+                    {% with ocs_en_transito_count=ordenes_a_recibir.count %}
+                        {% if ocs_en_transito_count > 0 %}
+                            <span class="badge bg-success ms-auto">{{ ocs_en_transito_count }}</span>
+                        {% endif %}
+                    {% endwith %}
+                </a>
+            </li>
             <li class="nav-item">
                 <a class="nav-link text-white fw-bold custom-active-button d-flex align-items-center {% if request.path == url_deposito_solicitudes %}active{% endif %}" href="{{ url_deposito_solicitudes }}">
                     <i class="bi bi-card-list me-2"></i> <span class="ms-2">Solicitudes de Insumos</span>
