@@ -1,0 +1,58 @@
+{% extends 'padre.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}{{ titulo_seccion }}{% endblock %}
+
+{% block sidebar_content %}
+    {% include 'deposito/deposito_sidebar.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ titulo_seccion }}</h1>
+</div>
+
+<div class="alert alert-info small">
+    <i class="bi bi-info-circle-fill"></i>
+    Esta sección muestra las órdenes de compra que están actualmente en tránsito. Utilice el botón "Recibir" para confirmar la llegada del pedido completo y actualizar el stock.
+</div>
+
+<div class="table-responsive mt-3">
+    <table class="table table-hover align-middle">
+        <thead class="color-thead">
+            <tr>
+                <th>N° OC</th>
+                <th>Proveedor</th>
+                <th>Insumo Principal</th>
+                <th class="text-center">Cantidad Esperada</th>
+                <th>Fecha Estimada</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for oc in ordenes_a_recibir %}
+            <tr>
+                <td><a href="{% url 'App_LUMINOVA:compras_detalle_oc' oc.id %}" target="_blank">{{ oc.numero_orden }}</a></td>
+                <td>{{ oc.proveedor.nombre }}</td>
+                <td>{{ oc.insumo_principal.descripcion|truncatechars:40 }}</td>
+                <td class="text-center fw-bold">{{ oc.cantidad_principal|intcomma }}</td>
+                <td>{{ oc.fecha_estimada_entrega|date:"d/m/Y"|default:"N/A" }}</td>
+                <td class="text-center">
+                    <form action="{% url 'App_LUMINOVA:deposito_recibir_pedido' oc.id %}" method="post" onsubmit="return confirm('¿Confirma la recepción completa del pedido {{ oc.numero_orden }}? Esta acción actualizará el stock.')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-success">
+                            <i class="bi bi-box-arrow-in-down"></i> Recibir Pedido
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="text-center text-muted p-4">No hay órdenes de compra en tránsito en este momento.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
