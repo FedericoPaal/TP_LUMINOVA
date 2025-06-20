@@ -23,7 +23,7 @@
                 </ul>
 
                 <div class="navbar-nav ms-auto align-items-center me-3 mb-2 mb-lg-0 d-flex flex-row">
-                    <div class="d-flex flex-row align-items-center flex-nowrap">
+                    {% if user.is_authenticated %}
                         <span class="nav-link text-primary d-flex align-items-center me-2" style="white-space: nowrap;">
                             <i class="bi bi-bell-fill me-2 align-self-center"></i>
                             <i class="bi bi-envelope-fill me-2 align-self-center"></i>
@@ -31,10 +31,12 @@
                                 <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
                                 <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
                             </svg>
-                            <span class="d-none d-lg-inline align-self-center me-2  fw-bold">Usuario Administrador</span>
+                            <span class="d-none d-lg-inline align-self-center me-2 fw-bold">
+                                {{ user.first_name|default:user.username|capfirst }}
+                            </span>
                         </span>
                         <a class="btn btn-outline-primary btn-sm align-self-center" style="white-space: nowrap;" href="{% url 'App_LUMINOVA:logout' %}">Cerrar sesión</a>
-                    </div>
+                        {% endif %}
                 </div>
             </div>
         </div>
