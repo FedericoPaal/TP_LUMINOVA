@@ -4,7 +4,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 from .views import (
     # Vistas Principales y Autenticación
-    inicio, login_view, dashboard_view, 
+    inicio, login_view, dashboard_view, recepcion_pedidos_view, recibir_pedido_oc_view, 
 
     # Admin
     roles_permisos_view, auditoria_view,
@@ -120,8 +120,10 @@ urlpatterns = [
     path('deposito/solicitudes-insumos/', deposito_solicitudes_insumos_view, name='deposito_solicitudes_insumos'),
     path('deposito/solicitud-op/<int:op_id>/', deposito_detalle_solicitud_op_view, name='deposito_detalle_solicitud_op'),
     path('deposito/enviar-insumos-op/<int:op_id>/', deposito_enviar_insumos_op_view, name='deposito_enviar_insumos_op'),
-    
     path('deposito/enviar-lote-pt/<int:lote_id>/', deposito_enviar_lote_pt_view, name='deposito_enviar_lote_pt'),
+    path('deposito/recepcion-pedidos/', recepcion_pedidos_view, name='deposito_recepcion_pedidos'),
+    path('deposito/recibir-pedido/<int:oc_id>/', recibir_pedido_oc_view, name='deposito_recibir_pedido'),
+    
 
     # CRUDs para Fabricantes, Proveedores (Class-Based Views)
     path('ventas/proveedores/proveedor/', ProveedorListView.as_view(), name='proveedor_list'),
