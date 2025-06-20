@@ -39,9 +39,15 @@
                 <td class="text-center fw-bold">{{ oc.cantidad_principal|intcomma }}</td>
                 <td>{{ oc.fecha_estimada_entrega|date:"d/m/Y"|default:"N/A" }}</td>
                 <td class="text-center">
-                    <form action="{% url 'App_LUMINOVA:deposito_recibir_pedido' oc.id %}" method="post" onsubmit="return confirm('¿Confirma la recepción completa del pedido {{ oc.numero_orden }}? Esta acción actualizará el stock.')">
+                    <!-- Cada form tiene un ID único -->
+                    <form id="form-recibir-{{ oc.id }}" action="{% url 'App_LUMINOVA:deposito_recibir_pedido' oc.id %}" method="post" class="d-inline">
                         {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-success">
+                        <!-- Este botón ahora abre el modal -->
+                        <button type="button" class="btn btn-sm btn-success" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#confirmarRecepcionModal"
+                                data-oc-id="{{ oc.id }}"
+                                data-oc-numero="{{ oc.numero_orden }}">
                             <i class="bi bi-box-arrow-in-down"></i> Recibir Pedido
                         </button>
                     </form>
@@ -55,4 +61,66 @@
         </tbody>
     </table>
 </div>
+
+<!-- Modal único para confirmar la recepción -->
+<div class="modal fade" id="confirmarRecepcionModal" tabindex="-1" aria-labelledby="confirmarRecepcionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="confirmarRecepcionModalLabel"><i class="bi bi-check2-circle me-2"></i>Confirmar Recepción de Pedido</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>¿Confirma la recepción completa del pedido <strong id="ocNumeroParaRecibir"></strong>?</p>
+        <p class="small text-danger">Esta acción actualizará el stock y el estado de la orden de forma irreversible.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" id="btnConfirmarRecepcion">Sí, Recibir</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const confirmarModalElement = document.getElementById('confirmarRecepcionModal');
+    const btnConfirmarRecepcion = document.getElementById('btnConfirmarRecepcion');
+
+    if (confirmarModalElement) {
+        confirmarModalElement.addEventListener('show.bs.modal', function (event) {
+            // Botón que activó el modal
+            const button = event.relatedTarget;
+            
+            // Extraer información de los atributos data-* del botón
+            const ocId = button.dataset.ocId;
+            const ocNumero = button.dataset.ocNumero;
+
+            // Actualizar el contenido del modal
+            const modalInfoSpan = confirmarModalElement.querySelector('#ocNumeroParaRecibir');
+            modalInfoSpan.textContent = ocNumero;
+
+            // Guardar el ID del formulario que se debe enviar en el botón de confirmación del modal
+            btnConfirmarRecepcion.dataset.formId = `form-recibir-${ocId}`;
+        });
+    }
+
+    if (btnConfirmarRecepcion) {
+        btnConfirmarRecepcion.addEventListener('click', function () {
+            const formId = this.dataset.formId;
+            if (formId) {
+                const formToSubmit = document.getElementById(formId);
+                if (formToSubmit) {
+                    formToSubmit.submit();
+                } else {
+                    console.error('No se encontró el formulario para enviar: ' + formId);
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
