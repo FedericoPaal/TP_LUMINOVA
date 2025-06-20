@@ -58,7 +58,6 @@
                             <th scope="col" class="text-center color-thead-depo" >ID</th>
                             <th scope="col" class="color-thead-depo" >Descripción</th>
                             <th scope="col" class="text-center color-thead-depo" >Fabricante</th>
-                            <th scope="col" class="text-center color-thead-depo" >Proveedor</th>
                             <th scope="col" class="text-center color-thead-depo" >Cantidad</th>
                             <th scope="col" class="text-center color-thead-depo" >Acciones</th>
                         </tr>
@@ -91,7 +90,6 @@
                                 {% endif %}
                             </td>
                             <td class="text-center align-middle">{{ insumo.fabricante|default:"N/A" }}</td>
-                            <td class="text-center align-middle">{{ insumo.proveedor|default:"N/A" }}</td>
                             <td class="text-center align-middle">{{ insumo.stock }}</td>
                             <td class="text-center align-middle">
                                 <a href="{% url 'App_LUMINOVA:insumo_edit' insumo.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Editar Insumo"><i class="bi bi-pencil-fill"></i></a>

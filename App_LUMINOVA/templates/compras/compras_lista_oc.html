@@ -46,9 +46,9 @@
                 <td class="text-end">{{ oc.total_orden_compra|floatformat:2|default:"0.00" }}</td>
                 <td class="text-center">
                     <span class="badge fs-6
-                        {% if oc.estado == 'BORRADOR' %}bg-secondary
+                        {% if oc.estado == 'BORRADOR' %}bg-dark
                         {% elif oc.estado == 'PENDIENTE_APROBACION' %}bg-warning text-dark
-                        {% elif oc.estado == 'APROBADA' %}bg-info 
+                        {% elif oc.estado == 'APROBADA' %}bg-secondary
                         {% elif oc.estado == 'ENVIADA_PROVEEDOR' %}bg-primary
                         {% elif oc.estado == 'CONFIRMADA_PROVEEDOR' %}bg-primary-subtle text-primary-emphasis border border-primary-subtle
                         {% elif oc.estado == 'EN_TRANSITO' %}bg-info-subtle text-info-emphasis border border-info-subtle
@@ -82,16 +82,16 @@
                                 <i class="bi bi-check2-circle"></i> Aprobar
                             </button>
                         </form>
-                        
+
                         {# Aquí podrías tener el botón para Cancelar/Eliminar Borrador si lo implementas #}
-                        
+
                         <!-- <form method="post" action="#" style="display: inline;" onsubmit="return confirm('¿Está seguro de que desea eliminar este borrador de OC?');">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar Borrador OC {{ oc.numero_orden }}">
                                 <i class="bi bi-trash3-fill"></i>
                             </button>
                         </form>  -->
-                        
+
                     {% elif oc.estado == 'PENDIENTE_APROBACION' %}
                        {# ... (tus botones para Aprobar/Rechazar irían aquí, también como forms POST) ... #}
                          <a href="{% url 'App_LUMINOVA:compras_editar_oc' oc.id %}" class="btn btn-sm btn-outline-primary me-1" title="Editar OC (si permitido en este estado)">
@@ -150,7 +150,7 @@
         background-color: #f0f8ff; /* AliceBlue, o el color que prefieras para el hover */
     }
     /* Si tienes una clase color-thead, asegúrate que esté definida en custom.css o aquí */
-    .color-thead th { 
+    .color-thead th {
         background-color: #014BAC !important; /* Azul oscuro para encabezados */
         color: white !important;
         vertical-align: middle;
