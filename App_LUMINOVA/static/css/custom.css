@@ -136,7 +136,7 @@ nav.sidebar .nav-link.custom-active-button.active {
 
 .table > tbody > tr.table-row-odd > td,
 .table > tbody > tr.table-row-odd > th {
-    background-color: #61B5FA !important; /* Color para filas impares (ej. azul claro) */
+    background-color: #52a7ec !important; /* Color para filas impares (ej. azul claro) */
     color: white !important; /* Asegurar que el texto sea legible */
 }
 .color-thead-depo{

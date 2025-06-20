@@ -98,14 +98,13 @@
                     <th class="text-white text-center" style="background-color: #014BAC;">N° OP</th>
                     <th class="text-white" style="background-color: #014BAC;" colspan="2">Producto</th>
                     <th class="text-white text-center" style="background-color: #014BAC;">Cantidad</th>
-                    
+
                 </tr>
                 {% for op_solicitud in ops_pendientes_deposito_list %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
                     <td class="text-white text-center" >{{ op_solicitud.numero_op }}</td>
                     <td class="text-white" colspan="2">{{ op_solicitud.producto_a_producir.descripcion|truncatechars:20 }}</td>
                     <td class="text-white text-center">{{ op_solicitud.cantidad_a_producir }}</td>
-                    <td class="text-white text-center"></td>
                 </tr>
                 {% empty %}
                 <tr>
@@ -146,8 +145,8 @@
                     <td class="text-white text-center">
                         <form id="form-enviar-lote-{{ lote.id }}" method="post" action="{% url 'App_LUMINOVA:deposito_enviar_lote_pt' lote.id %}" style="display: inline;">
                             {% csrf_token %}
-                            <button type="button" class="btn btn-success btn-sm btn-enviar-lote" 
-                                    data-bs-toggle="modal" 
+                            <button type="button" class="btn btn-success btn-sm btn-enviar-lote"
+                                    data-bs-toggle="modal"
                                     data-bs-target="#confirmarEnvioModal"
                                     data-lote-id="{{ lote.id }}"
                                     data-lote-info="lote de {{lote.cantidad}} x {{lote.producto.descripcion}}"
@@ -186,7 +185,7 @@
                     <td class="text-white text-center fw-bold text-danger">{{ item.insumo.stock }}</td>
                     <td class="text-white text-center">
                         <a href="{% url 'App_LUMINOVA:compras_seleccionar_proveedor_para_insumo' item.insumo.id %}" class="btn btn-success btn-sm" title="Seleccionar proveedor para comprar {{ item.insumo.descripcion }}">
-                            <i class="bi bi-cart-plus-fill"></i> 
+                            <i class="bi bi-cart-plus-fill"></i>
                         </a>
                     </td>
                 </tr>

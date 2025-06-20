@@ -18,7 +18,7 @@
                 <i class="bi bi-pencil-square"></i> Editar OC
             </a>
             {% endif %}
-            <a href="{% url 'App_LUMINOVA:compras_seguimiento' %}" class="btn btn-outline-secondary btn-sm">
+            <a href="{% url 'App_LUMINOVA:compras_lista_oc' %}" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-arrow-left-circle"></i> Volver al Listado
             </a>
         </div>
@@ -69,7 +69,7 @@
 
                 <dt class="col-sm-4">Fecha Estimada Entrega:</dt>
                 <dd class="col-sm-8">{{ oc.fecha_estimada_entrega|date:"d/m/Y"|default_if_none:"No especificada" }}</dd>
-                
+
                 <dt class="col-sm-4">N° Tracking:</dt>
                 <dd class="col-sm-8 fw-bold text-success">{{ oc.numero_tracking|default_if_none:"Aún no disponible" }}</dd>
 
