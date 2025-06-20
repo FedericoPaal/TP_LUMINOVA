@@ -95,10 +95,10 @@
             </thead>
             <tbody class="bg-white text-dark">
                 <tr>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 25%;">N° OP</th>
-                    <th class="text-white" style="background-color: #014BAC; width: 50%;" colspan="2">Producto</th>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 30%;">Cantidad</th>
-                    <th class="text-white text-center" style="background-color: #014BAC; width: 30%;"></th>
+                    <th class="text-white text-center" style="background-color: #014BAC;">N° OP</th>
+                    <th class="text-white" style="background-color: #014BAC;" colspan="2">Producto</th>
+                    <th class="text-white text-center" style="background-color: #014BAC;">Cantidad</th>
+                    
                 </tr>
                 {% for op_solicitud in ops_pendientes_deposito_list %}
                 <tr class="{% if forloop.counter|divisibleby:2 %}table-row-even{% else %}table-row-odd{% endif %}">
@@ -192,7 +192,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="3" class="text-center text-white" style="background-color: #A19898;">
+                    <td colspan="4" class="text-center text-white" style="background-color: #A19898;">
                         No hay insumos que requieran gestión.
                     </td>
                 </tr>
@@ -226,7 +226,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="3" class="text-center text-white" style="background-color: #A19898;">
+                    <td colspan="4" class="text-center text-white" style="background-color: #A19898;">
                         No hay insumos en pedido con stock bajo.
                     </td>
                 </tr>
