@@ -24,12 +24,10 @@
         </div>
     </div>
 
-    {% bootstrap_messages %}
-
     <div class="row g-4">
         {# --- COLUMNA IZQUIERDA --- #}
         <div class="col-lg-8">
-            
+
             <!-- TARJETA 1: Información de la OV y su Historial (Unificados) -->
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
@@ -52,11 +50,11 @@
                                 {% if ov.estado == 'PENDIENTE' %}bg-warning text-dark
                                 {% elif ov.estado == 'CONFIRMADA' %}bg-secondary
                                 {% elif ov.estado == 'INSUMOS_SOLICITADOS' %}bg-info-subtle text-info-emphasis border border-info-subtle
-                                {% elif ov.estado == 'PRODUCCION_INICIADA' %}bg-primary 
+                                {% elif ov.estado == 'PRODUCCION_INICIADA' %}bg-primary
                                 {% elif ov.estado == 'PRODUCCION_CON_PROBLEMAS' %}bg-danger-subtle text-danger-emphasis border border-danger-subtle
                                 {% elif ov.estado == 'LISTA_ENTREGA' %}bg-success-subtle text-success-emphasis border border-success-subtle
                                 {% elif ov.estado == 'COMPLETADA' %}bg-success
-                                {% elif ov.estado == 'CANCELADA' %}bg-dark 
+                                {% elif ov.estado == 'CANCELADA' %}bg-dark
                                 {% else %}bg-light text-dark{% endif %}">
                                 {{ ov.get_estado_display }}
                             </span>
@@ -65,7 +63,7 @@
                         <dt class="col-sm-4 col-md-3">Notas de la Orden:</dt>
                         <dd class="col-sm-8 col-md-9">{{ ov.notas|default_if_none:"-"|linebreaksbr }}</dd>
                     </dl>
-                    
+
                     <!-- Sección de Historial (AHORA DENTRO) -->
                     <div class="mt-4 pt-3 border-top">
                         <h6 class="text-secondary"><i class="bi bi-clock-history me-2"></i>Historial de la Orden</h6>
@@ -140,8 +138,8 @@
                             <dt class="col-sm-5">Total Facturado:</dt>
                             <dd class="col-sm-7 fw-bold">${{ ov.factura_asociada.total_facturado|floatformat:2 }}</dd>
                         </dl>
-                        <a href="{% url 'App_LUMINOVA:ventas_ver_factura_pdf' factura_id=ov.factura_asociada.id %}" 
-                           class="btn btn-sm btn-outline-primary w-100 mt-2" 
+                        <a href="{% url 'App_LUMINOVA:ventas_ver_factura_pdf' factura_id=ov.factura_asociada.id %}"
+                           class="btn btn-sm btn-outline-primary w-100 mt-2"
                            target="_blank">
                             <i class="bi bi-printer-fill"></i> Ver/Imprimir Factura
                         </a>
@@ -184,7 +182,7 @@
                     {% for op_asociada in ov.ops_generadas.all %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <a href="{% url 'App_LUMINOVA:produccion_detalle_op' op_asociada.id %}">{{ op_asociada.numero_op }}</a>
-                            <span class="badge 
+                            <span class="badge
                                 {% if op_asociada.estado_op.nombre.lower == 'pendiente' %}bg-warning text-dark
                                 {% elif op_asociada.estado_op.nombre.lower == 'insumos solicitados' %}bg-info text-dark
                                 {% elif op_asociada.estado_op.nombre.lower == 'insumos recibidos' %}bg-primary-subtle text-primary-emphasis
