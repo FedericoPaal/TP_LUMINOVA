@@ -1638,6 +1638,27 @@ def get_oferta_proveedor_ajax(request):
     else:
         return JsonResponse({'success': False, 'error': 'No se encontró oferta para esta combinación.'}, status=404)
 
+@login_required
+@require_GET
+def ajax_get_proveedores_for_insumo(request):
+    insumo_id = request.GET.get('insumo_id')
+    if not insumo_id:
+        return JsonResponse({'proveedores': []})
+
+    try:
+        # Obtiene los IDs de los proveedores que tienen una oferta para el insumo dado.
+        proveedor_ids = OfertaProveedor.objects.filter(insumo_id=insumo_id).values_list('proveedor_id', flat=True).distinct()
+        
+        # Obtiene los objetos Proveedor correspondientes a esos IDs.
+        proveedores = Proveedor.objects.filter(id__in=proveedor_ids).values('id', 'nombre').order_by('nombre')
+        
+        return JsonResponse({'proveedores': list(proveedores)})
+    except ValueError:
+        return JsonResponse({'error': 'ID de insumo inválido'}, status=400)
+    except Exception as e:
+        logger.error(f"Error en ajax_get_proveedores_for_insumo: {e}")
+        return JsonResponse({'error': 'Ocurrió un error en el servidor'}, status=500)
+
 # --- PRODUCCIÓN VIEWS ---
 def proveedor_create_view(request):
     if not request.user.is_authenticated:

@@ -20,13 +20,10 @@
                     
 
                     {% if insumo_preseleccionado %}
-                        <div class="alert alert-info small p-2"> {# La clase p-2 para menos padding #}
+                        <div class="alert alert-info small p-2">
                             <i class="bi bi-info-circle-fill"></i>
                             Iniciando orden de compra para el insumo: <strong>{{ insumo_preseleccionado.descripcion }}</strong>
                             (Stock actual: {{ insumo_preseleccionado.stock }}).
-                            {% if insumo_preseleccionado.proveedor %} {# Este es el if de la línea 26 #}
-                                Proveedor sugerido: {{ insumo_preseleccionado.proveedor.nombre }}.
-                            {% endif %} 
                         </div>
                     {% endif %}
 
@@ -54,74 +51,99 @@
 {% block scripts_extra %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const insumoSelect = document.getElementById('id_insumo_principal'); // Ajusta el ID si es diferente
-    const proveedorSelect = document.getElementById('id_proveedor');     // Ajusta el ID
+    const insumoSelect = document.getElementById('id_insumo_principal');
+    const proveedorSelect = document.getElementById('id_proveedor');
     const precioInput = document.getElementById('id_precio_unitario_compra');
     const fechaEntregaInput = document.getElementById('id_fecha_estimada_entrega');
-    // const debugInfoDiv = document.getElementById('debug-oferta-info'); // Opcional para debug
 
+    // --- Función para obtener proveedores con ofertas para un insumo ---
+    function updateProveedores() {
+        const insumoId = insumoSelect.value;
+        const currentProveedorId = proveedorSelect.value;
+
+        // Limpiar campos relacionados si no hay insumo
+        if (!insumoId) {
+            proveedorSelect.innerHTML = '<option value="">Seleccione un Insumo primero</option>';
+            precioInput.value = '';
+            fechaEntregaInput.value = '';
+            return;
+        }
+
+        // Llamada AJAX para obtener los proveedores con ofertas
+        fetch(`{% url 'App_LUMINOVA:ajax_get_proveedores_for_insumo' %}?insumo_id=${insumoId}`)
+            .then(response => response.json())
+            .then(data => {
+                proveedorSelect.innerHTML = '<option value="">Seleccionar Proveedor...</option>'; // Opción por defecto
+                if (data.proveedores && data.proveedores.length > 0) {
+                    data.proveedores.forEach(proveedor => {
+                        const option = document.createElement('option');
+                        option.value = proveedor.id;
+                        option.textContent = proveedor.nombre;
+                        if (proveedor.id == currentProveedorId) { // Mantener la selección si es posible
+                           option.selected = true;
+                        }
+                        proveedorSelect.appendChild(option);
+                    });
+                } else {
+                    proveedorSelect.innerHTML = '<option value="">Sin proveedores con ofertas</option>';
+                }
+                // Disparar manualmente la función de la oferta para el caso de recarga
+                fetchAndSetOfertaData(); 
+            })
+            .catch(error => {
+                console.error('Error al cargar proveedores:', error);
+                proveedorSelect.innerHTML = '<option value="">Error al cargar</option>';
+            });
+    }
+
+    // --- Función para obtener la oferta específica ---
     function fetchAndSetOfertaData() {
         const insumoId = insumoSelect.value;
         const proveedorId = proveedorSelect.value;
 
-        // if (debugInfoDiv) debugInfoDiv.innerHTML = ''; // Limpiar debug
-
         if (insumoId && proveedorId) {
-            // console.log(`Fetching oferta para Insumo: ${insumoId}, Proveedor: ${proveedorId}`);
             fetch(`{% url 'App_LUMINOVA:ajax_get_oferta_proveedor' %}?insumo_id=${insumoId}&proveedor_id=${proveedorId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    // console.log("Data recibida:", data);
                     if (data.success) {
                         precioInput.value = parseFloat(data.precio_unitario).toFixed(2);
-                        if (data.fecha_estimada_entrega) {
-                            fechaEntregaInput.value = data.fecha_estimada_entrega; // Viene en YYYY-MM-DD
-                        } else {
-                            fechaEntregaInput.value = ''; // Limpiar si no hay fecha estimada
-                        }
-                        // if (debugInfoDiv) debugInfoDiv.innerHTML = `Oferta encontrada: Precio $${data.precio_unitario}, Entrega: ${data.tiempo_entrega_dias} días (Actualizado: ${data.fecha_actualizacion_oferta || 'N/A'})`;
+                        fechaEntregaInput.value = data.fecha_estimada_entrega || '';
                     } else {
-                        // No se encontró oferta, limpiar campos o poner valores por defecto/mensaje
-                        precioInput.value = '0.00'; // O dejar vacío y que el usuario ingrese
+                        precioInput.value = '';
                         fechaEntregaInput.value = '';
-                        // if (debugInfoDiv) debugInfoDiv.innerHTML = `<span class="text-danger">No se encontró oferta para esta combinación. Ingrese datos manualmente.</span>`;
-                        // Podrías mostrar un mensaje más amigable al usuario aquí
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching oferta:', error);
-                    precioInput.value = '0.00';
+                    precioInput.value = '';
                     fechaEntregaInput.value = '';
-                    // if (debugInfoDiv) debugInfoDiv.innerHTML = `<span class="text-danger">Error al buscar oferta.</span>`;
                 });
         } else {
-            // Si no están seleccionados ambos, no hacer nada o limpiar
-            // precioInput.value = ''; // Comentado para no borrar si el usuario está escribiendo
-            // fechaEntregaInput.value = '';
+            precioInput.value = '';
+            fechaEntregaInput.value = '';
         }
     }
 
+    // --- Event Listeners ---
     if (insumoSelect) {
-        insumoSelect.addEventListener('change', fetchAndSetOfertaData);
+        insumoSelect.addEventListener('change', function() {
+            // Cuando cambia el insumo, actualizamos la lista de proveedores
+            updateProveedores();
+        });
     }
+    
     if (proveedorSelect) {
+        // Cuando cambia el proveedor, actualizamos los datos de la oferta
         proveedorSelect.addEventListener('change', fetchAndSetOfertaData);
     }
-
-    // Llamada inicial por si el formulario ya tiene valores preseleccionados al cargar (para edición)
-    // Esto es importante si el formulario se carga para editar una OC existente
-    // y queremos que el precio y fecha reflejen la oferta del proveedor ya guardado.
-    // if (insumoSelect.value && proveedorSelect.value && "{% if oc_instance %}true{% else %}false{% endif %}" === "true" ) { // Solo en modo edición
-    //     fetchAndSetOfertaData();
-    // }
-    // Nota: Al editar, los campos ya tendrán los valores guardados de la OC.
-    // Esta lógica AJAX es para cuando el *usuario cambia* el proveedor en el formulario de edición.
-    // El pre-rellenado inicial para edición ya lo hace Django al pasar `instance=orden_compra_instance` al form.
+    
+    // --- Llamada Inicial ---
+    // Si la página se carga con un insumo ya seleccionado (ej. al editar o venir de stock bajo),
+    // la lógica en `forms.py` ya habrá filtrado la lista de proveedores. No es necesario `updateProveedores()` aquí.
+    // Solo necesitamos asegurarnos de que si hay un proveedor seleccionado, los datos de la oferta se carguen.
+    if (insumoSelect && insumoSelect.value && proveedorSelect && proveedorSelect.value) {
+        fetchAndSetOfertaData();
+    }
 });
 </script>
 {% endblock %}

@@ -4,7 +4,7 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 from .views import (
     # Vistas Principales y Autenticación
-    inicio, login_view, dashboard_view, recepcion_pedidos_view, recibir_pedido_oc_view, 
+    ajax_get_proveedores_for_insumo, inicio, login_view, dashboard_view, recepcion_pedidos_view, recibir_pedido_oc_view, 
 
     # Admin
     roles_permisos_view, auditoria_view,
@@ -103,6 +103,7 @@ urlpatterns = [
     path('compras/orden/<int:oc_id>/editar/', compras_editar_oc_view, name='compras_editar_oc'),
     path('compras/orden/<int:oc_id>/aprobar-directo/', compras_aprobar_oc_directamente_view, name='compras_aprobar_oc_directamente'),
     path('ajax/get-oferta-proveedor/', get_oferta_proveedor_ajax, name='ajax_get_oferta_proveedor'),
+    path('ajax/get-proveedores-for-insumo/', ajax_get_proveedores_for_insumo, name='ajax_get_proveedores_for_insumo'),
 
     # --- Rutas de Producción ---
     path('produccion/', produccion_lista_op_view, name='produccion_principal'),

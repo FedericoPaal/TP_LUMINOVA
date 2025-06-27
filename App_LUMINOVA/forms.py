@@ -7,7 +7,7 @@ from .models import (
     Factura,
     OfertaProveedor,
     Orden, 
-    Proveedor, # Asegúrate de importar el modelo Proveedor
+    Proveedor,
     OrdenVenta, ItemOrdenVenta, ProductoTerminado,
     OrdenProduccion, EstadoOrden, SectorAsignado, CategoriaInsumo, Insumo, CategoriaProductoTerminado,SectorAsignado, Reportes
 )
@@ -293,7 +293,6 @@ class OrdenCompraForm(forms.ModelForm):
         label="Insumo principal"
     )
     def __init__(self, *args, **kwargs):
-        # Insumo fijado (si viene de una alerta de stock, no debería cambiar)
         self.insumo_fijo = kwargs.pop('insumo_fijado', None) 
         super().__init__(*args, **kwargs)
         
@@ -333,8 +332,17 @@ class OrdenCompraForm(forms.ModelForm):
             self.fields['proveedor'].widget.attrs['disabled'] = True
             self.fields['proveedor'].empty_label = None
         else:
-            self.fields['proveedor'].queryset = Proveedor.objects.all().order_by('nombre')
-            self.fields['proveedor'].empty_label = "Seleccionar Proveedor..."
+            # Lógica dinámica para proveedores
+            selected_insumo = self.insumo_fijo or self.initial.get('insumo_principal') or (instance and instance.insumo_principal)
+            
+            if selected_insumo:
+                insumo_id = selected_insumo.id if isinstance(selected_insumo, Insumo) else selected_insumo
+                proveedor_ids_con_oferta = OfertaProveedor.objects.filter(insumo_id=insumo_id).values_list('proveedor_id', flat=True).distinct()
+                self.fields['proveedor'].queryset = Proveedor.objects.filter(id__in=proveedor_ids_con_oferta).order_by('nombre')
+                self.fields['proveedor'].empty_label = "Seleccionar Proveedor..."
+            else:
+                self.fields['proveedor'].queryset = Proveedor.objects.none()
+                self.fields['proveedor'].empty_label = "Seleccione un Insumo primero"
 
         # --- Configuración de Precio y Fecha ---
         self.fields['precio_unitario_compra'].widget.attrs['readonly'] = True
