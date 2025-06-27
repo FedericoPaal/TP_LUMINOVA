@@ -326,24 +326,35 @@ class OrdenCompraForm(forms.ModelForm):
             self.fields['insumo_principal'].empty_label = "Seleccionar Insumo..."
 
         # --- Configuración de Proveedor ---
-        # ** INICIO DE LA CORRECCIÓN CLAVE **
-        # La lógica anterior no funcionaba bien durante el POST porque `self.initial` está vacío.
         self.fields['proveedor'].queryset = Proveedor.objects.none()
 
+        insumo_for_filter = None
+        # 1. Caso POST: El insumo viene en `self.data`
         if 'insumo_principal' in self.data:
             try:
-                insumo_id = int(self.data.get('insumo_principal'))
-                proveedor_ids_con_oferta = OfertaProveedor.objects.filter(insumo_id=insumo_id).values_list('proveedor_id', flat=True).distinct()
-                self.fields['proveedor'].queryset = Proveedor.objects.filter(id__in=proveedor_ids_con_oferta).order_by('nombre')
-            except (ValueError, TypeError):
-                # Ocurre si `self.data.get('insumo_principal')` es None o no es un número válido.
-                # En este caso, el queryset se queda vacío, lo cual es correcto.
+                insumo_pk = int(self.data.get('insumo_principal'))
+                insumo_for_filter = Insumo.objects.get(pk=insumo_pk)
+            except (Insumo.DoesNotExist, ValueError, TypeError):
                 pass
+        # 2. Caso GET para editar: El insumo está en la instancia
         elif instance and instance.insumo_principal:
-            # Lógica para cuando se carga el formulario en modo GET (edición)
-            proveedor_ids_con_oferta = OfertaProveedor.objects.filter(insumo=instance.insumo_principal).values_list('proveedor_id', flat=True).distinct()
-            self.fields['proveedor'].queryset = Proveedor.objects.filter(id__in=proveedor_ids_con_oferta).order_by('nombre')
-        # ** FIN DE LA CORRECCIÓN CLAVE **
+            insumo_for_filter = instance.insumo_principal
+        # 3. Caso GET para crear con datos iniciales: El insumo viene en `self.initial`
+        elif self.initial.get('insumo_principal'):
+            # self.initial puede contener el ID o el objeto, nos aseguramos de tener el objeto
+            initial_insumo = self.initial.get('insumo_principal')
+            if isinstance(initial_insumo, Insumo):
+                insumo_for_filter = initial_insumo
+            else:
+                try:
+                    insumo_for_filter = Insumo.objects.get(pk=int(initial_insumo))
+                except (Insumo.DoesNotExist, ValueError, TypeError):
+                    pass
+        
+        # Si determinamos un insumo, filtramos los proveedores
+        if insumo_for_filter:
+            proveedor_ids = OfertaProveedor.objects.filter(insumo=insumo_for_filter).values_list('proveedor_id', flat=True).distinct()
+            self.fields['proveedor'].queryset = Proveedor.objects.filter(id__in=proveedor_ids).order_by('nombre')
 
 
         # --- Configuración de Precio y Fecha ---
