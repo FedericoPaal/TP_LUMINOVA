@@ -326,23 +326,25 @@ class OrdenCompraForm(forms.ModelForm):
             self.fields['insumo_principal'].empty_label = "Seleccionar Insumo..."
 
         # --- Configuración de Proveedor ---
-        if instance and instance.pk and instance.proveedor and instance.estado != 'BORRADOR':
-            self.fields['proveedor'].queryset = Proveedor.objects.filter(pk=instance.proveedor.pk)
-            self.fields['proveedor'].initial = instance.proveedor
-            self.fields['proveedor'].widget.attrs['disabled'] = True
-            self.fields['proveedor'].empty_label = None
-        else:
-            # Lógica dinámica para proveedores
-            selected_insumo = self.insumo_fijo or self.initial.get('insumo_principal') or (instance and instance.insumo_principal)
-            
-            if selected_insumo:
-                insumo_id = selected_insumo.id if isinstance(selected_insumo, Insumo) else selected_insumo
+        # ** INICIO DE LA CORRECCIÓN CLAVE **
+        # La lógica anterior no funcionaba bien durante el POST porque `self.initial` está vacío.
+        self.fields['proveedor'].queryset = Proveedor.objects.none()
+
+        if 'insumo_principal' in self.data:
+            try:
+                insumo_id = int(self.data.get('insumo_principal'))
                 proveedor_ids_con_oferta = OfertaProveedor.objects.filter(insumo_id=insumo_id).values_list('proveedor_id', flat=True).distinct()
                 self.fields['proveedor'].queryset = Proveedor.objects.filter(id__in=proveedor_ids_con_oferta).order_by('nombre')
-                self.fields['proveedor'].empty_label = "Seleccionar Proveedor..."
-            else:
-                self.fields['proveedor'].queryset = Proveedor.objects.none()
-                self.fields['proveedor'].empty_label = "Seleccione un Insumo primero"
+            except (ValueError, TypeError):
+                # Ocurre si `self.data.get('insumo_principal')` es None o no es un número válido.
+                # En este caso, el queryset se queda vacío, lo cual es correcto.
+                pass
+        elif instance and instance.insumo_principal:
+            # Lógica para cuando se carga el formulario en modo GET (edición)
+            proveedor_ids_con_oferta = OfertaProveedor.objects.filter(insumo=instance.insumo_principal).values_list('proveedor_id', flat=True).distinct()
+            self.fields['proveedor'].queryset = Proveedor.objects.filter(id__in=proveedor_ids_con_oferta).order_by('nombre')
+        # ** FIN DE LA CORRECCIÓN CLAVE **
+
 
         # --- Configuración de Precio y Fecha ---
         self.fields['precio_unitario_compra'].widget.attrs['readonly'] = True

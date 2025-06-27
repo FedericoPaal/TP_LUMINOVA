@@ -1,5 +1,5 @@
 # TP_LUMINOVA-main/App_LUMINOVA/context_processors.py
-from .models import OrdenProduccion, Reportes, Orden
+from .models import OrdenProduccion, Reportes, Orden, Insumo
 
 def notificaciones_context(request):
     if not request.user.is_authenticated:
@@ -24,12 +24,34 @@ def notificaciones_context(request):
         estado='EN_TRANSITO'
     ).count()
 
-    total_notificaciones = ops_con_problemas_count + solicitudes_insumos_count + ocs_para_aprobar_count + ocs_en_transito_count
+    UMBRAL_STOCK_BAJO = 15000
+    ESTADOS_OC_EN_PROCESO = ['APROBADA', 'ENVIADA_PROVEEDOR', 'EN_TRANSITO', 'RECIBIDA_PARCIAL', 'RECIBIDA_TOTAL', 'COMPLETADA']
+    
+    # Excluimos los insumos que ya tienen una OC "en firme"
+    insumos_con_oc_en_firme = Orden.objects.filter(
+        tipo='compra',
+        estado__in=ESTADOS_OC_EN_PROCESO
+    ).values_list('insumo_principal_id', flat=True)
+
+    insumos_stock_bajo_count = Insumo.objects.filter(
+        stock__lt=UMBRAL_STOCK_BAJO
+    ).exclude(
+        id__in=insumos_con_oc_en_firme
+    ).count()
+
+    total_notificaciones = (
+        ops_con_problemas_count + 
+        solicitudes_insumos_count + 
+        ocs_para_aprobar_count + 
+        ocs_en_transito_count +
+        insumos_stock_bajo_count
+    )
 
     return {
         'ops_con_problemas_count': ops_con_problemas_count,
         'solicitudes_insumos_count': solicitudes_insumos_count,
         'ocs_para_aprobar_count': ocs_para_aprobar_count,
         'ocs_en_transito_count': ocs_en_transito_count,
+        'insumos_stock_bajo_count': insumos_stock_bajo_count,
         'total_notificaciones': total_notificaciones,
     }

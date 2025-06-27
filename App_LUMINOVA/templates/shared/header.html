@@ -37,6 +37,14 @@
                             <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="width: 300px;">
                                 <li class="dropdown-header">Acciones Urgentes</li>
                                 <li><hr class="dropdown-divider"></li>
+                                {% if insumos_stock_bajo_count > 0 %}
+                                <li>
+                                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'App_LUMINOVA:compras_desglose' %}">
+                                        Insumos con Stock Bajo
+                                        <span class="badge bg-info rounded-pill">{{ insumos_stock_bajo_count }}</span>
+                                    </a>
+                                </li>
+                                {% endif %}
                                 {% if ops_con_problemas_count > 0 %}<li><a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'App_LUMINOVA:reportes_produccion' %}">OPs con Problemas <span class="badge bg-danger rounded-pill">{{ ops_con_problemas_count }}</span></a></li>{% endif %}
                                 {% if solicitudes_insumos_count > 0 %}<li><a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'App_LUMINOVA:deposito_solicitudes_insumos' %}">Solicitudes de Insumos <span class="badge bg-warning text-dark rounded-pill">{{ solicitudes_insumos_count }}</span></a></li>{% endif %}
                                 {% if ocs_para_aprobar_count > 0 %}<li><a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'App_LUMINOVA:compras_lista_oc' %}">OCs para Aprobar <span class="badge bg-info text-dark rounded-pill">{{ ocs_para_aprobar_count }}</span></a></li>{% endif %}

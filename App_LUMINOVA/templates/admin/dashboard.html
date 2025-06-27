@@ -170,6 +170,12 @@
                 <h5 class="card-title mb-3 text-danger"><i class="bi bi-lightning-charge-fill me-2" ></i>Acciones Urgentes</h5>
                 <div class="list-group list-group-flush">
                     {% if total_notificaciones > 0 %}
+                        {% if insumos_stock_bajo_count > 0 %}
+                            <a href="{% url 'App_LUMINOVA:compras_desglose' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0">
+                                Insumos con Stock Bajo
+                                <span class="badge bg-info rounded-pill">{{ insumos_stock_bajo_count }}</span>
+                            </a>
+                        {% endif %}
                         {% if ops_con_problemas_count > 0 %}
                             <a href="{% url 'App_LUMINOVA:reportes_produccion' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-0">
                                 OPs con Problemas
