@@ -40,6 +40,14 @@
                                 {% if ops_con_problemas_count > 0 %}<li><a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'App_LUMINOVA:reportes_produccion' %}">OPs con Problemas <span class="badge bg-danger rounded-pill">{{ ops_con_problemas_count }}</span></a></li>{% endif %}
                                 {% if solicitudes_insumos_count > 0 %}<li><a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'App_LUMINOVA:deposito_solicitudes_insumos' %}">Solicitudes de Insumos <span class="badge bg-warning text-dark rounded-pill">{{ solicitudes_insumos_count }}</span></a></li>{% endif %}
                                 {% if ocs_para_aprobar_count > 0 %}<li><a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'App_LUMINOVA:compras_lista_oc' %}">OCs para Aprobar <span class="badge bg-info text-dark rounded-pill">{{ ocs_para_aprobar_count }}</span></a></li>{% endif %}
+                                {% if ocs_en_transito_count > 0 %}
+                                <li>
+                                    <a class="dropdown-item d-flex justify-content-between align-items-center" href="{% url 'App_LUMINOVA:deposito_recepcion_pedidos' %}">
+                                        Pedidos por Recibir 
+                                        <span class="badge bg-success rounded-pill">{{ ocs_en_transito_count }}</span>
+                                    </a>
+                                </li>
+                                {% endif %}
                                 {% if total_notificaciones == 0 %}<li><p class="dropdown-item-text text-center text-muted small py-3">No hay notificaciones.</p></li>{% endif %}
                             </ul>
                         </div>
