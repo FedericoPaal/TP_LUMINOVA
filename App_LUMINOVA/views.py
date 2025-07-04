@@ -81,22 +81,11 @@ from .models import (
 )
 from .signals import get_client_ip
 
+from .services.document_services import generar_siguiente_numero_documento
+from .services.pdf_services import generar_pdf_factura
+from .utils import es_admin, es_admin_o_rol
+
 logger = logging.getLogger(__name__)
-
-
-# --- HELPER FUNCTIONS ---
-def es_admin(user):
-    return user.groups.filter(name="administrador").exists() or user.is_superuser
-
-
-def es_admin_o_rol(user, roles_permitidos=None):
-    if user.is_superuser:
-        return True
-    if roles_permitidos is None:
-        roles_permitidos = []
-    return user.groups.filter(
-        name__in=[rol.lower() for rol in roles_permitidos]
-    ).exists()
 
 
 # --- GENERAL VIEWS & AUTHENTICATION ---
@@ -832,172 +821,100 @@ def ventas_lista_ov_view(request):
 @login_required
 @transaction.atomic
 def ventas_crear_ov_view(request):
+    """
+    Gestiona la creación de una nueva Orden de Venta y sus ítems asociados.
+    Al crearse exitosamente, también genera las Órdenes de Producción correspondientes.
+    """
     if not es_admin_o_rol(request.user, ["ventas", "administrador"]):
         messages.error(request, "Acción no permitida.")
         return redirect("App_LUMINOVA:ventas_lista_ov")
 
+    # 1. Decidir si se procesa un POST o se muestra un formulario GET
     if request.method == "POST":
         form_ov = OrdenVentaForm(request.POST, prefix="ov")
-        # --- CORRECCIÓN ---
-        # Usar el formset de creación para manejar los datos del POST
         formset_items = ItemOrdenVentaFormSetCreacion(request.POST, prefix="items")
 
         if form_ov.is_valid() and formset_items.is_valid():
-            ov = form_ov.save(commit=False)
-            if not ov.pk:
-                ov.estado = "PENDIENTE"
-                logger.info(
-                    f"Nueva OV (Número pre-form: {form_ov.cleaned_data.get('numero_ov', 'N/A')}), estado asignado a PENDIENTE por la vista."
-                )
-
-            ov.total_ov = 0
-
             try:
-                ov.save()
+                # Guardar la OV principal primero, pero sin total definitivo
+                orden_venta_instance = form_ov.save(commit=False)
+                orden_venta_instance.estado = "PENDIENTE" # Asignado explícitamente por la vista
+                orden_venta_instance.save() # Guardar para obtener un ID
 
+                # Asociar el formset con la instancia recién creada
+                formset_items.instance = orden_venta_instance
+
+                # Guardar los ítems del formset
+                items_guardados = formset_items.save(commit=False)
+
+                # Calcular el total y guardar ítems individualmente
                 total_orden_calculado = 0
-                items_guardados_para_op = []
+                items_para_op = []
 
-                for form_item in formset_items:
-                    if (
-                        form_item.is_valid()
-                        and form_item.cleaned_data
-                        and not form_item.cleaned_data.get("DELETE", False)
-                    ):
-                        if form_item.cleaned_data.get(
-                            "producto_terminado"
-                        ) and form_item.cleaned_data.get("cantidad"):
-                            item = form_item.save(commit=False)
-                            item.orden_venta = ov
-                            item.precio_unitario_venta = (
-                                item.producto_terminado.precio_unitario
-                            )
-                            item.subtotal = item.cantidad * item.precio_unitario_venta
-                            total_orden_calculado += item.subtotal
-                            item.save()
-                            items_guardados_para_op.append(item)
+                for item in items_guardados:
+                    if item.producto_terminado and item.cantidad > 0:
+                        # Asignar el precio desde el modelo ProductoTerminado para seguridad
+                        item.precio_unitario_venta = item.producto_terminado.precio_unitario
+                        item.subtotal = item.cantidad * item.precio_unitario_venta
+                        item.save() # Guardar el ítem ahora que tiene todos los datos
+                        total_orden_calculado += item.subtotal
+                        items_para_op.append(item)
 
-                if not items_guardados_para_op:
-                    messages.error(
-                        request, "Debe añadir al menos un producto válido a la orden."
-                    )
-                    ov_numero_temp = ov.numero_ov
-                    ov.delete()
-                    logger.warning(
-                        f"OV {ov_numero_temp} eliminada porque no tenía ítems válidos."
-                    )
+                if not items_para_op:
+                    messages.error(request, "La orden de venta debe tener al menos un producto válido.")
+                    # Como estamos en una transacción, no es necesario eliminar la OV manualmente,
+                    # se deshará al salir del bloque `try`. Por eso lanzamos una excepción.
+                    raise ValueError("No se proporcionaron ítems válidos para la orden.")
 
-                    form_ov_para_error = OrdenVentaForm(request.POST, prefix="ov")
-                    context = {
-                        "form_ov": form_ov_para_error,
-                        "formset_items": formset_items,
-                        "titulo_seccion": "Nueva Orden de Venta",
-                    }
-                    return render(request, "ventas/ventas_crear_ov.html", context)
+                # Actualizar el total de la OV
+                orden_venta_instance.total_ov = total_orden_calculado
+                orden_venta_instance.save(update_fields=['total_ov'])
 
-                ov.total_ov = total_orden_calculado
-                ov.save(update_fields=["total_ov"])
-
-                messages.success(
-                    request,
-                    f'Orden de Venta "{ov.numero_ov}" creada en estado {ov.get_estado_display()}. Total: ${ov.total_ov:.2f}',
-                )
-
-                estado_op_inicial = EstadoOrden.objects.filter(
-                    nombre__iexact="Pendiente"
-                ).first()
+                # Generar las OPs correspondientes
+                estado_op_inicial = EstadoOrden.objects.filter(nombre__iexact="Pendiente").first()
                 if not estado_op_inicial:
-                    messages.error(
-                        request,
-                        "Error crítico: El estado 'Pendiente' para OP no está configurado. Las OPs no se generarán.",
+                    # Este error detendrá la transacción y mostrará un mensaje claro
+                    raise Exception("Error crítico: El estado de OP 'Pendiente' no está configurado.")
+                
+                for item_ov in items_para_op:
+                    next_op_number = generar_siguiente_numero_documento(OrdenProduccion, 'OP', 'numero_op')
+                    OrdenProduccion.objects.create(
+                        numero_op=next_op_number,
+                        orden_venta_origen=orden_venta_instance,
+                        producto_a_producir=item_ov.producto_terminado,
+                        cantidad_a_producir=item_ov.cantidad,
+                        fecha_solicitud=timezone.now(),
+                        estado_op=estado_op_inicial,
                     )
-                else:
-                    for item_ov_for_op in items_guardados_para_op:
-                        try:
-                            # Obtener el último número de OP existente
-                            last_op = OrdenProduccion.objects.order_by("-id").first()
-                            if last_op and last_op.numero_op:
-                                try:
-                                    last_number = int(
-                                        last_op.numero_op.replace("OP-", "")
-                                    )
-                                except ValueError:
-                                    last_number = OrdenProduccion.objects.count()
-                                next_op_number = f"OP-{str(last_number + 1).zfill(5)}"
-                            else:
-                                next_op_number = "OP-00001"
 
-                            # Si por alguna razón el número generado ya existe, buscar el siguiente disponible
-                            while OrdenProduccion.objects.filter(
-                                numero_op=next_op_number
-                            ).exists():
-                                last_number += 1
-                                next_op_number = f"OP-{str(last_number + 1).zfill(5)}"
-
-                            OrdenProduccion.objects.create(
-                                numero_op=next_op_number,
-                                orden_venta_origen=ov,
-                                producto_a_producir=item_ov_for_op.producto_terminado,
-                                cantidad_a_producir=item_ov_for_op.cantidad,
-                                fecha_solicitud=timezone.now(),
-                                estado_op=estado_op_inicial,
-                            )
-                            logger.info(
-                                f'OP "{next_op_number}" para "{item_ov_for_op.producto_terminado.descripcion}" generada.'
-                            )
-                        except Exception as e_op:
-                            messages.error(
-                                request,
-                                f'Error al generar OP para item "{item_ov_for_op.producto_terminado.descripcion}": {e_op}',
-                            )
-                            logger.exception(
-                                f"Error al generar OP para OV {ov.numero_ov}"
-                            )
-
-                return redirect("App_LUMINOVA:ventas_lista_ov")
+                messages.success(request, f'Orden de Venta "{orden_venta_instance.numero_ov}" y sus OPs asociadas se han creado exitosamente.')
+                return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta_instance.id)
 
             except DjangoIntegrityError as e_int:
-                if (
-                    "UNIQUE constraint" in str(e_int)
-                    and "numero_ov" in str(e_int).lower()
-                ):
-                    messages.error(
-                        request,
-                        f"El número de orden de venta '{form_ov.cleaned_data.get('numero_ov')}' ya existe.",
-                    )
-                else:
-                    messages.error(request, f"Error de base de datos: {e_int}")
+                # Manejo de error si el número de OV ya existe
+                messages.error(request, f"El número de orden de venta '{form_ov.cleaned_data.get('numero_ov')}' ya existe.")
+            except ValueError as e_val:
+                # Manejo del error de "sin ítems"
+                messages.error(request, str(e_val))
             except Exception as e:
-                messages.error(
-                    request, f"Error inesperado al crear la Orden de Venta: {e}"
-                )
-                logger.exception("Error inesperado en ventas_crear_ov_view POST:")
-        else:
-            logger.warning(
-                f"Formulario OV inválido en POST: {form_ov.errors.as_json()}"
-            )
-            if formset_items.errors:
-                logger.warning(
-                    f"Formulario Items OV inválido en POST: {formset_items.errors}"
-                )
+                # Manejo de cualquier otro error, como el de estado de OP no encontrado
+                messages.error(request, f"Error inesperado al procesar la orden: {e}")
+                logger.exception("Error en la creación de OV y sus OPs")
+            
+            # Si hubo algún error en el bloque try, el `form_ov` y `formset_items`
+            # (con los datos del POST y sus errores) se pasarán al contexto para renderizar de nuevo.
+
+        else: # Si los formularios no son válidos
             messages.error(request, "Por favor, corrija los errores en el formulario.")
+            logger.warning(f"Error de validación en creación de OV: OV errors: {form_ov.errors.as_json()} | Items errors: {formset_items.errors}")
 
-    else:  # GET request
-        initial_ov_data = {}
-        ov_count = OrdenVenta.objects.count()
-        next_ov_number = f"OV-{str(ov_count + 1).zfill(4)}"
-        while OrdenVenta.objects.filter(numero_ov=next_ov_number).exists():
-            ov_count += 1
-            next_ov_number = f"OV-{str(ov_count + 1).zfill(4)}"
-        initial_ov_data["numero_ov"] = next_ov_number
-
+    # 2. Si es GET, preparar formularios vacíos
+    else:
+        initial_ov_data = {'numero_ov': generar_siguiente_numero_documento(OrdenVenta, 'OV', 'numero_ov')}
         form_ov = OrdenVentaForm(initial=initial_ov_data, prefix="ov")
-        # --- CORRECCIÓN ---
-        # Usar el formset específico para CREACIÓN, que ya tiene extra=1
-        formset_items = ItemOrdenVentaFormSetCreacion(
-            prefix="items", queryset=ItemOrdenVenta.objects.none()
-        )
+        formset_items = ItemOrdenVentaFormSetCreacion(prefix='items', queryset=ItemOrdenVenta.objects.none())
 
+    # 3. Renderizar la plantilla con los formularios correspondientes (nuevos o con errores)
     context = {
         "form_ov": form_ov,
         "formset_items": formset_items,
@@ -1273,13 +1190,7 @@ def ventas_editar_ov_view(request, ov_id):
                             # --- INICIO DE LA CORRECCIÓN ---
                             for item_guardado in ov_actualizada.items_ov.all():
                                 # Lógica correcta para generar número de OP secuencial
-                                op_count = OrdenProduccion.objects.count()
-                                next_op_number = f"OP-{str(op_count + 1).zfill(5)}"
-                                while OrdenProduccion.objects.filter(
-                                    numero_op=next_op_number
-                                ).exists():
-                                    op_count += 1
-                                    next_op_number = f"OP-{str(op_count + 1).zfill(5)}"
+                                next_op_number = generar_siguiente_numero_documento(OrdenProduccion, 'OP', 'numero_op')
 
                                 OrdenProduccion.objects.create(
                                     numero_op=next_op_number,
@@ -1629,200 +1540,6 @@ def compras_seleccionar_proveedor_para_insumo_view(request, insumo_id):
     return render(request, "compras/compras_seleccionar_proveedor.html", context)
 
 
-def compras_crear_oc_view(
-    request, insumo_id=None, proveedor_id=None
-):  # Nombres de parámetros ajustados
-    insumo_preseleccionado_obj = None
-    proveedor_preseleccionado_obj = None
-    oferta_seleccionada = None
-    initial_data = {}
-    logger.info(
-        f"Entrando a compras_crear_oc_view con insumo_id={insumo_id}, proveedor_id={proveedor_id}"
-    )
-
-    if insumo_id:
-        insumo_preseleccionado_obj = get_object_or_404(Insumo, id=insumo_id)
-        initial_data["insumo_principal"] = insumo_preseleccionado_obj
-        logger.info(f"Insumo preseleccionado: {insumo_preseleccionado_obj.descripcion}")
-
-        if proveedor_id:
-            proveedor_preseleccionado_obj = get_object_or_404(
-                Proveedor, id=proveedor_id
-            )
-            initial_data["proveedor"] = proveedor_preseleccionado_obj
-            logger.info(
-                f"Proveedor preseleccionado: {proveedor_preseleccionado_obj.nombre}"
-            )
-
-            oferta_seleccionada = OfertaProveedor.objects.filter(
-                insumo=insumo_preseleccionado_obj,
-                proveedor=proveedor_preseleccionado_obj,
-            ).first()
-
-            if oferta_seleccionada:
-                initial_data["precio_unitario_compra"] = (
-                    oferta_seleccionada.precio_unitario_compra
-                )
-                if oferta_seleccionada.tiempo_entrega_estimado_dias is not None:
-                    try:
-                        dias_entrega = int(
-                            oferta_seleccionada.tiempo_entrega_estimado_dias
-                        )
-                        fecha_actual = timezone.now().date()
-                        fecha_estimada = fecha_actual + timedelta(days=dias_entrega)
-                        initial_data["fecha_estimada_entrega"] = (
-                            fecha_estimada.strftime("%Y-%m-%d")
-                        )
-                        logger.info(
-                            f"Oferta: Precio {oferta_seleccionada.precio_unitario_compra}, Entrega {dias_entrega} días. Fecha est: {initial_data['fecha_estimada_entrega']}"
-                        )
-                    except ValueError:
-                        logger.warning(
-                            f"Tiempo de entrega '{oferta_seleccionada.tiempo_entrega_estimado_dias}' no es válido."
-                        )
-                else:
-                    logger.info("Oferta encontrada, sin tiempo de entrega estimado.")
-            else:
-                logger.warning(
-                    f"No se encontró oferta para insumo {insumo_preseleccionado_obj.id} y proveedor {proveedor_preseleccionado_obj.id}."
-                )
-
-        elif (
-            insumo_preseleccionado_obj.ofertas_de_proveedores.exists()
-        ):  # Si no se pasa proveedor, pero el insumo tiene ofertas
-            primera_oferta = insumo_preseleccionado_obj.ofertas_de_proveedores.order_by(
-                "precio_unitario_compra"
-            ).first()
-            if primera_oferta:
-                initial_data["proveedor"] = primera_oferta.proveedor
-                initial_data["precio_unitario_compra"] = (
-                    primera_oferta.precio_unitario_compra
-                )
-                proveedor_preseleccionado_obj = (
-                    primera_oferta.proveedor
-                )  # Para el contexto
-                # Podrías calcular fecha estimada de entrega aquí también si la primera_oferta tiene tiempo_entrega
-
-        UMBRAL_STOCK_BAJO_INSUMOS = 15000
-        cantidad_necesaria = (
-            UMBRAL_STOCK_BAJO_INSUMOS - insumo_preseleccionado_obj.stock
-        )
-        initial_data["cantidad_principal"] = max(
-            10, cantidad_necesaria
-        )  # Sugerir comprar al menos 10 o lo necesario
-
-    if request.method == "POST":
-        form_kwargs_post = {}
-        if insumo_preseleccionado_obj:  # Si la URL contenía insumo_id
-            form_kwargs_post["insumo_para_ofertas"] = insumo_preseleccionado_obj
-        if proveedor_preseleccionado_obj:  # Si la URL contenía proveedor_id
-            form_kwargs_post["proveedor_fijado"] = proveedor_preseleccionado_obj
-
-        form = OrdenCompraForm(
-            request.POST, **form_kwargs_post
-        )  # instance=None para creación
-        if form.is_valid():
-            try:
-                orden_compra = form.save(commit=False)
-                orden_compra.tipo = "compra"
-                orden_compra.estado = "BORRADOR"
-
-                # Si el precio no vino del form pero había una oferta seleccionada (y se pasó el proveedor_id), usar el de la oferta
-                # Esta lógica es más para cuando el campo precio es opcional en el form
-                if (
-                    not form.cleaned_data.get("precio_unitario_compra")
-                    and oferta_seleccionada
-                ):  # oferta_seleccionada se define en el GET si hay proveedor_id
-                    orden_compra.precio_unitario_compra = (
-                        oferta_seleccionada.precio_unitario_compra
-                    )
-
-                # Si la fecha de entrega no vino del form pero se calculó una en el GET (si había oferta), usarla
-                # Esto también es por si el campo es opcional en el form y el usuario no lo llena
-                if not form.cleaned_data.get(
-                    "fecha_estimada_entrega"
-                ) and initial_data.get("fecha_estimada_entrega"):
-                    orden_compra.fecha_estimada_entrega = initial_data.get(
-                        "fecha_estimada_entrega"
-                    )
-
-                # El cálculo del total se hace en el save() del modelo Orden si los campos están
-                orden_compra.save()  # Guardar la OC para que tenga un ID y se pueda referenciar
-
-                # --- ACTUALIZAR CANTIDAD EN PEDIDO DEL INSUMO ---
-                if (
-                    orden_compra.insumo_principal
-                    and orden_compra.cantidad_principal
-                    and orden_compra.cantidad_principal > 0
-                ):
-                    insumo_obj_actualizar = (
-                        orden_compra.insumo_principal
-                    )  # Obtener el objeto Insumo
-                    # Actualización atómica
-                    Insumo.objects.filter(id=insumo_obj_actualizar.id).update(
-                        cantidad_en_pedido=F("cantidad_en_pedido")
-                        + orden_compra.cantidad_principal
-                    )
-                    logger.info(
-                        f"Incrementada cantidad_en_pedido para '{insumo_obj_actualizar.descripcion}' en {orden_compra.cantidad_principal} unidades."
-                    )
-                # --- FIN ACTUALIZACIÓN CANTIDAD EN PEDIDO ---
-
-                # Asegúrate de que get_estado_display() exista o usa get_estado_display_custom() si lo definiste.
-                # Asumiré que el modelo Orden tiene el campo 'estado' con choices, por lo que get_estado_display() está disponible.
-                messages.success(
-                    request,
-                    f"Orden de Compra '{orden_compra.numero_orden}' creada exitosamente en estado '{orden_compra.get_estado_display()}'. Total: ${orden_compra.total_orden_compra or 0:.2f}",
-                )
-                return redirect("App_LUMINOVA:compras_lista_oc")
-            except DjangoIntegrityError as e_int:
-                if "UNIQUE constraint" in str(e_int) and (
-                    "numero_orden" in str(e_int) or "numero_orden" in str(e_int).lower()
-                ):
-                    messages.error(
-                        request,
-                        f"Error: El número de orden de compra '{form.cleaned_data.get('numero_orden')}' ya existe.",
-                    )
-                else:
-                    messages.error(
-                        request, f"Error de base de datos al guardar la OC: {e_int}"
-                    )
-            except Exception as e:
-                messages.error(
-                    request, f"Error inesperado al crear la Orden de Compra: {e}"
-                )
-                logger.exception("Error inesperado en compras_crear_oc_view POST:")
-        else:  # Formulario no es válido
-            logger.warning(f"Formulario OC inválido: {form.errors.as_json()}")
-            # Los errores del formulario se mostrarán automáticamente por django-bootstrap5
-            # Pero necesitamos repopular el contexto con los objetos preseleccionados para el renderizado
-            if insumo_id:  # Si veníamos con un insumo preseleccionado
-                initial_data["insumo_principal"] = insumo_preseleccionado_obj
-            if proveedor_id:  # Si veníamos con un proveedor preseleccionado
-                initial_data["proveedor"] = proveedor_preseleccionado_obj
-            # No es necesario pasar initial_data al form aquí porque el form ya se creó con request.POST
-            # y los errores se asociarán a esa instancia.
-
-    else:  # GET request
-        form_kwargs_get = {}
-        if insumo_preseleccionado_obj:
-            form_kwargs_get["insumo_para_ofertas"] = insumo_preseleccionado_obj
-        if proveedor_preseleccionado_obj:
-            form_kwargs_get["proveedor_fijado"] = (
-                proveedor_preseleccionado_obj  # Pasar para deshabilitar
-            )
-            form = OrdenCompraForm(initial=initial_data, **form_kwargs_get)
-
-    context = {
-        "form_oc": form,  # Pasa el formulario (ya sea nuevo o con errores POST)
-        "titulo_seccion": "Crear Nueva Orden de Compra",
-        "insumo_preseleccionado": insumo_preseleccionado_obj,
-        "proveedor_preseleccionado": proveedor_preseleccionado_obj,
-        "oferta_seleccionada": oferta_seleccionada,  # Podría ser None si no se encontró oferta
-    }
-    return render(request, "compras/compras_crear_editar_oc.html", context)
-
-
 @login_required
 def compras_detalle_oc_view(request, oc_id):
     # if not es_admin_o_rol(request.user, ['compras', 'administrador', 'deposito']): # Ajusta permisos
@@ -1896,12 +1613,7 @@ def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None):
         )
 
     # Siempre se sugiere N° de OC para nuevas
-    last_oc = Orden.objects.filter(tipo="compra").order_by("id").last()
-    next_id = (last_oc.id + 1) if last_oc else 1
-    next_oc_number = f"OC-{str(next_id).zfill(5)}"
-    while Orden.objects.filter(numero_orden=next_oc_number).exists():
-        next_id += 1
-        next_oc_number = f"OC-{str(next_id).zfill(5)}"
+    next_oc_number = generar_siguiente_numero_documento(Orden, 'OC', 'numero_orden')
     initial_data["numero_orden"] = next_oc_number
 
     if request.method == "POST":
@@ -2792,12 +2504,7 @@ def crear_reporte_produccion_view(request, op_id):
             reporte.fecha = timezone.now()
 
             # Generar n_reporte único
-            rp_count = Reportes.objects.count()
-            next_rp_number = f"RP-{str(rp_count + 1).zfill(5)}"
-            while Reportes.objects.filter(n_reporte=next_rp_number).exists():
-                rp_count += 1
-                next_rp_number = f"RP-{str(rp_count + 1).zfill(5)}"
-            reporte.n_reporte = next_rp_number
+            reporte.n_reporte = generar_siguiente_numero_documento(Reportes, 'RP', 'n_reporte')
 
             reporte.save()
             messages.success(
@@ -3901,168 +3608,18 @@ class FabricanteDeleteView(DeleteView):
 # --- PDF VIEW ---
 @login_required
 def ventas_ver_factura_pdf_view(request, factura_id):
-    # Obtener la factura y pre-cargar los datos necesarios de forma eficiente
     try:
-        factura = (
-            Factura.objects.select_related(
-                "orden_venta__cliente"  # Para el cliente de la orden de venta
-            )
-            .prefetch_related(
-                # Prefetch para los ítems de la orden de venta y sus productos terminados
-                Prefetch(
-                    "orden_venta__items_ov",
-                    queryset=ItemOrdenVenta.objects.select_related(
-                        "producto_terminado"
-                    ),
-                )
-            )
-            .get(id=factura_id)
-        )
+        factura = Factura.objects.select_related(
+            'orden_venta__cliente'
+        ).prefetch_related(
+            Prefetch('orden_venta__items_ov', queryset=ItemOrdenVenta.objects.select_related('producto_terminado'))
+        ).get(id=factura_id)
     except Factura.DoesNotExist:
         messages.error(request, "La factura solicitada no existe.")
-        return redirect("App_LUMINOVA:ventas_lista_ov")  # O a donde sea apropiado
+        return redirect('App_LUMINOVA:ventas_lista_ov')
 
-    orden_venta = factura.orden_venta  # Acceder a la orden de venta asociada
-
-    # Crear la respuesta HTTP con el tipo de contenido PDF.
-    response = HttpResponse(content_type="application/pdf")
-    response["Content-Disposition"] = (
-        f'inline; filename="factura_{factura.numero_factura}.pdf"'
-    )
-
-    p = canvas.Canvas(response, pagesize=letter)
-    styles = getSampleStyleSheet()
-    style_normal = styles["Normal"]
-    # ... (resto de tu código de generación de PDF como lo tenías) ...
-
-    # --- COMIENZO DEL DIBUJO DEL PDF ---
-    width, height = letter
-
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(1 * inch, height - 1 * inch, f"FACTURA N°: {factura.numero_factura}")
-
-    # ... (Datos de la Empresa) ...
-    p.setFont("Helvetica", 10)
-    p.drawString(1 * inch, height - 1.5 * inch, "LUMINOVA S.A.")
-    p.drawString(1 * inch, height - 1.65 * inch, "Calle Falsa 123, Ciudad")
-    p.drawString(1 * inch, height - 1.80 * inch, "CUIT: 30-XXXXXXXX-X")
-
-    p.setFont("Helvetica", 10)
-    p.drawString(
-        width - 3 * inch,
-        height - 1.5 * inch,
-        f"Fecha Emisión: {factura.fecha_emision.strftime('%d/%m/%Y')}",
-    )
-    p.drawString(
-        width - 3 * inch, height - 1.65 * inch, f"OV N°: {orden_venta.numero_ov}"
-    )
-
-    # ... (Datos del Cliente, usando factura.orden_venta.cliente) ...
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(1 * inch, height - 2.5 * inch, "Cliente:")
-    p.setFont("Helvetica", 10)
-    p.drawString(1 * inch, height - 2.7 * inch, orden_venta.cliente.nombre)
-    # ... (más datos del cliente) ...
-
-    p.line(1 * inch, height - 3.5 * inch, width - 1 * inch, height - 3.5 * inch)
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(1 * inch, height - 3.8 * inch, "Detalle de Productos/Servicios:")
-
-    data = [["Cant.", "Descripción", "P. Unit.", "Subtotal"]]  # Encabezados de la tabla
-
-    # Lógica para determinar qué ítems de la OV se incluyen en la factura
-    # (basado en si sus OPs asociadas fueron completadas, o si eran de stock)
-    ops_asociadas_a_ov = (
-        orden_venta.ops_generadas.all()
-    )  # Obtener todas las OPs de la OV
-    productos_completados_en_ops_ids = {
-        op.producto_a_producir_id
-        for op in ops_asociadas_a_ov
-        if op.estado_op and op.estado_op.nombre.lower() == "completada"
-    }
-
-    total_factura_recalculado_para_pdf = 0  # Para verificar o usar si es necesario
-
-    for item in orden_venta.items_ov.all():  # Iterar sobre los items pre-cargados
-        facturar_este_item = False
-        if (
-            not ops_asociadas_a_ov.exists()
-        ):  # Si la OV no generó OPs (todo era de stock)
-            facturar_este_item = True
-        elif (
-            item.producto_terminado_id in productos_completados_en_ops_ids
-        ):  # Si la OP del producto se completó
-            facturar_este_item = True
-
-        # Podrías añadir una condición adicional: si la OV está en 'LISTA_ENTREGA' o 'COMPLETADA'
-        # y un item no tuvo OP (asumiendo que era de stock), también facturarlo.
-        elif not ops_asociadas_a_ov.filter(
-            producto_a_producir=item.producto_terminado
-        ).exists() and orden_venta.estado in ["LISTA_ENTREGA", "COMPLETADA"]:
-            facturar_este_item = True
-
-        if facturar_este_item:
-            data.append(
-                [
-                    str(item.cantidad),
-                    Paragraph(item.producto_terminado.descripcion, style_normal),
-                    f"${item.precio_unitario_venta:.2f}",
-                    f"${item.subtotal:.2f}",
-                ]
-            )
-            total_factura_recalculado_para_pdf += item.subtotal
-
-    # Es mejor usar el factura.total_facturado que ya fue calculado y guardado
-    # a menos que quieras que el PDF siempre recalcule.
-    # total_a_mostrar = factura.total_facturado
-    total_a_mostrar = total_factura_recalculado_para_pdf  # O usa este si quieres que el PDF siempre refleje los items listados
-
-    y_position = height - 4.2 * inch
-    if len(data) > 1:  # Si hay ítems
-        table = Table(
-            data, colWidths=[0.5 * inch, 4.5 * inch, 1 * inch, 1 * inch]
-        )  # Ajusta anchos
-        table.setStyle(
-            TableStyle(
-                [
-                    (
-                        "BACKGROUND",
-                        (0, 0),
-                        (-1, 0),
-                        colors.darkblue,
-                    ),  # Color de encabezado
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("ALIGN", (1, 1), (1, -1), "LEFT"),
-                    ("ALIGN", (0, 1), (0, -1), "RIGHT"),  # Cantidad a la derecha
-                    ("ALIGN", (2, 1), (3, -1), "RIGHT"),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, 0), 9),
-                    ("FONTSIZE", (0, 1), (-1, -1), 8),
-                    ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
-                    ("TOPPADDING", (0, 1), (-1, -1), 6),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-                ]
-            )
-        )
-        table.wrapOn(p, width - 2 * inch, y_position)
-        table_height = table._height
-        table.drawOn(p, 1 * inch, y_position - table_height)
-        y_position -= table_height + 0.3 * inch
-    else:
-        p.drawString(1 * inch, y_position, "No hay ítems facturados para esta orden.")
-        y_position -= 0.3 * inch
-
-    p.setFont("Helvetica-Bold", 12)
-    p.drawRightString(
-        width - 1 * inch, y_position, f"TOTAL: ${total_a_mostrar:.2f}"
-    )  # Usar total_a_mostrar
-
-    # ... (Notas Adicionales si las tienes en el modelo Factura)
-
-    p.showPage()
-    p.save()
-    return response
+    # Simplemente llama al servicio y devuelve su respuesta
+    return generar_pdf_factura(factura)
 
 
 # --- CONTROL DE CALIDAD (Placeholder) ---
