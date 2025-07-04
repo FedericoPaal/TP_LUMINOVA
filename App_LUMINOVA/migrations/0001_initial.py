@@ -11,190 +11,546 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('auth', '0012_alter_user_first_name_max_length'),
+        ("auth", "0012_alter_user_first_name_max_length"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='CategoriaInsumo',
+            name="CategoriaInsumo",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nombre', models.CharField(max_length=100, unique=True, verbose_name='Nombre Categoría Insumo')),
-                ('imagen', models.ImageField(blank=True, null=True, upload_to='categorias_insumos/')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "nombre",
+                    models.CharField(
+                        max_length=100,
+                        unique=True,
+                        verbose_name="Nombre Categoría Insumo",
+                    ),
+                ),
+                (
+                    "imagen",
+                    models.ImageField(
+                        blank=True, null=True, upload_to="categorias_insumos/"
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Categoría de Insumo',
-                'verbose_name_plural': 'Categorías de Insumos',
+                "verbose_name": "Categoría de Insumo",
+                "verbose_name_plural": "Categorías de Insumos",
             },
         ),
         migrations.CreateModel(
-            name='CategoriaProductoTerminado',
+            name="CategoriaProductoTerminado",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nombre', models.CharField(max_length=100, unique=True, verbose_name='Nombre Categoría PT')),
-                ('imagen', models.ImageField(blank=True, null=True, upload_to='categorias_productos/')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "nombre",
+                    models.CharField(
+                        max_length=100, unique=True, verbose_name="Nombre Categoría PT"
+                    ),
+                ),
+                (
+                    "imagen",
+                    models.ImageField(
+                        blank=True, null=True, upload_to="categorias_productos/"
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Categoría de Producto Terminado',
-                'verbose_name_plural': 'Categorías de Productos Terminados',
+                "verbose_name": "Categoría de Producto Terminado",
+                "verbose_name_plural": "Categorías de Productos Terminados",
             },
         ),
         migrations.CreateModel(
-            name='Cliente',
+            name="Cliente",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nombre', models.CharField(max_length=150, unique=True)),
-                ('direccion', models.TextField(blank=True)),
-                ('telefono', models.CharField(blank=True, max_length=25)),
-                ('email', models.EmailField(blank=True, max_length=254, null=True, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("nombre", models.CharField(max_length=150, unique=True)),
+                ("direccion", models.TextField(blank=True)),
+                ("telefono", models.CharField(blank=True, max_length=25)),
+                (
+                    "email",
+                    models.EmailField(
+                        blank=True, max_length=254, null=True, unique=True
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='EstadoOrden',
+            name="EstadoOrden",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nombre', models.CharField(max_length=50, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("nombre", models.CharField(max_length=50, unique=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Proveedor',
+            name="Proveedor",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nombre', models.CharField(max_length=100, unique=True)),
-                ('contacto', models.CharField(blank=True, max_length=100)),
-                ('telefono', models.CharField(blank=True, max_length=25)),
-                ('email', models.EmailField(blank=True, max_length=254, null=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("nombre", models.CharField(max_length=100, unique=True)),
+                ("contacto", models.CharField(blank=True, max_length=100)),
+                ("telefono", models.CharField(blank=True, max_length=25)),
+                ("email", models.EmailField(blank=True, max_length=254, null=True)),
             ],
         ),
         migrations.CreateModel(
-            name='SectorAsignado',
+            name="SectorAsignado",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nombre', models.CharField(max_length=50, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("nombre", models.CharField(max_length=50, unique=True)),
             ],
         ),
         migrations.CreateModel(
-            name='AuditoriaAcceso',
+            name="AuditoriaAcceso",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('accion', models.CharField(max_length=255)),
-                ('fecha_hora', models.DateTimeField(auto_now_add=True)),
-                ('ip_address', models.GenericIPAddressField(blank=True, null=True)),
-                ('user_agent', models.TextField(blank=True, null=True)),
-                ('usuario', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("accion", models.CharField(max_length=255)),
+                ("fecha_hora", models.DateTimeField(auto_now_add=True)),
+                ("ip_address", models.GenericIPAddressField(blank=True, null=True)),
+                ("user_agent", models.TextField(blank=True, null=True)),
+                (
+                    "usuario",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Insumo',
+            name="Insumo",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('descripcion', models.CharField(max_length=255)),
-                ('fabricante', models.CharField(blank=True, max_length=100)),
-                ('precio_unitario', models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
-                ('tiempo_entrega', models.IntegerField(default=0, verbose_name='Tiempo Entrega (días)')),
-                ('imagen', models.ImageField(blank=True, null=True, upload_to='insumos/')),
-                ('stock', models.IntegerField(default=0)),
-                ('categoria', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='insumos', to='App_LUMINOVA.categoriainsumo')),
-                ('proveedor', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='insumos_proveedor', to='App_LUMINOVA.proveedor')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("descripcion", models.CharField(max_length=255)),
+                ("fabricante", models.CharField(blank=True, max_length=100)),
+                (
+                    "precio_unitario",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=10),
+                ),
+                (
+                    "tiempo_entrega",
+                    models.IntegerField(
+                        default=0, verbose_name="Tiempo Entrega (días)"
+                    ),
+                ),
+                (
+                    "imagen",
+                    models.ImageField(blank=True, null=True, upload_to="insumos/"),
+                ),
+                ("stock", models.IntegerField(default=0)),
+                (
+                    "categoria",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="insumos",
+                        to="App_LUMINOVA.categoriainsumo",
+                    ),
+                ),
+                (
+                    "proveedor",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="insumos_proveedor",
+                        to="App_LUMINOVA.proveedor",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='OrdenVenta',
+            name="OrdenVenta",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('numero_ov', models.CharField(max_length=20, unique=True, verbose_name='N° Orden de Venta')),
-                ('fecha_creacion', models.DateTimeField(default=django.utils.timezone.now)),
-                ('estado', models.CharField(choices=[('PENDIENTE', 'Pendiente Confirmación'), ('CONFIRMADA', 'Confirmada'), ('EN_PRODUCCION', 'En Producción'), ('LISTA_ENTREGA', 'Lista para Entrega'), ('COMPLETADA', 'Completada'), ('CANCELADA', 'Cancelada')], default='PENDIENTE', max_length=20)),
-                ('total_ov', models.DecimalField(decimal_places=2, default=0.0, max_digits=12, verbose_name='Total OV')),
-                ('notas', models.TextField(blank=True, null=True)),
-                ('cliente', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='ordenes_venta', to='App_LUMINOVA.cliente')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "numero_ov",
+                    models.CharField(
+                        max_length=20, unique=True, verbose_name="N° Orden de Venta"
+                    ),
+                ),
+                (
+                    "fecha_creacion",
+                    models.DateTimeField(default=django.utils.timezone.now),
+                ),
+                (
+                    "estado",
+                    models.CharField(
+                        choices=[
+                            ("PENDIENTE", "Pendiente Confirmación"),
+                            ("CONFIRMADA", "Confirmada"),
+                            ("EN_PRODUCCION", "En Producción"),
+                            ("LISTA_ENTREGA", "Lista para Entrega"),
+                            ("COMPLETADA", "Completada"),
+                            ("CANCELADA", "Cancelada"),
+                        ],
+                        default="PENDIENTE",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "total_ov",
+                    models.DecimalField(
+                        decimal_places=2,
+                        default=0.0,
+                        max_digits=12,
+                        verbose_name="Total OV",
+                    ),
+                ),
+                ("notas", models.TextField(blank=True, null=True)),
+                (
+                    "cliente",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="ordenes_venta",
+                        to="App_LUMINOVA.cliente",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Factura',
+            name="Factura",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('numero_factura', models.CharField(max_length=50, unique=True)),
-                ('fecha_emision', models.DateTimeField(default=django.utils.timezone.now)),
-                ('total_facturado', models.DecimalField(decimal_places=2, max_digits=12)),
-                ('orden_venta', models.OneToOneField(on_delete=django.db.models.deletion.PROTECT, related_name='factura_asociada', to='App_LUMINOVA.ordenventa')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("numero_factura", models.CharField(max_length=50, unique=True)),
+                (
+                    "fecha_emision",
+                    models.DateTimeField(default=django.utils.timezone.now),
+                ),
+                (
+                    "total_facturado",
+                    models.DecimalField(decimal_places=2, max_digits=12),
+                ),
+                (
+                    "orden_venta",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="factura_asociada",
+                        to="App_LUMINOVA.ordenventa",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ProductoTerminado',
+            name="ProductoTerminado",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('descripcion', models.CharField(max_length=255)),
-                ('precio_unitario', models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
-                ('stock', models.IntegerField(default=0)),
-                ('modelo', models.CharField(blank=True, max_length=50, null=True)),
-                ('potencia', models.IntegerField(blank=True, null=True)),
-                ('acabado', models.CharField(blank=True, max_length=50, null=True)),
-                ('color_luz', models.CharField(blank=True, max_length=50, null=True)),
-                ('material', models.CharField(blank=True, max_length=50, null=True)),
-                ('imagen', models.ImageField(blank=True, null=True, upload_to='productos_terminados/')),
-                ('categoria', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='productos_terminados', to='App_LUMINOVA.categoriaproductoterminado')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("descripcion", models.CharField(max_length=255)),
+                (
+                    "precio_unitario",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=10),
+                ),
+                ("stock", models.IntegerField(default=0)),
+                ("modelo", models.CharField(blank=True, max_length=50, null=True)),
+                ("potencia", models.IntegerField(blank=True, null=True)),
+                ("acabado", models.CharField(blank=True, max_length=50, null=True)),
+                ("color_luz", models.CharField(blank=True, max_length=50, null=True)),
+                ("material", models.CharField(blank=True, max_length=50, null=True)),
+                (
+                    "imagen",
+                    models.ImageField(
+                        blank=True, null=True, upload_to="productos_terminados/"
+                    ),
+                ),
+                (
+                    "categoria",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="productos_terminados",
+                        to="App_LUMINOVA.categoriaproductoterminado",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='OrdenProduccion',
+            name="OrdenProduccion",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('numero_op', models.CharField(max_length=20, unique=True, verbose_name='N° Orden de Producción')),
-                ('cantidad_a_producir', models.PositiveIntegerField()),
-                ('fecha_solicitud', models.DateTimeField(default=django.utils.timezone.now)),
-                ('fecha_inicio_planificada', models.DateField(blank=True, null=True)),
-                ('fecha_fin_planificada', models.DateField(blank=True, null=True)),
-                ('notas', models.TextField(blank=True, null=True)),
-                ('estado_op', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='ops_estado', to='App_LUMINOVA.estadoorden')),
-                ('orden_venta_origen', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='ops_generadas', to='App_LUMINOVA.ordenventa')),
-                ('producto_a_producir', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='ordenes_produccion', to='App_LUMINOVA.productoterminado')),
-                ('sector_asignado_op', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='ops_sector', to='App_LUMINOVA.sectorasignado')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "numero_op",
+                    models.CharField(
+                        max_length=20,
+                        unique=True,
+                        verbose_name="N° Orden de Producción",
+                    ),
+                ),
+                ("cantidad_a_producir", models.PositiveIntegerField()),
+                (
+                    "fecha_solicitud",
+                    models.DateTimeField(default=django.utils.timezone.now),
+                ),
+                ("fecha_inicio_planificada", models.DateField(blank=True, null=True)),
+                ("fecha_fin_planificada", models.DateField(blank=True, null=True)),
+                ("notas", models.TextField(blank=True, null=True)),
+                (
+                    "estado_op",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="ops_estado",
+                        to="App_LUMINOVA.estadoorden",
+                    ),
+                ),
+                (
+                    "orden_venta_origen",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="ops_generadas",
+                        to="App_LUMINOVA.ordenventa",
+                    ),
+                ),
+                (
+                    "producto_a_producir",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="ordenes_produccion",
+                        to="App_LUMINOVA.productoterminado",
+                    ),
+                ),
+                (
+                    "sector_asignado_op",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="ops_sector",
+                        to="App_LUMINOVA.sectorasignado",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ItemOrdenVenta',
+            name="ItemOrdenVenta",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('cantidad', models.PositiveIntegerField()),
-                ('precio_unitario_venta', models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Precio Unit. en Venta')),
-                ('subtotal', models.DecimalField(decimal_places=2, editable=False, max_digits=12)),
-                ('orden_venta', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='items_ov', to='App_LUMINOVA.ordenventa')),
-                ('producto_terminado', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='App_LUMINOVA.productoterminado')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("cantidad", models.PositiveIntegerField()),
+                (
+                    "precio_unitario_venta",
+                    models.DecimalField(
+                        decimal_places=2,
+                        max_digits=10,
+                        verbose_name="Precio Unit. en Venta",
+                    ),
+                ),
+                (
+                    "subtotal",
+                    models.DecimalField(
+                        decimal_places=2, editable=False, max_digits=12
+                    ),
+                ),
+                (
+                    "orden_venta",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="items_ov",
+                        to="App_LUMINOVA.ordenventa",
+                    ),
+                ),
+                (
+                    "producto_terminado",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="App_LUMINOVA.productoterminado",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Reportes',
+            name="Reportes",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('n_reporte', models.CharField(max_length=20, unique=True)),
-                ('fecha', models.DateTimeField(default=django.utils.timezone.now)),
-                ('tipo_problema', models.CharField(max_length=100)),
-                ('informe_reporte', models.TextField(blank=True, null=True)),
-                ('orden_produccion_asociada', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='reportes_incidencia', to='App_LUMINOVA.ordenproduccion')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("n_reporte", models.CharField(max_length=20, unique=True)),
+                ("fecha", models.DateTimeField(default=django.utils.timezone.now)),
+                ("tipo_problema", models.CharField(max_length=100)),
+                ("informe_reporte", models.TextField(blank=True, null=True)),
+                (
+                    "orden_produccion_asociada",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="reportes_incidencia",
+                        to="App_LUMINOVA.ordenproduccion",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='RolDescripcion',
+            name="RolDescripcion",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('descripcion', models.TextField(blank=True, verbose_name='Descripción del rol')),
-                ('group', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='descripcion_extendida', to='auth.group')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "descripcion",
+                    models.TextField(blank=True, verbose_name="Descripción del rol"),
+                ),
+                (
+                    "group",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="descripcion_extendida",
+                        to="auth.group",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ComponenteProducto',
+            name="ComponenteProducto",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('cantidad_necesaria', models.PositiveIntegerField(default=1)),
-                ('insumo', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='App_LUMINOVA.insumo')),
-                ('producto_terminado', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='componentes_requeridos', to='App_LUMINOVA.productoterminado')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("cantidad_necesaria", models.PositiveIntegerField(default=1)),
+                (
+                    "insumo",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to="App_LUMINOVA.insumo",
+                    ),
+                ),
+                (
+                    "producto_terminado",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="componentes_requeridos",
+                        to="App_LUMINOVA.productoterminado",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Componente de Producto (BOM)',
-                'verbose_name_plural': 'Componentes de Productos (BOM)',
-                'unique_together': {('producto_terminado', 'insumo')},
+                "verbose_name": "Componente de Producto (BOM)",
+                "verbose_name_plural": "Componentes de Productos (BOM)",
+                "unique_together": {("producto_terminado", "insumo")},
             },
         ),
     ]

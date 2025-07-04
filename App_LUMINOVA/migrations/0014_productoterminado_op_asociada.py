@@ -7,13 +7,19 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('App_LUMINOVA', '0013_alter_insumo_cantidad_en_pedido_alter_orden_estado'),
+        ("App_LUMINOVA", "0013_alter_insumo_cantidad_en_pedido_alter_orden_estado"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='productoterminado',
-            name='op_asociada',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='productos_terminados', to='App_LUMINOVA.ordenproduccion'),
+            model_name="productoterminado",
+            name="op_asociada",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="productos_terminados",
+                to="App_LUMINOVA.ordenproduccion",
+            ),
         ),
     ]

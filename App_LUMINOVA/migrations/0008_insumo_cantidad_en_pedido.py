@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('App_LUMINOVA', '0007_remove_insumo_precio_unitario_and_more'),
+        ("App_LUMINOVA", "0007_remove_insumo_precio_unitario_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='insumo',
-            name='cantidad_en_pedido',
-            field=models.PositiveIntegerField(default=0, verbose_name='Cantidad en Pedido a Proveedores'),
+            model_name="insumo",
+            name="cantidad_en_pedido",
+            field=models.PositiveIntegerField(
+                default=0, verbose_name="Cantidad en Pedido a Proveedores"
+            ),
         ),
     ]

@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('App_LUMINOVA', '0005_alter_ordenventa_estado'),
+        ("App_LUMINOVA", "0005_alter_ordenventa_estado"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='ordenproduccion',
-            name='fecha_fin_real',
+            model_name="ordenproduccion",
+            name="fecha_fin_real",
             field=models.DateTimeField(blank=True, null=True),
         ),
         migrations.AddField(
-            model_name='ordenproduccion',
-            name='fecha_inicio_real',
+            model_name="ordenproduccion",
+            name="fecha_inicio_real",
             field=models.DateTimeField(blank=True, null=True),
         ),
     ]

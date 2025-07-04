@@ -6,23 +6,31 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('App_LUMINOVA', '0002_orden'),
+        ("App_LUMINOVA", "0002_orden"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Fabricante',
+            name="Fabricante",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nombre', models.CharField(max_length=100, unique=True)),
-                ('contacto', models.CharField(blank=True, max_length=100)),
-                ('telefono', models.CharField(blank=True, max_length=25)),
-                ('email', models.EmailField(blank=True, max_length=254, null=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("nombre", models.CharField(max_length=100, unique=True)),
+                ("contacto", models.CharField(blank=True, max_length=100)),
+                ("telefono", models.CharField(blank=True, max_length=25)),
+                ("email", models.EmailField(blank=True, max_length=254, null=True)),
             ],
         ),
         migrations.AlterField(
-            model_name='ordenproduccion',
-            name='notas',
-            field=models.TextField(blank=True, null=True, verbose_name='Notas'),
+            model_name="ordenproduccion",
+            name="notas",
+            field=models.TextField(blank=True, null=True, verbose_name="Notas"),
         ),
     ]

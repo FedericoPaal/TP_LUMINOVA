@@ -6,13 +6,27 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('App_LUMINOVA', '0004_alter_ordenventa_estado'),
+        ("App_LUMINOVA", "0004_alter_ordenventa_estado"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='ordenventa',
-            name='estado',
-            field=models.CharField(choices=[('PENDIENTE', 'Pendiente Confirmación'), ('CONFIRMADA', 'Confirmada (Esperando Producción)'), ('INSUMOS_SOLICITADOS', 'Insumos Solicitados'), ('PRODUCCION_INICIADA', 'Producción Iniciada'), ('PRODUCCION_PARCIAL', 'Producción Parcial'), ('PRODUCCION_CON_PROBLEMAS', 'Producción con Problemas'), ('LISTA_ENTREGA', 'Lista para Entrega'), ('COMPLETADA', 'Completada/Entregada'), ('CANCELADA', 'Cancelada')], default='PENDIENTE', max_length=50),
+            model_name="ordenventa",
+            name="estado",
+            field=models.CharField(
+                choices=[
+                    ("PENDIENTE", "Pendiente Confirmación"),
+                    ("CONFIRMADA", "Confirmada (Esperando Producción)"),
+                    ("INSUMOS_SOLICITADOS", "Insumos Solicitados"),
+                    ("PRODUCCION_INICIADA", "Producción Iniciada"),
+                    ("PRODUCCION_PARCIAL", "Producción Parcial"),
+                    ("PRODUCCION_CON_PROBLEMAS", "Producción con Problemas"),
+                    ("LISTA_ENTREGA", "Lista para Entrega"),
+                    ("COMPLETADA", "Completada/Entregada"),
+                    ("CANCELADA", "Cancelada"),
+                ],
+                default="PENDIENTE",
+                max_length=50,
+            ),
         ),
     ]

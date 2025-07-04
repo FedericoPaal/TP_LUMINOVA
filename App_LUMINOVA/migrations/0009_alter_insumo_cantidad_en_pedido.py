@@ -6,13 +6,15 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('App_LUMINOVA', '0008_insumo_cantidad_en_pedido'),
+        ("App_LUMINOVA", "0008_insumo_cantidad_en_pedido"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='insumo',
-            name='cantidad_en_pedido',
-            field=models.PositiveIntegerField(default=0, verbose_name='Cantidad en Pedido'),
+            model_name="insumo",
+            name="cantidad_en_pedido",
+            field=models.PositiveIntegerField(
+                default=0, verbose_name="Cantidad en Pedido"
+            ),
         ),
     ]

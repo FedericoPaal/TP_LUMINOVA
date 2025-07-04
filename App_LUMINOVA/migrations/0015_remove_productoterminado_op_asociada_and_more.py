@@ -7,23 +7,45 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('App_LUMINOVA', '0014_productoterminado_op_asociada'),
+        ("App_LUMINOVA", "0014_productoterminado_op_asociada"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='productoterminado',
-            name='op_asociada',
+            model_name="productoterminado",
+            name="op_asociada",
         ),
         migrations.CreateModel(
-            name='LoteProductoTerminado',
+            name="LoteProductoTerminado",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('cantidad', models.PositiveIntegerField()),
-                ('fecha_creacion', models.DateTimeField(auto_now_add=True)),
-                ('enviado', models.BooleanField(default=False)),
-                ('op_asociada', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='lotes_pt', to='App_LUMINOVA.ordenproduccion')),
-                ('producto', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='lotes', to='App_LUMINOVA.productoterminado')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("cantidad", models.PositiveIntegerField()),
+                ("fecha_creacion", models.DateTimeField(auto_now_add=True)),
+                ("enviado", models.BooleanField(default=False)),
+                (
+                    "op_asociada",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="lotes_pt",
+                        to="App_LUMINOVA.ordenproduccion",
+                    ),
+                ),
+                (
+                    "producto",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="lotes",
+                        to="App_LUMINOVA.productoterminado",
+                    ),
+                ),
             ],
         ),
     ]

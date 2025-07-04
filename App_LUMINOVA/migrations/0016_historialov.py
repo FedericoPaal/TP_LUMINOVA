@@ -8,25 +8,56 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('App_LUMINOVA', '0015_remove_productoterminado_op_asociada_and_more'),
+        ("App_LUMINOVA", "0015_remove_productoterminado_op_asociada_and_more"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='HistorialOV',
+            name="HistorialOV",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('fecha_evento', models.DateTimeField(auto_now_add=True)),
-                ('descripcion', models.CharField(max_length=255)),
-                ('tipo_evento', models.CharField(blank=True, help_text="Ej: 'Estado Cambiado', 'Producción Iniciada', 'Facturado'", max_length=50, null=True)),
-                ('orden_venta', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='historial', to='App_LUMINOVA.ordenventa')),
-                ('realizado_por', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("fecha_evento", models.DateTimeField(auto_now_add=True)),
+                ("descripcion", models.CharField(max_length=255)),
+                (
+                    "tipo_evento",
+                    models.CharField(
+                        blank=True,
+                        help_text="Ej: 'Estado Cambiado', 'Producción Iniciada', 'Facturado'",
+                        max_length=50,
+                        null=True,
+                    ),
+                ),
+                (
+                    "orden_venta",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="historial",
+                        to="App_LUMINOVA.ordenventa",
+                    ),
+                ),
+                (
+                    "realizado_por",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Historial de Orden de Venta',
-                'verbose_name_plural': 'Historiales de Órdenes de Venta',
-                'ordering': ['-fecha_evento'],
+                "verbose_name": "Historial de Orden de Venta",
+                "verbose_name_plural": "Historiales de Órdenes de Venta",
+                "ordering": ["-fecha_evento"],
             },
         ),
     ]
