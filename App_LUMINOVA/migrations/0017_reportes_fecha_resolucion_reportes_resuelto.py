@@ -6,18 +6,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('App_LUMINOVA', '0016_historialov'),
+        ("App_LUMINOVA", "0016_historialov"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='reportes',
-            name='fecha_resolucion',
-            field=models.DateTimeField(blank=True, null=True, verbose_name='Fecha de Resolución'),
+            model_name="reportes",
+            name="fecha_resolucion",
+            field=models.DateTimeField(
+                blank=True, null=True, verbose_name="Fecha de Resolución"
+            ),
         ),
         migrations.AddField(
-            model_name='reportes',
-            name='resuelto',
-            field=models.BooleanField(default=False, verbose_name='¿Problema Resuelto?'),
+            model_name="reportes",
+            name="resuelto",
+            field=models.BooleanField(
+                default=False, verbose_name="¿Problema Resuelto?"
+            ),
         ),
     ]

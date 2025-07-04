@@ -1,9 +1,9 @@
 # TP_LUMINOVA-main/App_LUMINOVA/models.py
 
-from django.db import models
-from django.contrib.auth.models import User, Group
-from django.utils import timezone  # Importar timezone
+from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
+from django.db import models
+from django.utils import timezone  # Importar timezone
 
 
 # --- CATEGORÍAS Y ENTIDADES BASE ---
@@ -36,7 +36,6 @@ class ProductoTerminado(models.Model):
     color_luz = models.CharField(max_length=50, blank=True, null=True)
     material = models.CharField(max_length=50, blank=True, null=True)
     imagen = models.ImageField(null=True, blank=True, upload_to="productos_terminados/")
-    
 
     def __str__(self):
         return f"{self.descripcion} (Modelo: {self.modelo or 'N/A'})"
@@ -45,7 +44,7 @@ class ProductoTerminado(models.Model):
 class CategoriaInsumo(models.Model):
     nombre = models.CharField(
         max_length=100, unique=True, verbose_name="Nombre Categoría Insumo"
-    ) 
+    )
     imagen = models.ImageField(upload_to="categorias_insumos/", null=True, blank=True)
 
     class Meta:
@@ -59,7 +58,7 @@ class CategoriaInsumo(models.Model):
 class Proveedor(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
     contacto = models.CharField(max_length=100, blank=True)
-    telefono = models.CharField(max_length=25, blank=True) 
+    telefono = models.CharField(max_length=25, blank=True)
     email = models.EmailField(blank=True, null=True)
 
     def __str__(self):
@@ -83,19 +82,16 @@ class Insumo(models.Model):
     )
     fabricante = models.ForeignKey(
         Fabricante,
-        on_delete=models.SET_NULL,  
+        on_delete=models.SET_NULL,
         null=True,
-        blank=True, 
+        blank=True,
         related_name="insumos_fabricados",
     )
     imagen = models.ImageField(null=True, blank=True, upload_to="insumos/")
     stock = models.IntegerField(default=0)
     cantidad_en_pedido = models.PositiveIntegerField(
-    default=0, 
-    verbose_name="Cantidad en Pedido",
-    blank=True,
-    null=True 
-)
+        default=0, verbose_name="Cantidad en Pedido", blank=True, null=True
+    )
 
     def __str__(self):
         return self.descripcion
@@ -132,15 +128,13 @@ class OfertaProveedor(models.Model):
         return f"{self.insumo.descripcion} - {self.proveedor.nombre} (${self.precio_unitario_compra})"
 
 
-class ComponenteProducto(models.Model):  
+class ComponenteProducto(models.Model):
     producto_terminado = models.ForeignKey(
         ProductoTerminado,
         on_delete=models.CASCADE,
         related_name="componentes_requeridos",
     )
-    insumo = models.ForeignKey(
-        Insumo, on_delete=models.PROTECT
-    )
+    insumo = models.ForeignKey(Insumo, on_delete=models.PROTECT)
     cantidad_necesaria = models.PositiveIntegerField(default=1)
 
     class Meta:
@@ -196,9 +190,7 @@ class OrdenVenta(models.Model):
         nuevo_total = sum(item.subtotal for item in self.items_ov.all())
         if self.total_ov != nuevo_total:
             self.total_ov = nuevo_total
-            self.save(
-                update_fields=["total_ov"]
-            )
+            self.save(update_fields=["total_ov"])
 
 
 class ItemOrdenVenta(models.Model):
@@ -220,23 +212,15 @@ class ItemOrdenVenta(models.Model):
         return f"{self.cantidad} x {self.producto_terminado.descripcion} en OV {self.orden_venta.numero_ov}"
 
 
-class EstadoOrden(
-    models.Model
-):
-    nombre = models.CharField(
-        max_length=50, unique=True
-    )
+class EstadoOrden(models.Model):
+    nombre = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.nombre
 
 
-class SectorAsignado(
-    models.Model
-): 
-    nombre = models.CharField(
-        max_length=50, unique=True
-    )
+class SectorAsignado(models.Model):
+    nombre = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
         return self.nombre
@@ -257,7 +241,7 @@ class OrdenProduccion(models.Model):
     producto_a_producir = models.ForeignKey(
         ProductoTerminado, on_delete=models.PROTECT, related_name="ordenes_produccion"
     )
-    cantidad_a_producir = models.PositiveIntegerField() 
+    cantidad_a_producir = models.PositiveIntegerField()
     estado_op = models.ForeignKey(
         EstadoOrden,
         on_delete=models.SET_NULL,
@@ -268,9 +252,7 @@ class OrdenProduccion(models.Model):
 
     fecha_solicitud = models.DateTimeField(default=timezone.now)
     fecha_inicio_real = models.DateTimeField(null=True, blank=True)
-    fecha_inicio_planificada = models.DateField(
-        null=True, blank=True
-    ) 
+    fecha_inicio_planificada = models.DateField(null=True, blank=True)
     fecha_fin_real = models.DateTimeField(null=True, blank=True)
     fecha_fin_planificada = models.DateField(null=True, blank=True)
     sector_asignado_op = models.ForeignKey(
@@ -279,7 +261,7 @@ class OrdenProduccion(models.Model):
         null=True,
         blank=True,
         related_name="ops_sector",
-    ) 
+    )
     notas = models.TextField(null=True, blank=True, verbose_name="Notas")
 
     def get_estado_op_display(self):
@@ -302,11 +284,11 @@ class Reportes(models.Model):
     n_reporte = models.CharField(max_length=20, unique=True)
     fecha = models.DateTimeField(default=timezone.now)
     tipo_problema = models.CharField(max_length=100)
-    informe_reporte = models.TextField(
-        blank=True, null=True
-    )
+    informe_reporte = models.TextField(blank=True, null=True)
     resuelto = models.BooleanField(default=False, verbose_name="¿Problema Resuelto?")
-    fecha_resolucion = models.DateTimeField(null=True, blank=True, verbose_name="Fecha de Resolución")
+    fecha_resolucion = models.DateTimeField(
+        null=True, blank=True, verbose_name="Fecha de Resolución"
+    )
 
     # ESTOS SON LOS CAMPOS EN CUESTIÓN:
     reportado_por = models.ForeignKey(
@@ -375,20 +357,19 @@ class AuditoriaAcceso(models.Model):
         return f"{user_display} - {self.accion} @ {self.fecha_hora.strftime('%Y-%m-%d %H:%M')}"
 
 
-class Orden(models.Model): 
+class Orden(models.Model):
     TIPO_ORDEN_CHOICES = [
         ("compra", "Orden de Compra"),
     ]
     ESTADO_ORDEN_COMPRA_CHOICES = [
         ("BORRADOR", "Borrador"),
-        
         ("APROBADA", "Aprobada"),
         ("ENVIADA_PROVEEDOR", "Enviada al Proveedor"),
         ("CONFIRMADA_PROVEEDOR", "Confirmada por Proveedor"),
         ("EN_TRANSITO", "En Tránsito"),
         ("RECIBIDA_PARCIAL", "Recibida Parcialmente"),
         ("RECIBIDA_TOTAL", "Recibida Totalmente"),
-        ("COMPLETADA", "Completada"), 
+        ("COMPLETADA", "Completada"),
         ("CANCELADA", "Cancelada"),
     ]
 
@@ -448,9 +429,14 @@ class Orden(models.Model):
             )
         super().save(*args, **kwargs)
 
+
 class LoteProductoTerminado(models.Model):
-    producto = models.ForeignKey(ProductoTerminado, on_delete=models.PROTECT, related_name='lotes')
-    op_asociada = models.ForeignKey(OrdenProduccion, on_delete=models.PROTECT, related_name='lotes_pt')
+    producto = models.ForeignKey(
+        ProductoTerminado, on_delete=models.PROTECT, related_name="lotes"
+    )
+    op_asociada = models.ForeignKey(
+        OrdenProduccion, on_delete=models.PROTECT, related_name="lotes_pt"
+    )
     cantidad = models.PositiveIntegerField()
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     enviado = models.BooleanField(default=False)
@@ -458,15 +444,25 @@ class LoteProductoTerminado(models.Model):
     def __str__(self):
         return f"Lote de {self.producto.descripcion} - OP {self.op_asociada.numero_op} ({self.cantidad})"
 
+
 class HistorialOV(models.Model):
-    orden_venta = models.ForeignKey(OrdenVenta, on_delete=models.CASCADE, related_name='historial')
+    orden_venta = models.ForeignKey(
+        OrdenVenta, on_delete=models.CASCADE, related_name="historial"
+    )
     fecha_evento = models.DateTimeField(auto_now_add=True)
     descripcion = models.CharField(max_length=255)
-    tipo_evento = models.CharField(max_length=50, blank=True, null=True, help_text="Ej: 'Estado Cambiado', 'Producción Iniciada', 'Facturado'")
-    realizado_por = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    tipo_evento = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="Ej: 'Estado Cambiado', 'Producción Iniciada', 'Facturado'",
+    )
+    realizado_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True
+    )
 
     class Meta:
-        ordering = ['-fecha_evento'] # Ordenar del más reciente al más antiguo
+        ordering = ["-fecha_evento"]  # Ordenar del más reciente al más antiguo
         verbose_name = "Historial de Orden de Venta"
         verbose_name_plural = "Historiales de Órdenes de Venta"
 
@@ -479,7 +475,10 @@ class PasswordChangeRequired(models.Model):
     Un modelo simple para marcar a los usuarios que deben cambiar
     su contraseña por defecto en el primer inicio de sesión.
     """
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="password_change_required")
+
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name="password_change_required"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

@@ -8,26 +8,103 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('App_LUMINOVA', '0001_initial'),
+        ("App_LUMINOVA", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Orden',
+            name="Orden",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('numero_orden', models.CharField(max_length=20, unique=True, verbose_name='N° Orden de Compra')),
-                ('tipo', models.CharField(choices=[('compra', 'Orden de Compra')], default='compra', max_length=20)),
-                ('fecha_creacion', models.DateTimeField(default=django.utils.timezone.now)),
-                ('estado', models.CharField(choices=[('BORRADOR', 'Borrador'), ('PENDIENTE_APROBACION', 'Pendiente Aprobación'), ('APROBADA', 'Aprobada'), ('ENVIADA_PROVEEDOR', 'Enviada al Proveedor'), ('CONFIRMADA_PROVEEDOR', 'Confirmada por Proveedor'), ('EN_TRANSITO', 'En Tránsito'), ('RECIBIDA_PARCIAL', 'Recibida Parcialmente'), ('RECIBIDA_TOTAL', 'Recibida Totalmente'), ('COMPLETADA', 'Completada'), ('CANCELADA', 'Cancelada')], default='BORRADOR', max_length=30)),
-                ('cantidad_principal', models.PositiveIntegerField(blank=True, null=True, verbose_name='Cantidad Insumo Principal')),
-                ('precio_unitario_compra', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True, verbose_name='Precio Unit. Compra')),
-                ('total_orden_compra', models.DecimalField(decimal_places=2, default=0.0, max_digits=12)),
-                ('fecha_estimada_entrega', models.DateField(blank=True, null=True)),
-                ('numero_tracking', models.CharField(blank=True, max_length=50, null=True)),
-                ('notas', models.TextField(blank=True, null=True)),
-                ('insumo_principal', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='App_LUMINOVA.insumo', verbose_name='Insumo Principal')),
-                ('proveedor', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='ordenes_de_compra_a_proveedor', to='App_LUMINOVA.proveedor')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "numero_orden",
+                    models.CharField(
+                        max_length=20, unique=True, verbose_name="N° Orden de Compra"
+                    ),
+                ),
+                (
+                    "tipo",
+                    models.CharField(
+                        choices=[("compra", "Orden de Compra")],
+                        default="compra",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "fecha_creacion",
+                    models.DateTimeField(default=django.utils.timezone.now),
+                ),
+                (
+                    "estado",
+                    models.CharField(
+                        choices=[
+                            ("BORRADOR", "Borrador"),
+                            ("PENDIENTE_APROBACION", "Pendiente Aprobación"),
+                            ("APROBADA", "Aprobada"),
+                            ("ENVIADA_PROVEEDOR", "Enviada al Proveedor"),
+                            ("CONFIRMADA_PROVEEDOR", "Confirmada por Proveedor"),
+                            ("EN_TRANSITO", "En Tránsito"),
+                            ("RECIBIDA_PARCIAL", "Recibida Parcialmente"),
+                            ("RECIBIDA_TOTAL", "Recibida Totalmente"),
+                            ("COMPLETADA", "Completada"),
+                            ("CANCELADA", "Cancelada"),
+                        ],
+                        default="BORRADOR",
+                        max_length=30,
+                    ),
+                ),
+                (
+                    "cantidad_principal",
+                    models.PositiveIntegerField(
+                        blank=True, null=True, verbose_name="Cantidad Insumo Principal"
+                    ),
+                ),
+                (
+                    "precio_unitario_compra",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=2,
+                        max_digits=10,
+                        null=True,
+                        verbose_name="Precio Unit. Compra",
+                    ),
+                ),
+                (
+                    "total_orden_compra",
+                    models.DecimalField(decimal_places=2, default=0.0, max_digits=12),
+                ),
+                ("fecha_estimada_entrega", models.DateField(blank=True, null=True)),
+                (
+                    "numero_tracking",
+                    models.CharField(blank=True, max_length=50, null=True),
+                ),
+                ("notas", models.TextField(blank=True, null=True)),
+                (
+                    "insumo_principal",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="App_LUMINOVA.insumo",
+                        verbose_name="Insumo Principal",
+                    ),
+                ),
+                (
+                    "proveedor",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="ordenes_de_compra_a_proveedor",
+                        to="App_LUMINOVA.proveedor",
+                    ),
+                ),
             ],
         ),
     ]

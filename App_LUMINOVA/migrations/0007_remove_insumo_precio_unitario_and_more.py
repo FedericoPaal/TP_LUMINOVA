@@ -8,42 +8,88 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('App_LUMINOVA', '0006_ordenproduccion_fecha_fin_real_and_more'),
+        ("App_LUMINOVA", "0006_ordenproduccion_fecha_fin_real_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='insumo',
-            name='precio_unitario',
+            model_name="insumo",
+            name="precio_unitario",
         ),
         migrations.RemoveField(
-            model_name='insumo',
-            name='proveedor',
+            model_name="insumo",
+            name="proveedor",
         ),
         migrations.RemoveField(
-            model_name='insumo',
-            name='tiempo_entrega',
+            model_name="insumo",
+            name="tiempo_entrega",
         ),
         migrations.AlterField(
-            model_name='orden',
-            name='precio_unitario_compra',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True, verbose_name='Precio Unit. Compra (de la oferta)'),
+            model_name="orden",
+            name="precio_unitario_compra",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=2,
+                max_digits=10,
+                null=True,
+                verbose_name="Precio Unit. Compra (de la oferta)",
+            ),
         ),
         migrations.CreateModel(
-            name='OfertaProveedor',
+            name="OfertaProveedor",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('precio_unitario_compra', models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Precio de Compra Unitario')),
-                ('tiempo_entrega_estimado_dias', models.IntegerField(default=0, verbose_name='Tiempo de Entrega Estimado (días)')),
-                ('fecha_actualizacion_precio', models.DateTimeField(default=django.utils.timezone.now, verbose_name='Última Actualización del Precio')),
-                ('insumo', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='ofertas_de_proveedores', to='App_LUMINOVA.insumo')),
-                ('proveedor', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='provee_insumos', to='App_LUMINOVA.proveedor')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "precio_unitario_compra",
+                    models.DecimalField(
+                        decimal_places=2,
+                        max_digits=10,
+                        verbose_name="Precio de Compra Unitario",
+                    ),
+                ),
+                (
+                    "tiempo_entrega_estimado_dias",
+                    models.IntegerField(
+                        default=0, verbose_name="Tiempo de Entrega Estimado (días)"
+                    ),
+                ),
+                (
+                    "fecha_actualizacion_precio",
+                    models.DateTimeField(
+                        default=django.utils.timezone.now,
+                        verbose_name="Última Actualización del Precio",
+                    ),
+                ),
+                (
+                    "insumo",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="ofertas_de_proveedores",
+                        to="App_LUMINOVA.insumo",
+                    ),
+                ),
+                (
+                    "proveedor",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="provee_insumos",
+                        to="App_LUMINOVA.proveedor",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Oferta de Proveedor por Insumo',
-                'verbose_name_plural': 'Ofertas de Proveedores por Insumos',
-                'ordering': ['insumo__descripcion', 'proveedor__nombre'],
-                'unique_together': {('insumo', 'proveedor')},
+                "verbose_name": "Oferta de Proveedor por Insumo",
+                "verbose_name_plural": "Ofertas de Proveedores por Insumos",
+                "ordering": ["insumo__descripcion", "proveedor__nombre"],
+                "unique_together": {("insumo", "proveedor")},
             },
         ),
     ]
