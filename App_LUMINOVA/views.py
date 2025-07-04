@@ -829,96 +829,71 @@ def ventas_crear_ov_view(request):
         messages.error(request, "Acción no permitida.")
         return redirect("App_LUMINOVA:ventas_lista_ov")
 
-    # 1. Decidir si se procesa un POST o se muestra un formulario GET
     if request.method == "POST":
         form_ov = OrdenVentaForm(request.POST, prefix="ov")
         formset_items = ItemOrdenVentaFormSetCreacion(request.POST, prefix="items")
 
         if form_ov.is_valid() and formset_items.is_valid():
             try:
-                # Guardar la OV principal primero, pero sin total definitivo
-                orden_venta_instance = form_ov.save(commit=False)
-                orden_venta_instance.estado = "PENDIENTE" # Asignado explícitamente por la vista
-                orden_venta_instance.save() # Guardar para obtener un ID
+                ov_instance = form_ov.save(commit=False)
+                ov_instance.estado = "PENDIENTE"
+                ov_instance.save() # Se necesita ID para la relación
 
-                # Asociar el formset con la instancia recién creada
-                formset_items.instance = orden_venta_instance
-
-                # Guardar los ítems del formset
-                items_guardados = formset_items.save(commit=False)
-
-                # Calcular el total y guardar ítems individualmente
-                total_orden_calculado = 0
-                items_para_op = []
-
-                for item in items_guardados:
-                    if item.producto_terminado and item.cantidad > 0:
-                        # Asignar el precio desde el modelo ProductoTerminado para seguridad
-                        item.precio_unitario_venta = item.producto_terminado.precio_unitario
-                        item.subtotal = item.cantidad * item.precio_unitario_venta
-                        item.save() # Guardar el ítem ahora que tiene todos los datos
-                        total_orden_calculado += item.subtotal
-                        items_para_op.append(item)
-
-                if not items_para_op:
-                    messages.error(request, "La orden de venta debe tener al menos un producto válido.")
-                    # Como estamos en una transacción, no es necesario eliminar la OV manualmente,
-                    # se deshará al salir del bloque `try`. Por eso lanzamos una excepción.
-                    raise ValueError("No se proporcionaron ítems válidos para la orden.")
-
-                # Actualizar el total de la OV
-                orden_venta_instance.total_ov = total_orden_calculado
-                orden_venta_instance.save(update_fields=['total_ov'])
-
-                # Generar las OPs correspondientes
-                estado_op_inicial = EstadoOrden.objects.filter(nombre__iexact="Pendiente").first()
-                if not estado_op_inicial:
-                    # Este error detendrá la transacción y mostrará un mensaje claro
-                    raise Exception("Error crítico: El estado de OP 'Pendiente' no está configurado.")
+                items_a_procesar = []
+                total_ov = 0
+                for form in formset_items:
+                    if form.is_valid() and form.cleaned_data and not form.cleaned_data.get('DELETE'):
+                        item = form.save(commit=False)
+                        item.orden_venta = ov_instance
+                        item.subtotal = item.cantidad * item.producto_terminado.precio_unitario
+                        total_ov += item.subtotal
+                        items_a_procesar.append(item)
                 
-                for item_ov in items_para_op:
+                if not items_a_procesar:
+                    raise ValueError("Se debe añadir al menos un producto a la orden.")
+
+                ItemOrdenVenta.objects.bulk_create(items_a_procesar)
+                ov_instance.total_ov = total_ov
+                ov_instance.save(update_fields=['total_ov'])
+
+                estado_op_inicial = EstadoOrden.objects.get(nombre__iexact="Pendiente")
+                
+                ops_a_crear = []
+                for item_procesado in items_a_procesar:
                     next_op_number = generar_siguiente_numero_documento(OrdenProduccion, 'OP', 'numero_op')
-                    OrdenProduccion.objects.create(
-                        numero_op=next_op_number,
-                        orden_venta_origen=orden_venta_instance,
-                        producto_a_producir=item_ov.producto_terminado,
-                        cantidad_a_producir=item_ov.cantidad,
-                        fecha_solicitud=timezone.now(),
-                        estado_op=estado_op_inicial,
+                    ops_a_crear.append(
+                        OrdenProduccion(
+                            numero_op=next_op_number,
+                            orden_venta_origen=ov_instance,
+                            producto_a_producir=item_procesado.producto_terminado,
+                            cantidad_a_producir=item_procesado.cantidad,
+                            estado_op=estado_op_inicial,
+                        )
                     )
+                OrdenProduccion.objects.bulk_create(ops_a_crear)
 
-                messages.success(request, f'Orden de Venta "{orden_venta_instance.numero_ov}" y sus OPs asociadas se han creado exitosamente.')
-                return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=orden_venta_instance.id)
+                messages.success(request, f'Orden de Venta "{ov_instance.numero_ov}" y sus OPs asociadas se crearon exitosamente.')
+                return redirect('App_LUMINOVA:ventas_detalle_ov', ov_id=ov_instance.id)
 
-            except DjangoIntegrityError as e_int:
-                # Manejo de error si el número de OV ya existe
-                messages.error(request, f"El número de orden de venta '{form_ov.cleaned_data.get('numero_ov')}' ya existe.")
-            except ValueError as e_val:
-                # Manejo del error de "sin ítems"
-                messages.error(request, str(e_val))
+            except EstadoOrden.DoesNotExist:
+                 messages.error(request, "Error de configuración: El estado 'Pendiente' para OP no existe. No se pudo continuar.")
+                 # La transacción se revertirá.
+            except ValueError as e:
+                messages.error(request, str(e))
+                # La transacción se revertirá.
             except Exception as e:
-                # Manejo de cualquier otro error, como el de estado de OP no encontrado
-                messages.error(request, f"Error inesperado al procesar la orden: {e}")
-                logger.exception("Error en la creación de OV y sus OPs")
-            
-            # Si hubo algún error en el bloque try, el `form_ov` y `formset_items`
-            # (con los datos del POST y sus errores) se pasarán al contexto para renderizar de nuevo.
+                messages.error(request, f"Ocurrió un error inesperado. Por favor, intente de nuevo. Detalle: {e}")
+                logger.exception("Error grave en la creación de OV/OPs")
+                # La transacción se revertirá.
+    else: # GET
+        initial_data = {'numero_ov': generar_siguiente_numero_documento(OrdenVenta, 'OV', 'numero_ov')}
+        form_ov = OrdenVentaForm(prefix="ov", initial=initial_data)
+        formset_items = ItemOrdenVentaFormSetCreacion(prefix="items", queryset=ItemOrdenVenta.objects.none())
 
-        else: # Si los formularios no son válidos
-            messages.error(request, "Por favor, corrija los errores en el formulario.")
-            logger.warning(f"Error de validación en creación de OV: OV errors: {form_ov.errors.as_json()} | Items errors: {formset_items.errors}")
-
-    # 2. Si es GET, preparar formularios vacíos
-    else:
-        initial_ov_data = {'numero_ov': generar_siguiente_numero_documento(OrdenVenta, 'OV', 'numero_ov')}
-        form_ov = OrdenVentaForm(initial=initial_ov_data, prefix="ov")
-        formset_items = ItemOrdenVentaFormSetCreacion(prefix='items', queryset=ItemOrdenVenta.objects.none())
-
-    # 3. Renderizar la plantilla con los formularios correspondientes (nuevos o con errores)
     context = {
-        "form_ov": form_ov,
-        "formset_items": formset_items,
-        "titulo_seccion": "Nueva Orden de Venta",
+        'form_ov': form_ov,
+        'formset_items': formset_items,
+        'titulo_seccion': "Nueva Orden de Venta"
     }
     return render(request, "ventas/ventas_crear_ov.html", context)
 
@@ -1567,104 +1542,56 @@ def compras_detalle_oc_view(request, oc_id):
 def compras_crear_oc_view(request, insumo_id=None, proveedor_id=None):
     insumo_preseleccionado_obj = None
     proveedor_preseleccionado_obj = None
-    oferta_seleccionada = None
     initial_data = {}
-    form_kwargs = {}  # Para pasar al constructor del formulario
+    form_kwargs = {}
 
     if insumo_id:
         insumo_preseleccionado_obj = get_object_or_404(Insumo, id=insumo_id)
-        initial_data["insumo_principal"] = insumo_preseleccionado_obj
-        form_kwargs["insumo_fijado"] = (
-            insumo_preseleccionado_obj  # Para que el form lo deshabilite
-        )
+        initial_data['insumo_principal'] = insumo_preseleccionado_obj
+        form_kwargs['insumo_fijado'] = insumo_preseleccionado_obj
+
+        UMBRAL_STOCK_BAJO = 15000
+        cantidad_sugerida = max(10, UMBRAL_STOCK_BAJO - insumo_preseleccionado_obj.stock)
+        initial_data['cantidad_principal'] = cantidad_sugerida
 
         if proveedor_id:
-            proveedor_preseleccionado_obj = get_object_or_404(
-                Proveedor, id=proveedor_id
-            )
-            initial_data["proveedor"] = proveedor_preseleccionado_obj
-            # form_kwargs['proveedor_fijado'] = proveedor_preseleccionado_obj # Ya no es necesario si el form lo toma de initial
-
-            oferta_seleccionada = OfertaProveedor.objects.filter(
-                insumo=insumo_preseleccionado_obj,
-                proveedor=proveedor_preseleccionado_obj,
-            ).first()
-
+            proveedor_preseleccionado_obj = get_object_or_404(Proveedor, id=proveedor_id)
+            initial_data['proveedor'] = proveedor_preseleccionado_obj
+            oferta_seleccionada = OfertaProveedor.objects.filter(insumo=insumo_preseleccionado_obj, proveedor=proveedor_preseleccionado_obj).first()
             if oferta_seleccionada:
-                initial_data["precio_unitario_compra"] = (
-                    oferta_seleccionada.precio_unitario_compra
-                )
+                initial_data['precio_unitario_compra'] = oferta_seleccionada.precio_unitario_compra
                 if oferta_seleccionada.tiempo_entrega_estimado_dias is not None:
                     try:
                         dias = int(oferta_seleccionada.tiempo_entrega_estimado_dias)
                         fecha_estimada = timezone.now().date() + timedelta(days=dias)
-                        initial_data["fecha_estimada_entrega"] = (
-                            fecha_estimada.strftime("%Y-%m-%d")
-                        )
-                    except ValueError:
-                        pass
+                        initial_data['fecha_estimada_entrega'] = fecha_estimada.strftime('%Y-%m-%d')
+                    except (ValueError, TypeError): pass
 
-        UMBRAL_STOCK_BAJO_INSUMOS = 15000
-        cantidad_necesaria = (
-            UMBRAL_STOCK_BAJO_INSUMOS - insumo_preseleccionado_obj.stock
-        )
-        initial_data["cantidad_principal"] = max(
-            1, cantidad_necesaria if cantidad_necesaria > 0 else 10
-        )
-
-    # Siempre se sugiere N° de OC para nuevas
-    next_oc_number = generar_siguiente_numero_documento(Orden, 'OC', 'numero_orden')
-    initial_data["numero_orden"] = next_oc_number
-
-    if request.method == "POST":
-        form = OrdenCompraForm(
-            request.POST, initial=initial_data, **form_kwargs
-        )  # Pasar initial para que clean() pueda usarlo
+    if request.method == 'POST':
+        form = OrdenCompraForm(request.POST, **form_kwargs)
         if form.is_valid():
-            try:
-                orden_compra = form.save(commit=False)
-                orden_compra.tipo = "compra"
-                orden_compra.estado = "BORRADOR"
-
-                # Los valores de los campos deshabilitados/readonly son restaurados por form.clean()
-                # a partir de 'initial' o 'instance'.
-                # No es necesario reasignarlos aquí si clean() es correcto.
-                orden_compra.save()  # El save() del modelo Orden calcula el total
-
-                # ... (actualizar cantidad_en_pedido) ...
-                if (
-                    orden_compra.insumo_principal
-                    and orden_compra.cantidad_principal > 0
-                ):
-                    Insumo.objects.filter(id=orden_compra.insumo_principal.id).update(
-                        cantidad_en_pedido=F("cantidad_en_pedido")
-                        + orden_compra.cantidad_principal
-                    )
-
-                messages.success(
-                    request,
-                    f"OC '{orden_compra.numero_orden}' creada en Borrador. Total: ${orden_compra.total_orden_compra or 0:.2f}",
-                )
-                return redirect("App_LUMINOVA:compras_lista_oc")
-            # ... (manejo de errores) ...
-            except Exception as e:
-                messages.error(request, f"Error inesperado: {e}")
-        else:  # form inválido
-            messages.error(request, "Por favor, corrija los errores en el formulario.")
-            logger.warning(
-                f"Formulario OC (creación) inválido: {form.errors.as_json()}"
-            )
-    else:  # GET
+            orden_compra = form.save(commit=False)
+            orden_compra.tipo = 'compra'
+            orden_compra.estado = 'BORRADOR'
+            
+            # --- Aquí asignamos el número de orden usando el servicio ---
+            orden_compra.numero_orden = generar_siguiente_numero_documento(Orden, 'OC', 'numero_orden')
+            
+            orden_compra.save()
+            
+            messages.success(request, f"Orden de Compra '{orden_compra.numero_orden}' creada en Borrador.")
+            return redirect('App_LUMINOVA:compras_lista_oc')
+        else:
+            messages.error(request, "Por favor, corrija los errores del formulario.")
+    else: # GET
         form = OrdenCompraForm(initial=initial_data, **form_kwargs)
 
     context = {
-        "form_oc": form,
-        "titulo_seccion": "Crear Nueva Orden de Compra",
-        "insumo_preseleccionado": insumo_preseleccionado_obj,
-        "proveedor_preseleccionado": proveedor_preseleccionado_obj,
-        "oferta_seleccionada": oferta_seleccionada,
+        'form_oc': form,
+        'titulo_seccion': 'Crear Orden de Compra',
+        'insumo_preseleccionado': insumo_preseleccionado_obj,
     }
-    return render(request, "compras/compras_crear_editar_oc.html", context)
+    return render(request, 'compras/compras_crear_editar_oc.html', context)
 
 
 @login_required
@@ -2506,7 +2433,7 @@ def crear_reporte_produccion_view(request, op_id):
             # Generar n_reporte único
             reporte.n_reporte = generar_siguiente_numero_documento(Reportes, 'RP', 'n_reporte')
 
-            reporte.save()
+            reporte.save()  
             messages.success(
                 request,
                 f"Reporte '{reporte.n_reporte}' creado exitosamente para la OP {orden_produccion.numero_op}.",
