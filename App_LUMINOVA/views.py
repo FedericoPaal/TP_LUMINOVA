@@ -3535,17 +3535,29 @@ class FabricanteDeleteView(DeleteView):
 # --- PDF VIEW ---
 @login_required
 def ventas_ver_factura_pdf_view(request, factura_id):
+    """
+    Vista que obtiene los datos de una factura y delega la generación
+    del PDF a un servicio dedicado.
+    """
     try:
-        factura = Factura.objects.select_related(
-            'orden_venta__cliente'
-        ).prefetch_related(
-            Prefetch('orden_venta__items_ov', queryset=ItemOrdenVenta.objects.select_related('producto_terminado'))
-        ).get(id=factura_id)
+        # Esta consulta optimizada busca todo lo necesario de una vez
+        factura = (
+            Factura.objects.select_related(
+                "orden_venta__cliente"
+            )
+            .prefetch_related(
+                Prefetch(
+                    "orden_venta__items_ov",
+                    queryset=ItemOrdenVenta.objects.select_related("producto_terminado"),
+                )
+            )
+            .get(id=factura_id)
+        )
     except Factura.DoesNotExist:
         messages.error(request, "La factura solicitada no existe.")
-        return redirect('App_LUMINOVA:ventas_lista_ov')
+        return redirect("App_LUMINOVA:ventas_lista_ov")
 
-    # Simplemente llama al servicio y devuelve su respuesta
+    # Llamamos a nuestro servicio y retornamos directamente su respuesta
     return generar_pdf_factura(factura)
 
 
